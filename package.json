@@ -1,0 +1,32 @@
+{
+  "name": "contract-obligation-tracker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Production-oriented Contract & Obligation Tracker monorepo.",
+  "type": "module",
+  "packageManager": "pnpm@10.14.0",
+  "scripts": {
+    "install:workspaces": "corepack pnpm install",
+    "dev": "corepack pnpm --parallel --stream -r --filter \"./apps/*\" run dev",
+    "dev:web": "corepack pnpm --filter @contract-obligation-tracker/web run dev",
+    "dev:api": "corepack pnpm --filter @contract-obligation-tracker/api run dev",
+    "build": "corepack pnpm -r --if-present --filter \"./apps/*\" run build",
+    "typecheck": "corepack pnpm -r --if-present run typecheck",
+    "test": "corepack pnpm -r --if-present run test",
+    "test:kpi": "corepack pnpm --filter @contract-obligation-tracker/test-kit run test:kpi",
+    "import:cuad-subset": "corepack pnpm --filter @contract-obligation-tracker/api run import:cuad-subset",
+    "lint": "corepack pnpm -r --if-present run lint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@types/node": "^24.1.0",
+    "prettier": "^3.6.2",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=10.0.0"
+  }
+}

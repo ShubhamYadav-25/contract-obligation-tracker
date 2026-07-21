@@ -1,0 +1,39 @@
+{
+  "name": "@contract-obligation-tracker/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/server.ts",
+    "start": "node dist/src/server.js",
+    "worker": "tsx src/jobs/worker-entry.ts",
+    "scheduler": "tsx src/jobs/scheduler-entry.ts",
+    "check:connections": "tsx src/scripts/check-connections.ts",
+    "import:cuad-subset": "tsx src/scripts/import-cuad-subset.ts",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "test:unit": "vitest run tests/unit --passWithNoTests",
+    "test:integration": "vitest run tests/integration --passWithNoTests",
+    "test:kpi": "vitest run tests/kpi --passWithNoTests"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.110.7",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "multer": "^2.2.0",
+    "node-cron": "^4.6.0",
+    "pg": "^8.22.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/multer": "^2.2.0",
+    "@types/node-cron": "^3.0.11",
+    "@types/pg": "^8.20.0",
+    "@types/supertest": "^7.2.1",
+    "supertest": "^7.2.2",
+    "tsx": "^4.23.1"
+  }
+}

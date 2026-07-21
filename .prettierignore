@@ -1,0 +1,7 @@
+downloads/
+raw/
+working-subset/
+node_modules/
+dist/
+build/
+coverage/

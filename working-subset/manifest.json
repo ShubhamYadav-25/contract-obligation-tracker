@@ -1,0 +1,229 @@
+{
+  "contracts": [
+    {
+      "datasetId": "contract-001",
+      "originalDocumentName": "['AFFILIATE AGREEMENT']",
+      "filename": "contract-001__SouthernStarEnergyInc_20051202_SB-2A_EX-9_801890_EX-9_Affiliate Agreement.pdf",
+      "sha256": "a424f4fcda1f1123a7e8948f8ca00f5ce854455acf10fc12986adf8ab675c041",
+      "hasRenewalTerm": true,
+      "hasRenewalNotice": true,
+      "selectionPriority": 1
+    },
+    {
+      "datasetId": "contract-002",
+      "originalDocumentName": "['AGENCY AGREEMENT']",
+      "filename": "contract-002__OLDAPIWIND-DOWNLTD_01_08_2016-EX-1.3-AGENCY AGREEMENT2.pdf",
+      "sha256": "5887262732ce60cc55b7b86c8c3413a701b95ada83cbfa84ee02a1073d9e6b46",
+      "hasRenewalTerm": true,
+      "hasRenewalNotice": true,
+      "selectionPriority": 1
+    },
+    {
+      "datasetId": "contract-003",
+      "originalDocumentName": "['AMENDMENT                                      TO THE                               DISTRIBUTOR AGREEMENT                                      BETWEEN                                   INGRAM MICRO                                        AND                                      NETGEAR']",
+      "filename": "contract-003__NETGEAR,INC_04_21_2003-EX-10.16-AMENDMENT TO THE DISTRIBUTOR AGREEMENT BETWEEN INGRAM MICRO AND NETGEAR-.pdf",
+      "sha256": "b1ad4c2f07fb2c6a753edcf9c339f9659e0eee2b15aee115f5c9678ee29d9db1",
+      "hasRenewalTerm": true,
+      "hasRenewalNotice": true,
+      "selectionPriority": 1
+    },
+    {
+      "datasetId": "contract-004",
+      "originalDocumentName": "['AMENDMENT #2 TO THE                              DISTRIBUTION AGREEMENT']",
+      "filename": "contract-004__NETGEAR,INC_04_21_2003-EX-10.16- AMENDMENT #2 TO THE DISTRIBUTION AGREEMENT.pdf",
+      "sha256": "bb730a12e485d9c6f7ec924a64294cfadf8b3bf72a61fc1219dca5d724ddc056",
+      "hasRenewalTerm": true,
+      "hasRenewalNotice": true,
+      "selectionPriority": 1
+    },
+    {
+      "datasetId": "contract-005",
+      "originalDocumentName": "['CO-BRANDING AGREEMENT']",
+      "filename": "contract-005__TheglobeComInc_19990503_S-1A_EX-10.20_5416126_EX-10.20_Co-Branding Agreement.pdf",
+      "sha256": "58b06c0c4f20d0426405b18c8a8b69c31c411219a7f8f762cf4276752e985917",
+      "hasRenewalTerm": true,
+      "hasRenewalNotice": true,
+      "selectionPriority": 1
+    },
+    {
+      "datasetId": "contract-006",
+      "originalDocumentName": "['CONTENT LICENSE AGREEMENT']",
+      "filename": "contract-006__LejuHoldingsLtd_20140121_DRS (on F-1)_EX-10.26_8473102_EX-10.26_Content License Agreement1.pdf",
+      "sha256": "a062c0d4fdaa3213b6638704171de288dd6d885901d13c21359a86f7cb9df184",
+      "hasRenewalTerm": true,
+      "hasRenewalNotice": true,
+      "selectionPriority": 1
+    },
+    {
+      "datasetId": "contract-007",
+      "originalDocumentName": "['DEVELOPMENT AGREEMENT (\"']",
+      "filename": "contract-007__BIOAMBERINC_04_10_2013-EX-10.34-DEVELOPMENT AGREEMENT (1).pdf",
+      "sha256": "08676c1ea03a5e316cd1f2d737cfb77cc5f45678e15b0ccf06ac20a48f81863c",
+      "hasRenewalTerm": true,
+      "hasRenewalNotice": true,
+      "selectionPriority": 1
+    },
+    {
+      "datasetId": "contract-008",
+      "originalDocumentName": "['DISTRIBUTOR AGREEMENT']",
+      "filename": "contract-008__NEONSYSTEMSINC_03_01_1999-EX-10.5-DISTRIBUTOR AGREEMENT_Amendment.pdf",
+      "sha256": "0cf1bb6b2d36c3bd989e23402718206c2fc7c9aa5e58b98f54aa90b20e194978",
+      "hasRenewalTerm": true,
+      "hasRenewalNotice": true,
+      "selectionPriority": 1
+    },
+    {
+      "datasetId": "contract-009",
+      "originalDocumentName": "['ENDORSEMENT AGREEMENT']",
+      "filename": "contract-009__WOMENSGOLFUNLIMITEDINC_03_29_2000-EX-10.13-ENDORSEMENT AGREEMENT - Intellectual Property Rights                 Confidentiality and Non-Use Obligations Agreement.pdf",
+      "sha256": "ba24e5fa635df31e12f60398486926bcf688ce3113b9251990f6829da4585770",
+      "hasRenewalTerm": true,
+      "hasRenewalNotice": true,
+      "selectionPriority": 1
+    },
+    {
+      "datasetId": "contract-010",
+      "originalDocumentName": "['ESCROW AGREEMENT']",
+      "filename": "contract-010__HEALTHGATEDATACORP_11_24_1999-EX-10.1-HOSTING AND MANAGEMENT AGREEMENT - Escrow Agreement.pdf",
+      "sha256": "6cea0f3bf3f61e2fbdd57388b97571423e58b83b5a9e46ca4fd32653bd1df050",
+      "hasRenewalTerm": true,
+      "hasRenewalNotice": true,
+      "selectionPriority": 1
+    },
+    {
+      "datasetId": "contract-011",
+      "originalDocumentName": "['FRANCHISE AGREEMENT']",
+      "filename": "contract-011__SoupmanInc_20150814_8-K_EX-10.1_9230148_EX-10.1_Franchise Agreement2.pdf",
+      "sha256": "2d1f96ee2f01403ad3a29477e16249bd9bd6f7caee88ef5ff138384be33d7563",
+      "hasRenewalTerm": true,
+      "hasRenewalNotice": true,
+      "selectionPriority": 1
+    },
+    {
+      "datasetId": "contract-012",
+      "originalDocumentName": "['First Amendment']",
+      "filename": "contract-012__BIOAMBERINC_04_10_2013-EX-10.34-DEVELOPMENT AGREEMENT - First Amendment.pdf",
+      "sha256": "8dad2e30497f834ebfe88edca88fc9df8b06a90e47a2823a7bdad22ac5892f6e",
+      "hasRenewalTerm": true,
+      "hasRenewalNotice": true,
+      "selectionPriority": 1
+    },
+    {
+      "datasetId": "contract-013",
+      "originalDocumentName": "['MAINTENANCE AGREEMENT']",
+      "filename": "contract-013__CardlyticsInc_20180112_S-1_EX-10.16_11002987_EX-10.16_Maintenance Agreement1.pdf",
+      "sha256": "4765b84564a06932e38726ee204da005bc9c141870ef2138a1957f7ab5891909",
+      "hasRenewalTerm": true,
+      "hasRenewalNotice": true,
+      "selectionPriority": 1
+    },
+    {
+      "datasetId": "contract-014",
+      "originalDocumentName": "['MANUFACTURING AGREEMENT']",
+      "filename": "contract-014__UpjohnInc_20200121_10-12G_EX-2.6_11948692_EX-2.6_Manufacturing Agreement_ Supply Agreement.pdf",
+      "sha256": "893909bf198d75e1b608756b10eea3b698b42cc0d5de30d984f0da48e797ecbb",
+      "hasRenewalTerm": true,
+      "hasRenewalNotice": true,
+      "selectionPriority": 1
+    },
+    {
+      "datasetId": "contract-015",
+      "originalDocumentName": "['MASTER SERVICES AGREEMENT (']",
+      "filename": "contract-015__KUBIENT,INC_07_02_2020-EX-10.14-MASTER SERVICES AGREEMENT_Part1.pdf",
+      "sha256": "be3353c0e7564af58fb4039cf12e83254ba0ed97c0f8ca00cfe04be17f1f4835",
+      "hasRenewalTerm": true,
+      "hasRenewalNotice": true,
+      "selectionPriority": 1
+    },
+    {
+      "datasetId": "contract-016",
+      "originalDocumentName": "['Marketing Agreement']",
+      "filename": "contract-016__PlayboyEnterprisesInc_20090220_10-QA_EX-10.2_4091580_EX-10.2_Content License Agreement_ Marketing Agreement_ Sales-Purchase Agreement2.pdf",
+      "sha256": "1322c34c106151012fdbba644936c428dd44ca8bf39e39f514f7b5c559853d28",
+      "hasRenewalTerm": true,
+      "hasRenewalNotice": true,
+      "selectionPriority": 1
+    },
+    {
+      "datasetId": "contract-017",
+      "originalDocumentName": "['OUTSOURCING AGREEMENT']",
+      "filename": "contract-017__FerroglobePlc_20150624_F-4A_EX-10.20_9154746_EX-10.20_Outsourcing Agreement.pdf",
+      "sha256": "9d8734bf7d20fe8e2e2503c7608e5f19f4ebf5858c65a26ef38cb84bc79eeaa3",
+      "hasRenewalTerm": true,
+      "hasRenewalNotice": true,
+      "selectionPriority": 1
+    },
+    {
+      "datasetId": "contract-018",
+      "originalDocumentName": "['PROMOTION AGREEMENT']",
+      "filename": "contract-018__VnueInc_20150914_8-K_EX-10.1_9259571_EX-10.1_Promotion Agreement.pdf",
+      "sha256": "1b714e036261180f8dced0853f50e554ade7c056e55a8fd2fb0ae94fc0193d72",
+      "hasRenewalTerm": true,
+      "hasRenewalNotice": true,
+      "selectionPriority": 1
+    },
+    {
+      "datasetId": "contract-019",
+      "originalDocumentName": "['RESELLER AGREEMENT']",
+      "filename": "contract-019__SalesforcecomInc_20171122_10-Q_EX-10.1_10961535_EX-10.1_Reseller Agreement.pdf",
+      "sha256": "e5eac490d8ac0dac0fafd35e0a8872a3f9484e7648a7c93f5548b06cceeccdcd",
+      "hasRenewalTerm": true,
+      "hasRenewalNotice": true,
+      "selectionPriority": 1
+    },
+    {
+      "datasetId": "contract-020",
+      "originalDocumentName": "['SPONSORSHIP AGREEMENT']",
+      "filename": "contract-020__AlliedEsportsEntertainmentInc_20190815_8-K_EX-10.34_11788308_EX-10.34_Sponsorship Agreement.pdf",
+      "sha256": "cf48c00dd85b521cb397d45960bbc1b24e7eac0f7bf8ec896ad5c4d185b316a0",
+      "hasRenewalTerm": true,
+      "hasRenewalNotice": true,
+      "selectionPriority": 1
+    },
+    {
+      "datasetId": "contract-021",
+      "originalDocumentName": "['SUPPLY AGREEMENT']",
+      "filename": "contract-021__ReynoldsConsumerProductsInc_20191115_S-1_EX-10.18_11896469_EX-10.18_Supply Agreement.pdf",
+      "sha256": "085f382aa806423ae3aa53a841bacc0cf4648add7a2e03b3e63785ab48f571d9",
+      "hasRenewalTerm": true,
+      "hasRenewalNotice": true,
+      "selectionPriority": 1
+    },
+    {
+      "datasetId": "contract-022",
+      "originalDocumentName": "['TRADEMARK LICENSE AGREEMENT']",
+      "filename": "contract-022__PalmerSquareCapitalBdcInc_20200116_10-12GA_EX-10.6_11949289_EX-10.6_Trademark License Agreement.pdf",
+      "sha256": "d6aba43776b90b56b87ac7b2f5f30a943263688e282d3848f1463681b6d97240",
+      "hasRenewalTerm": true,
+      "hasRenewalNotice": true,
+      "selectionPriority": 1
+    },
+    {
+      "datasetId": "contract-023",
+      "originalDocumentName": "['TRANSPORTATION CONTRACT']",
+      "filename": "contract-023__ZtoExpressCaymanInc_20160930_F-1_EX-10.10_9752871_EX-10.10_Transportation Agreement.pdf",
+      "sha256": "c280c948ce15d74b8134cf46657e00b0ceb89b73bde55e66004f3ac6becf04fe",
+      "hasRenewalTerm": true,
+      "hasRenewalNotice": true,
+      "selectionPriority": 1
+    },
+    {
+      "datasetId": "contract-024",
+      "originalDocumentName": "NEONSYSTEMSINC_03_01_1999-EX-10.5-DISTRIBUTOR AGREEMENT_New.pdf",
+      "filename": "contract-024__NEONSYSTEMSINC_03_01_1999-EX-10.5-DISTRIBUTOR AGREEMENT_New.pdf",
+      "sha256": "259c057c3177899d1cdf70fd77212537c07c8f31414ddd3bad21e8f5937e3e50",
+      "hasRenewalTerm": false,
+      "hasRenewalNotice": false,
+      "selectionPriority": 5
+    },
+    {
+      "datasetId": "contract-025",
+      "originalDocumentName": "OLDAPIWIND-DOWNLTD_01_08_2016-EX-1.3-AGENCY AGREEMENT1.pdf",
+      "filename": "contract-025__OLDAPIWIND-DOWNLTD_01_08_2016-EX-1.3-AGENCY AGREEMENT1.pdf",
+      "sha256": "70d4ce0ed47fa5ac36934dccda08550963b76354fe5c4cfb2388332d4a44bf5f",
+      "hasRenewalTerm": false,
+      "hasRenewalNotice": false,
+      "selectionPriority": 5
+    }
+  ]
+}

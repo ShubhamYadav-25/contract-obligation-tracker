@@ -1,0 +1,106 @@
+import { z } from "zod";
+
+import { loadDotEnvFile } from "./dotenv.js";
+
+const integerFromEnv = z.coerce.number().int().positive();
+const booleanFromEnv = z
+  .enum(["true", "false", "1", "0"])
+  .transform((value) => value === "true" || value === "1");
+
+export const envSchema = z
+  .object({
+    NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+    APP_NAME: z.string().min(1).default("Contract Obligation Tracker"),
+    APP_BASE_URL: z.url().default("http://localhost:5173"),
+    API_HOST: z.string().min(1).default("0.0.0.0"),
+    API_PORT: integerFromEnv.default(3000),
+    CORS_ORIGIN: z.string().min(1).default("http://localhost:5173"),
+    CONTRACT_MAX_FILE_SIZE_MB: integerFromEnv.default(20),
+    CONTRACT_MAX_PAGE_COUNT: integerFromEnv.default(300),
+    CUAD_IMPORT_CONCURRENCY: integerFromEnv.default(2),
+    INGESTION_DEFAULT_ORGANIZATION_ID: z.uuid().default("00000000-0000-4000-8000-000000000001"),
+    INGESTION_DEFAULT_USER_ID: z.uuid().default("00000000-0000-4000-8000-000000000002"),
+    DATABASE_URL: z.string().optional(),
+    DATABASE_SSL: booleanFromEnv.default(true),
+    DATABASE_POOL_MAX: integerFromEnv.default(5),
+    DATABASE_CONNECTION_TIMEOUT_MS: integerFromEnv.default(5_000),
+    DATABASE_IDLE_TIMEOUT_MS: integerFromEnv.default(30_000),
+    STORAGE_PROVIDER: z.enum(["supabase", "local"]).default("supabase"),
+    SUPABASE_URL: z.string().optional(),
+    SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
+    SUPABASE_STORAGE_BUCKET: z.string().min(1).default("contracts"),
+    GEMINI_API_KEY: z.string().optional(),
+    GEMINI_MODEL: z.string().min(1).default("gemini-2.5-flash"),
+    OCR_PROVIDER: z.enum(["tesseract", "gemini-vision"]).default("tesseract"),
+    TESSERACT_WORKER_COUNT: integerFromEnv.default(1),
+    EMAIL_PROVIDER: z.enum(["console", "mailtrap", "resend", "smtp"]).default("console"),
+    EMAIL_FROM: z.string().optional(),
+    SMTP_HOST: z.string().optional(),
+    SMTP_PORT: integerFromEnv.default(587),
+    SMTP_USER: z.string().optional(),
+    SMTP_PASSWORD: z.string().optional(),
+    JWT_SECRET: z.string().optional(),
+    JWT_ISSUER: z.string().min(1).default("contract-obligation-tracker"),
+    JWT_AUDIENCE: z.string().min(1).default("contract-obligation-tracker"),
+    JWT_ACCESS_TOKEN_TTL_SECONDS: integerFromEnv.default(900),
+    JOB_POLL_INTERVAL_MS: integerFromEnv.default(2_000),
+    JOB_BATCH_SIZE: integerFromEnv.default(5),
+    JOB_LOCK_DURATION_MS: integerFromEnv.default(300_000),
+    JOB_MAX_ATTEMPTS: integerFromEnv.default(5),
+    JOB_RETRY_BASE_DELAY_MS: integerFromEnv.default(30_000),
+    JOB_RETRY_MAX_DELAY_MS: integerFromEnv.default(1_800_000),
+    WORKER_ID: z.string().min(1).default("local-worker"),
+    REMINDER_CRON_TIMEZONE: z.string().min(1).default("UTC"),
+    SCHEDULER_CRON: z.string().min(1).default("*/5 * * * *"),
+    REMINDER_LOOKAHEAD_MINUTES: integerFromEnv.default(15),
+    LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
+    LOG_FORMAT: z.enum(["json", "pretty"]).default("json"),
+  })
+  .superRefine((value, context) => {
+    if (value.NODE_ENV === "production" && !value.JWT_SECRET) {
+      context.addIssue({
+        code: "custom",
+        path: ["JWT_SECRET"],
+        message: "JWT_SECRET is required in production",
+      });
+    }
+    if (value.NODE_ENV === "production" && !value.DATABASE_URL) {
+      context.addIssue({
+        code: "custom",
+        path: ["DATABASE_URL"],
+        message: "DATABASE_URL is required in production",
+      });
+    }
+    if (value.STORAGE_PROVIDER === "supabase" && value.NODE_ENV === "production") {
+      if (!value.SUPABASE_URL) {
+        context.addIssue({
+          code: "custom",
+          path: ["SUPABASE_URL"],
+          message: "SUPABASE_URL is required when Supabase storage is enabled in production",
+        });
+      }
+      if (!value.SUPABASE_SERVICE_ROLE_KEY) {
+        context.addIssue({
+          code: "custom",
+          path: ["SUPABASE_SERVICE_ROLE_KEY"],
+          message:
+            "SUPABASE_SERVICE_ROLE_KEY is required when Supabase storage is enabled in production",
+        });
+      }
+    }
+  });
+
+export type ApiEnv = z.infer<typeof envSchema>;
+
+export function parseEnv(source: NodeJS.ProcessEnv): ApiEnv {
+  return envSchema.parse(source);
+}
+
+export function loadEnv(): ApiEnv {
+  loadDotEnvFile();
+  return parseEnv(process.env);
+}
+
+export function getCorsOrigin(): string {
+  return process.env.CORS_ORIGIN ?? "http://localhost:5173";
+}
