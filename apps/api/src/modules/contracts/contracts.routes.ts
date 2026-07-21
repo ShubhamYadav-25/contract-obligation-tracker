@@ -34,6 +34,16 @@ export function createContractRouter(
         );
         return;
       }
+      if (error instanceof MulterError) {
+        next(
+          new ContractIngestionError(
+            "MALFORMED_MULTIPART",
+            "Contract upload request is malformed",
+            400,
+          ),
+        );
+        return;
+      }
       next(error);
     });
   };

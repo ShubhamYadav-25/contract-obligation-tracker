@@ -80,6 +80,13 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions<T> 
     body = JSON.stringify(options.body);
   }
 
+  if (import.meta.env.VITE_DEV_USER_ID) {
+    headers.set("x-user-id", import.meta.env.VITE_DEV_USER_ID);
+  }
+  if (import.meta.env.VITE_DEV_ORGANIZATION_ID) {
+    headers.set("x-organization-id", import.meta.env.VITE_DEV_ORGANIZATION_ID);
+  }
+
   const requestInit: RequestInit = {
     method: options.method ?? "GET",
     headers,

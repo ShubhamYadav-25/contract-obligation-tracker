@@ -13,7 +13,13 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue>({ session: null });
 
 export function AuthProvider({ children }: PropsWithChildren) {
-  return <AuthContext.Provider value={{ session: null }}>{children}</AuthContext.Provider>;
+  const userId = import.meta.env.VITE_DEV_USER_ID;
+  const session =
+    typeof userId === "string" && userId.length > 0
+      ? ({ userId, role: "REVIEWER" } as const)
+      : null;
+
+  return <AuthContext.Provider value={{ session }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuthSession(): AuthContextValue {

@@ -11,7 +11,7 @@ export function createApp(): express.Express {
   const app = express();
 
   app.disable("x-powered-by");
-  app.use(cors({ origin: getCorsOrigin() }));
+  app.use(cors({ credentials: true, origin: getCorsOrigin() }));
   app.use(express.json({ limit: "1mb" }));
   app.use(requestCorrelationMiddleware);
 

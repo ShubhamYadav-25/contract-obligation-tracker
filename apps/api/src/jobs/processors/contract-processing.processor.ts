@@ -1,45 +1,34 @@
-import type { DocumentProcessingService } from "../../modules/document-processing/document-processing.service.js";
+import type { ContractProcessingOrchestrator } from "../../modules/contracts/contract-processing-orchestrator.service.js";
+import { ContractProcessingPipelineError } from "../../modules/contracts/contract-processing.errors.js";
+import { processContractJobPayloadSchema } from "../../modules/contracts/contract-processing-job.schema.js";
 import type { BackgroundJob } from "../job.types.js";
-import { PermanentJobError } from "../retry-policy.js";
-
-export interface ContractProcessingPayload {
-  readonly processingRunId: string;
-  readonly contractId: string;
-  readonly documentId: string;
-  readonly organizationId: string;
-}
-
-function parsePayload(payload: unknown): ContractProcessingPayload {
-  if (
-    typeof payload === "object" &&
-    payload !== null &&
-    "processingRunId" in payload &&
-    "contractId" in payload &&
-    "documentId" in payload &&
-    "organizationId" in payload &&
-    typeof payload.processingRunId === "string" &&
-    typeof payload.contractId === "string" &&
-    typeof payload.documentId === "string" &&
-    typeof payload.organizationId === "string"
-  ) {
-    return {
-      processingRunId: payload.processingRunId,
-      contractId: payload.contractId,
-      documentId: payload.documentId,
-      organizationId: payload.organizationId,
-    };
-  }
-
-  throw new PermanentJobError("Invalid contract processing job payload");
-}
+import { PermanentJobError, RetryableJobError } from "../retry-policy.js";
 
 export class ContractProcessingProcessor {
-  constructor(private readonly documentProcessingService?: DocumentProcessingService) {}
+  constructor(private readonly orchestrator: ContractProcessingOrchestrator) {}
 
   async process(job: BackgroundJob): Promise<void> {
-    const payload = parsePayload(job.payload);
-    void payload;
-    void this.documentProcessingService;
-    throw new Error("Contract processing workflow is not implemented yet");
+    const parsed = processContractJobPayloadSchema.safeParse(job.payload);
+    if (!parsed.success) {
+      throw new PermanentJobError("Invalid contract processing job payload");
+    }
+
+    try {
+      await this.orchestrator.processContract({
+        ...parsed.data,
+        jobId: job.id,
+        queueJobId: job.idempotencyKey,
+        attemptNumber: job.attemptCount,
+      });
+    } catch (error) {
+      if (error instanceof ContractProcessingPipelineError) {
+        if (error.retryable) {
+          throw new RetryableJobError(error.message);
+        }
+        throw new PermanentJobError(error.message);
+      }
+
+      throw error;
+    }
   }
 }

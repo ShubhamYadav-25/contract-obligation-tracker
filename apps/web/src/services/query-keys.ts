@@ -2,6 +2,7 @@ export const queryKeys = {
   contracts: {
     all: ["contracts"] as const,
     detail: (id: string) => ["contracts", id] as const,
+    processingStatus: (id: string) => ["contracts", id, "processing-status"] as const,
   },
   reviews: {
     all: ["reviews"] as const,

@@ -1,21 +1,30 @@
-type ContractProcessingStatus =
-  "UPLOADED" | "QUEUED" | "PROCESSING" | "REVIEW_REQUIRED" | "ACTIVE" | "FAILED";
+import type { ContractProcessingRunStatus } from "./contracts.types.js";
 
 const allowedContractTransitions: ReadonlyMap<
-  ContractProcessingStatus,
-  readonly ContractProcessingStatus[]
+  ContractProcessingRunStatus,
+  readonly ContractProcessingRunStatus[]
 > = new Map([
-  ["UPLOADED", ["QUEUED"]],
+  ["RECEIVED", ["STORED", "FAILED"]],
+  ["STORED", ["QUEUED", "FAILED"]],
   ["QUEUED", ["PROCESSING"]],
-  ["PROCESSING", ["REVIEW_REQUIRED", "ACTIVE", "FAILED"]],
-  ["REVIEW_REQUIRED", ["ACTIVE", "FAILED"]],
-  ["ACTIVE", []],
+  ["PROCESSING", ["QUEUED", "COMPLETED", "REVIEW_REQUIRED", "FAILED"]],
+  ["COMPLETED", []],
+  ["REVIEW_REQUIRED", []],
   ["FAILED", ["QUEUED"]],
 ]);
 
 export function canTransitionContract(
-  from: ContractProcessingStatus,
-  to: ContractProcessingStatus,
+  from: ContractProcessingRunStatus,
+  to: ContractProcessingRunStatus,
 ): boolean {
   return allowedContractTransitions.get(from)?.includes(to) ?? false;
+}
+
+export function assertContractProcessingTransition(
+  from: ContractProcessingRunStatus,
+  to: ContractProcessingRunStatus,
+): void {
+  if (!canTransitionContract(from, to)) {
+    throw new Error(`Invalid contract processing transition: ${from} -> ${to}`);
+  }
 }

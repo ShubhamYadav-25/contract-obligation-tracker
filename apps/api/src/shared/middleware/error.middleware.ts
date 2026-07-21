@@ -4,9 +4,32 @@ import { ZodError } from "zod";
 import { ApplicationError } from "../errors/application-error.js";
 import { ValidationAppError } from "../errors/validation-error.js";
 
+interface SerializedError {
+  readonly name: string;
+  readonly message: string;
+  readonly stack?: string;
+  readonly cause?: unknown;
+}
+
 function getCorrelationId(responseLocals: Record<string, unknown>): string {
   const correlationId = responseLocals["correlationId"];
   return typeof correlationId === "string" ? correlationId : "unknown";
+}
+
+function serializeError(error: unknown): SerializedError {
+  if (error instanceof Error) {
+    return {
+      name: error.name,
+      message: error.message,
+      ...(error.stack ? { stack: error.stack } : {}),
+      ...("cause" in error && error.cause ? { cause: error.cause } : {}),
+    };
+  }
+
+  return {
+    name: "UnknownError",
+    message: String(error),
+  };
 }
 
 function normalizeError(error: unknown): ApplicationError {
@@ -25,8 +48,24 @@ function normalizeError(error: unknown): ApplicationError {
   });
 }
 
-export const errorMiddleware: ErrorRequestHandler = (error, _request, response, _next) => {
+export const errorMiddleware: ErrorRequestHandler = (error, request, response, _next) => {
   const normalizedError = normalizeError(error);
+  const correlationId = getCorrelationId(response.locals);
+
+  console.error(
+    JSON.stringify({
+      level: "error",
+      message: "api_request_failed",
+      correlationId,
+      method: request.method,
+      path: request.originalUrl,
+      statusCode: normalizedError.statusCode,
+      errorCode: normalizedError.code,
+      errorMessage: normalizedError.message,
+      errorDetails: normalizedError.details,
+      originalError: serializeError(error),
+    }),
+  );
 
   response.status(normalizedError.statusCode).json({
     success: false,
@@ -34,7 +73,7 @@ export const errorMiddleware: ErrorRequestHandler = (error, _request, response, 
       code: normalizedError.code,
       message: normalizedError.message,
       details: normalizedError.details,
-      correlationId: getCorrelationId(response.locals),
+      correlationId,
     },
   });
 };

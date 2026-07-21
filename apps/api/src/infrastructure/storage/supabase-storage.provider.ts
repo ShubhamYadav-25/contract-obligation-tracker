@@ -10,7 +10,6 @@ import type {
 } from "./storage-provider.js";
 
 const allowedMimeTypes = new Set(["application/pdf"]);
-const maxUploadBytes = 25 * 1024 * 1024;
 
 export class SupabaseStorageProvider implements StorageProvider {
   private readonly client;
@@ -33,7 +32,7 @@ export class SupabaseStorageProvider implements StorageProvider {
     if (!contentType || !allowedMimeTypes.has(contentType)) {
       throw new ExternalServiceError("Unsupported upload MIME type", { mimeType: contentType });
     }
-    if (input.body.byteLength > maxUploadBytes) {
+    if (input.body.byteLength > this.config.maxUploadBytes) {
       throw new ExternalServiceError("Upload exceeds configured size limit", {
         sizeBytes: input.body.byteLength,
       });

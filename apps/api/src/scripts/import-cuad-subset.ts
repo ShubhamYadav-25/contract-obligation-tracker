@@ -15,8 +15,7 @@ interface ImportSummary {
   created: number;
   duplicatesSkipped: number;
   failed: number;
-  queued: number;
-  storedButNotQueued: number;
+  stored: number;
 }
 
 async function main(): Promise<void> {
@@ -34,8 +33,7 @@ async function main(): Promise<void> {
     created: 0,
     duplicatesSkipped: 0,
     failed: 0,
-    queued: 0,
-    storedButNotQueued: 0,
+    stored: 0,
   };
 
   logger.info("cuad_subset_import_started", {
@@ -86,10 +84,8 @@ async function main(): Promise<void> {
       } else {
         summary.created += 1;
       }
-      if (result.status === "QUEUED") {
-        summary.queued += 1;
-      } else {
-        summary.storedButNotQueued += 1;
+      if (result.status === "STORED") {
+        summary.stored += 1;
       }
     } catch (error) {
       summary.failed += 1;
@@ -106,8 +102,7 @@ async function main(): Promise<void> {
   console.log(`Created: ${summary.created}`);
   console.log(`Duplicates skipped: ${summary.duplicatesSkipped}`);
   console.log(`Failed: ${summary.failed}`);
-  console.log(`Queued: ${summary.queued}`);
-  console.log(`Stored but not queued: ${summary.storedButNotQueued}`);
+  console.log(`Stored: ${summary.stored}`);
 
   if (summary.failed > 0) {
     process.exitCode = 1;

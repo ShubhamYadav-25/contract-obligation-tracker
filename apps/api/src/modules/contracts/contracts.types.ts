@@ -1,8 +1,10 @@
 export type ContractStatus = "DRAFT";
 
 export type ContractDocumentSourceType = "USER_UPLOAD" | "CUAD_SEED";
+export type ContractDocumentUploadStatus = "PENDING_UPLOAD" | "STORED" | "UPLOAD_FAILED";
 
-export type ContractProcessingRunStatus = "RECEIVED" | "STORED" | "QUEUED" | "FAILED";
+export type ContractProcessingRunStatus =
+  "RECEIVED" | "STORED" | "QUEUED" | "PROCESSING" | "COMPLETED" | "REVIEW_REQUIRED" | "FAILED";
 
 export interface ContractRecord {
   readonly id: string;
@@ -28,6 +30,10 @@ export interface ContractDocumentRecord {
   readonly mimeType: "application/pdf";
   readonly fileSizeBytes: number;
   readonly fileHashSha256: string;
+  readonly uploadStatus: ContractDocumentUploadStatus;
+  readonly uploadErrorCode?: string;
+  readonly uploadErrorMessage?: string;
+  readonly uploadFailedAt?: Date;
   readonly sourceType: ContractDocumentSourceType;
   readonly sourceReference?: string;
   readonly uploadedBy: string;
@@ -42,9 +48,12 @@ export interface ContractProcessingRunRecord {
   readonly attemptNumber: number;
   readonly queueJobId?: string;
   readonly errorCode?: string;
+  readonly errorStage?: string;
   readonly errorMessage?: string;
+  readonly errorRetryable?: boolean;
   readonly startedAt?: Date;
   readonly completedAt?: Date;
+  readonly failedAt?: Date;
   readonly createdAt: Date;
   readonly updatedAt: Date;
 }
@@ -60,6 +69,13 @@ export interface ContractTrackingResult {
   readonly contractId: string;
   readonly documentId: string;
   readonly processingRunId: string;
-  readonly status: "QUEUED" | "STORED";
+  readonly status: "STORED";
+  readonly uploadStatus: "stored" | "duplicate";
+  readonly isDuplicate: boolean;
   readonly duplicate: boolean;
+  readonly originalFilename: string;
+  readonly mimeType: "application/pdf";
+  readonly sizeBytes: number;
+  readonly checksumSha256: string;
+  readonly createdAt: string;
 }

@@ -27,11 +27,16 @@ export class ContractController {
         }
       : undefined;
 
+    const displayName =
+      typeof request.body.title === "string"
+        ? request.body.title
+        : typeof request.body.displayName === "string"
+          ? request.body.displayName
+          : undefined;
+
     const input = {
       ...(file ? { file } : {}),
-      ...(typeof request.body.displayName === "string"
-        ? { displayName: request.body.displayName }
-        : {}),
+      ...(displayName ? { displayName } : {}),
       ...(typeof request.body.externalRef === "string"
         ? { externalRef: request.body.externalRef }
         : {}),
@@ -43,7 +48,7 @@ export class ContractController {
 
     const result = await this.createService().ingest(input);
 
-    response.status(result.duplicate ? 200 : 202).json({
+    response.status(result.isDuplicate ? 200 : 201).json({
       success: true,
       data: result,
       meta: {
@@ -94,7 +99,10 @@ export class ContractController {
         attemptNumber: processingRun.attemptNumber,
         queueJobId: processingRun.queueJobId ?? null,
         errorCode: processingRun.errorCode ?? null,
+        errorStage: processingRun.errorStage ?? null,
         errorMessage: processingRun.errorMessage ?? null,
+        errorRetryable: processingRun.errorRetryable ?? null,
+        failedAt: processingRun.failedAt?.toISOString() ?? null,
       },
       meta: {
         requestId: String(response.locals.correlationId ?? "unknown"),

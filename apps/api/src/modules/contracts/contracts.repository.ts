@@ -2,6 +2,7 @@ import type { TransactionContext } from "../../infrastructure/database/transacti
 import type {
   ContractDocumentRecord,
   ContractDocumentSourceType,
+  ContractDocumentUploadStatus,
   ContractProcessingRunRecord,
   ContractProcessingRunStatus,
   ContractRecord,
@@ -23,8 +24,20 @@ export interface ContractDocumentRepository {
     readonly organizationId: string;
     readonly fileHashSha256: string;
   }): Promise<ExistingContractDocument | null>;
-  create(
+  createPending(
     input: CreateContractDocumentInput,
+    transaction: TransactionContext,
+  ): Promise<ContractDocumentRecord>;
+  markStored(
+    input: { readonly documentId: string },
+    transaction: TransactionContext,
+  ): Promise<ContractDocumentRecord>;
+  markUploadFailed(
+    input: {
+      readonly documentId: string;
+      readonly errorCode: string;
+      readonly errorMessage: string;
+    },
     transaction: TransactionContext,
   ): Promise<ContractDocumentRecord>;
 }
@@ -42,6 +55,30 @@ export interface ContractProcessingRepository {
     readonly organizationId: string;
     readonly contractId: string;
   }): Promise<ContractProcessingRunRecord | null>;
+  findById(input: {
+    readonly organizationId: string;
+    readonly processingRunId: string;
+  }): Promise<ContractProcessingRunRecord | null>;
+  claimForProcessing(
+    input: ClaimContractProcessingRunInput,
+    transaction: TransactionContext,
+  ): Promise<ContractProcessingRunRecord | null>;
+  markCompleted(
+    input: CompleteContractProcessingRunInput,
+    transaction: TransactionContext,
+  ): Promise<ContractProcessingRunRecord>;
+  markReviewRequired(
+    input: CompleteContractProcessingRunInput,
+    transaction: TransactionContext,
+  ): Promise<ContractProcessingRunRecord>;
+  markRetryableFailure(
+    input: FailContractProcessingRunInput,
+    transaction: TransactionContext,
+  ): Promise<ContractProcessingRunRecord>;
+  markFailed(
+    input: FailContractProcessingRunInput,
+    transaction: TransactionContext,
+  ): Promise<ContractProcessingRunRecord>;
 }
 
 export interface ExistingContractDocument {
@@ -70,6 +107,7 @@ export interface CreateContractDocumentInput {
   readonly mimeType: "application/pdf";
   readonly fileSizeBytes: number;
   readonly fileHashSha256: string;
+  readonly uploadStatus: Extract<ContractDocumentUploadStatus, "PENDING_UPLOAD">;
   readonly sourceType: ContractDocumentSourceType;
   readonly sourceReference?: string;
   readonly uploadedBy: string;
@@ -81,6 +119,29 @@ export interface CreateContractProcessingRunInput {
   readonly documentId: string;
   readonly status: ContractProcessingRunStatus;
   readonly attemptNumber: number;
+}
+
+export interface ClaimContractProcessingRunInput {
+  readonly organizationId: string;
+  readonly contractId: string;
+  readonly documentId: string;
+  readonly processingRunId: string;
+  readonly queueJobId: string;
+  readonly attemptNumber: number;
+}
+
+export interface CompleteContractProcessingRunInput {
+  readonly organizationId: string;
+  readonly contractId: string;
+  readonly documentId: string;
+  readonly processingRunId: string;
+}
+
+export interface FailContractProcessingRunInput extends CompleteContractProcessingRunInput {
+  readonly errorCode: string;
+  readonly errorStage: string;
+  readonly retryable: boolean;
+  readonly message: string;
 }
 
 export interface LegacyContractRepository extends ContractRepository {

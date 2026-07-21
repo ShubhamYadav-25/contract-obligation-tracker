@@ -4,7 +4,7 @@
 
 The contract ingestion module accepts original contract PDFs, validates them,
 stores immutable originals in private object storage, records durable metadata in
-PostgreSQL, writes an audit event, and hands off identifiers for future
+PostgreSQL, writes audit events, and returns stable identifiers for future
 processing.
 
 This module does not parse PDFs, run OCR, call Gemini for extraction, generate
@@ -30,12 +30,10 @@ The service depends on:
 - `AuditRepository`
 - `StorageProvider`
 - `FileHashService`
-- `ContractProcessingQueue`
 - `TransactionManager`
 
 Supabase-specific code stays in infrastructure storage. PostgreSQL SQL stays in
-repository implementations. Queue implementation stays behind
-`ContractProcessingQueue`.
+repository implementations. Upload does not enqueue downstream processing.
 
 ## Ingestion Flow
 
@@ -46,32 +44,29 @@ sequenceDiagram
   participant Service as ContractIngestionService
   participant Storage as Supabase Storage
   participant DB as PostgreSQL
-  participant Queue as ContractProcessingQueue
 
   Client->>Route: POST /api/v1/contracts multipart/form-data
   Route->>Route: require user and organization context
-  Route->>Service: file, displayName, externalRef, actor context
+  Route->>Service: file, title/displayName, externalRef, actor context
   Service->>Service: validate PDF and calculate SHA-256
   Service->>DB: find duplicate by organization and hash
   alt Duplicate
     DB-->>Service: existing contract/document/run
     Service-->>Client: 200 duplicate tracking response
   else New document
-    Service->>Storage: upload immutable original PDF
     Service->>DB: begin transaction
     Service->>DB: insert contract
-    Service->>DB: insert contract_document
+    Service->>DB: insert contract_document PENDING_UPLOAD
+    Service->>DB: insert CONTRACT_UPLOAD_STARTED audit event
+    Service->>DB: commit
+    Service->>Storage: upload immutable original PDF
+    Service->>DB: begin transaction
+    Service->>DB: mark contract_document STORED
     Service->>DB: assign current_document_id
     Service->>DB: insert processing run with STORED
-    Service->>DB: insert audit event
+    Service->>DB: insert CONTRACT_FILE_STORED audit event
     Service->>DB: commit
-    Service->>Queue: enqueue identifiers only
-    alt Queue succeeds
-      Service->>DB: mark processing run QUEUED
-      Service-->>Client: 202 queued tracking response
-    else Queue fails
-      Service-->>Client: 202 stored tracking response
-    end
+    Service-->>Client: 201 stored tracking response
   end
 ```
 
@@ -89,14 +84,15 @@ Body: `multipart/form-data`
 Accepted fields:
 
 - `file`: required PDF
+- `title`: optional string
 - `displayName`: optional string
 - `externalRef`: optional string
 
 The endpoint does not accept parties, values, dates, renewal terms, notice
 periods, obligations, confidence scores, or extracted text.
 
-Successful queued response uses HTTP `202`. Duplicate response uses HTTP `200`.
-Queue failure after persistence returns HTTP `202` with `status: "STORED"`.
+Successful stored response uses HTTP `201`. Duplicate response uses HTTP `200`.
+Upload does not enqueue parsing, OCR, LLM extraction, or obligation creation.
 
 ## Processing Status API
 
@@ -128,6 +124,7 @@ Domain errors include:
 - `INVALID_PDF_SIGNATURE`
 - `INVALID_PDF`
 - `PASSWORD_PROTECTED_PDF`
+- `MALFORMED_MULTIPART`
 - `STORAGE_UPLOAD_FAILED`
 - `CONTRACT_PERSISTENCE_FAILED`
 
@@ -162,58 +159,36 @@ Important constraints:
 - positive file size
 - unique storage key
 - unique `(contract_id, version_number)`
-- unique `(organization_id, file_hash_sha256)`
+- unique active `(organization_id, file_hash_sha256)` for `PENDING_UPLOAD` and `STORED`
 - valid SHA-256 format
 - constrained status/source values
+- upload status lifecycle: `PENDING_UPLOAD`, `STORED`, `UPLOAD_FAILED`
 
 ## Duplicate Handling
 
 The service checks for an existing document by `(organization_id,
-file_hash_sha256)` before uploading. The database unique constraint remains the
-final authority for concurrent uploads. If PostgreSQL reports `23505`, the
-service attempts storage cleanup and returns the winning persisted document when
-available.
+file_hash_sha256)` before uploading. The database partial unique index remains
+the final authority for concurrent active uploads. If PostgreSQL reports
+`23505` during pending metadata creation, the service returns the winning
+persisted document when available and does not upload a second object.
 
 ## Failure Compensation
 
 Storage failure:
 
-- no database records are written
+- pending metadata is marked `UPLOAD_FAILED`
+- safe failure metadata and an audit event are recorded when possible
 - controlled `STORAGE_UPLOAD_FAILED` error is returned
 
 Database failure after storage succeeds:
 
 - service attempts to delete the uploaded object
 - cleanup failure is logged
+- pending metadata is marked `UPLOAD_FAILED` when possible
 - success is not returned
 
-Queue failure after database commit:
-
-- stored contract is preserved
-- processing run remains `STORED`
-- warning is logged
-- client receives accepted tracking response
-
-## Queue Handoff
-
-Queue payload contains identifiers only:
-
-```ts
-interface ProcessContractJobData {
-  processingRunId: string;
-  contractId: string;
-  documentId: string;
-  organizationId: string;
-}
-```
-
-Deterministic job ID:
-
-```text
-contract-processing:{documentId}
-```
-
-PDF buffers, extracted text, storage secrets, and signed URLs are not queued.
+No queue handoff occurs in this module. PDF buffers, extracted text, storage
+secrets, and signed URLs are not queued or persisted.
 
 ## CUAD Importer
 
@@ -244,7 +219,7 @@ The importer:
 - `CUAD_IMPORT_CONCURRENCY`
 - `INGESTION_DEFAULT_ORGANIZATION_ID`
 - `INGESTION_DEFAULT_USER_ID`
-- existing PostgreSQL, Supabase Storage, job, and logging variables
+- existing PostgreSQL, Supabase Storage, and logging variables
 
 ## Commands
 
@@ -275,8 +250,8 @@ Current tests cover:
 - path traversal rejection
 - storage failure behavior
 - database failure compensation
-- queue failure behavior
 - duplicate upload behavior
+- concurrent duplicate unique-violation resolution
 - audit event write path
 
 ## Current Limitations
@@ -284,7 +259,7 @@ Current tests cover:
 - The route uses header-based request context until the auth module is fully
   implemented.
 - Minimal PDF validation does not parse page trees.
-- The processing worker still does not parse PDFs.
+- The processing worker still does not parse PDFs and is not triggered by upload.
 - The importer is implemented, but should be run only after database migrations
   are applied.
 - Malware scanning is documented as future hardening.

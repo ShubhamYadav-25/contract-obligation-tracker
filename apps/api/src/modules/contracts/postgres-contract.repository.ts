@@ -7,16 +7,22 @@ import type {
   CreateContractDocumentInput,
   CreateContractInput,
   CreateContractProcessingRunInput,
+  ClaimContractProcessingRunInput,
+  CompleteContractProcessingRunInput,
   ExistingContractDocument,
+  FailContractProcessingRunInput,
 } from "./contracts.repository.js";
 import type {
   ContractDocumentRecord,
   ContractDocumentSourceType,
+  ContractDocumentUploadStatus,
   ContractProcessingRunRecord,
   ContractProcessingRunStatus,
   ContractRecord,
   ContractStatus,
 } from "./contracts.types.js";
+
+type PgTimestamp = Date | string;
 
 interface ContractRow {
   readonly id: string;
@@ -26,8 +32,8 @@ interface ContractRow {
   readonly external_ref: string | null;
   readonly status: ContractStatus;
   readonly current_document_id: string | null;
-  readonly created_at: Date;
-  readonly updated_at: Date;
+  readonly created_at: PgTimestamp;
+  readonly updated_at: PgTimestamp;
 }
 
 interface ContractDocumentRow {
@@ -42,10 +48,14 @@ interface ContractDocumentRow {
   readonly mime_type: "application/pdf";
   readonly file_size_bytes: number;
   readonly file_hash_sha256: string;
+  readonly upload_status: ContractDocumentUploadStatus;
+  readonly upload_error_code: string | null;
+  readonly upload_error_message: string | null;
+  readonly upload_failed_at: PgTimestamp | null;
   readonly source_type: ContractDocumentSourceType;
   readonly source_reference: string | null;
   readonly uploaded_by: string;
-  readonly uploaded_at: Date;
+  readonly uploaded_at: PgTimestamp;
 }
 
 interface ContractProcessingRunRow {
@@ -56,11 +66,22 @@ interface ContractProcessingRunRow {
   readonly attempt_number: number;
   readonly queue_job_id: string | null;
   readonly error_code: string | null;
+  readonly error_stage: string | null;
   readonly error_message: string | null;
-  readonly started_at: Date | null;
-  readonly completed_at: Date | null;
-  readonly created_at: Date;
-  readonly updated_at: Date;
+  readonly error_retryable: boolean | null;
+  readonly started_at: PgTimestamp | null;
+  readonly completed_at: PgTimestamp | null;
+  readonly failed_at: PgTimestamp | null;
+  readonly created_at: PgTimestamp;
+  readonly updated_at: PgTimestamp;
+}
+
+function toDate(value: PgTimestamp): Date {
+  return value instanceof Date ? value : new Date(value);
+}
+
+function toOptionalDate(value: PgTimestamp | null): Date | undefined {
+  return value ? toDate(value) : undefined;
 }
 
 function mapContract(row: ContractRow): ContractRecord {
@@ -72,12 +93,14 @@ function mapContract(row: ContractRow): ContractRecord {
     ...(row.external_ref ? { externalRef: row.external_ref } : {}),
     status: row.status,
     ...(row.current_document_id ? { currentDocumentId: row.current_document_id } : {}),
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    createdAt: toDate(row.created_at),
+    updatedAt: toDate(row.updated_at),
   };
 }
 
 function mapDocument(row: ContractDocumentRow): ContractDocumentRecord {
+  const uploadFailedAt = toOptionalDate(row.upload_failed_at);
+
   return {
     id: row.id,
     organizationId: row.organization_id,
@@ -90,14 +113,22 @@ function mapDocument(row: ContractDocumentRow): ContractDocumentRecord {
     mimeType: row.mime_type,
     fileSizeBytes: row.file_size_bytes,
     fileHashSha256: row.file_hash_sha256,
+    uploadStatus: row.upload_status,
+    ...(row.upload_error_code ? { uploadErrorCode: row.upload_error_code } : {}),
+    ...(row.upload_error_message ? { uploadErrorMessage: row.upload_error_message } : {}),
+    ...(uploadFailedAt ? { uploadFailedAt } : {}),
     sourceType: row.source_type,
     ...(row.source_reference ? { sourceReference: row.source_reference } : {}),
     uploadedBy: row.uploaded_by,
-    uploadedAt: row.uploaded_at,
+    uploadedAt: toDate(row.uploaded_at),
   };
 }
 
 function mapProcessingRun(row: ContractProcessingRunRow): ContractProcessingRunRecord {
+  const startedAt = toOptionalDate(row.started_at);
+  const completedAt = toOptionalDate(row.completed_at);
+  const failedAt = toOptionalDate(row.failed_at);
+
   return {
     id: row.id,
     contractId: row.contract_id,
@@ -106,11 +137,14 @@ function mapProcessingRun(row: ContractProcessingRunRow): ContractProcessingRunR
     attemptNumber: row.attempt_number,
     ...(row.queue_job_id ? { queueJobId: row.queue_job_id } : {}),
     ...(row.error_code ? { errorCode: row.error_code } : {}),
+    ...(row.error_stage ? { errorStage: row.error_stage } : {}),
     ...(row.error_message ? { errorMessage: row.error_message } : {}),
-    ...(row.started_at ? { startedAt: row.started_at } : {}),
-    ...(row.completed_at ? { completedAt: row.completed_at } : {}),
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    ...(row.error_retryable !== null ? { errorRetryable: row.error_retryable } : {}),
+    ...(startedAt ? { startedAt } : {}),
+    ...(completedAt ? { completedAt } : {}),
+    ...(failedAt ? { failedAt } : {}),
+    createdAt: toDate(row.created_at),
+    updatedAt: toDate(row.updated_at),
   };
 }
 
@@ -224,6 +258,7 @@ export class PostgresContractDocumentRepository implements ContractDocumentRepos
         ) AS run ON TRUE
         WHERE document.organization_id = $1
           AND document.file_hash_sha256 = $2
+          AND document.upload_status IN ('PENDING_UPLOAD', 'STORED')
         LIMIT 1
       `,
       [input.organizationId, input.fileHashSha256],
@@ -247,7 +282,7 @@ export class PostgresContractDocumentRepository implements ContractDocumentRepos
     };
   }
 
-  async create(
+  async createPending(
     input: CreateContractDocumentInput,
     transaction: TransactionContext,
   ): Promise<ContractDocumentRecord> {
@@ -265,11 +300,12 @@ export class PostgresContractDocumentRepository implements ContractDocumentRepos
           mime_type,
           file_size_bytes,
           file_hash_sha256,
+          upload_status,
           source_type,
           source_reference,
           uploaded_by
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
         RETURNING *
       `,
       [
@@ -284,6 +320,7 @@ export class PostgresContractDocumentRepository implements ContractDocumentRepos
         input.mimeType,
         input.fileSizeBytes,
         input.fileHashSha256,
+        input.uploadStatus,
         input.sourceType,
         input.sourceReference ?? null,
         input.uploadedBy,
@@ -293,6 +330,61 @@ export class PostgresContractDocumentRepository implements ContractDocumentRepos
     const row = result.rows[0];
     if (!row) {
       throw new Error("Contract document insert returned no row");
+    }
+    return mapDocument(row);
+  }
+
+  async markStored(
+    input: { readonly documentId: string },
+    transaction: TransactionContext,
+  ): Promise<ContractDocumentRecord> {
+    const result = await transaction.client.query<ContractDocumentRow>(
+      `
+        UPDATE contract_documents
+        SET upload_status = 'STORED',
+            upload_error_code = NULL,
+            upload_error_message = NULL,
+            upload_failed_at = NULL,
+            uploaded_at = NOW()
+        WHERE id = $1
+          AND upload_status = 'PENDING_UPLOAD'
+        RETURNING *
+      `,
+      [input.documentId],
+    );
+
+    const row = result.rows[0];
+    if (!row) {
+      throw new Error("Contract document stored update returned no row");
+    }
+    return mapDocument(row);
+  }
+
+  async markUploadFailed(
+    input: {
+      readonly documentId: string;
+      readonly errorCode: string;
+      readonly errorMessage: string;
+    },
+    transaction: TransactionContext,
+  ): Promise<ContractDocumentRecord> {
+    const result = await transaction.client.query<ContractDocumentRow>(
+      `
+        UPDATE contract_documents
+        SET upload_status = 'UPLOAD_FAILED',
+            upload_error_code = $2,
+            upload_error_message = $3,
+            upload_failed_at = NOW()
+        WHERE id = $1
+          AND upload_status = 'PENDING_UPLOAD'
+        RETURNING *
+      `,
+      [input.documentId, input.errorCode, input.errorMessage],
+    );
+
+    const row = result.rows[0];
+    if (!row) {
+      throw new Error("Contract document upload failure update returned no row");
     }
     return mapDocument(row);
   }
@@ -369,5 +461,214 @@ export class PostgresContractProcessingRepository implements ContractProcessingR
     );
 
     return result.rows[0] ? mapProcessingRun(result.rows[0]) : null;
+  }
+
+  async findById(input: {
+    readonly organizationId: string;
+    readonly processingRunId: string;
+  }): Promise<ContractProcessingRunRecord | null> {
+    const result = await this.database.query<ContractProcessingRunRow>(
+      `
+        SELECT run.*
+        FROM contract_processing_runs AS run
+        INNER JOIN contracts AS contract
+          ON contract.id = run.contract_id
+        WHERE contract.organization_id = $1
+          AND run.id = $2
+        LIMIT 1
+      `,
+      [input.organizationId, input.processingRunId],
+    );
+
+    return result.rows[0] ? mapProcessingRun(result.rows[0]) : null;
+  }
+
+  async claimForProcessing(
+    input: ClaimContractProcessingRunInput,
+    transaction: TransactionContext,
+  ): Promise<ContractProcessingRunRecord | null> {
+    const result = await transaction.client.query<ContractProcessingRunRow>(
+      `
+        UPDATE contract_processing_runs AS run
+        SET
+          status = 'PROCESSING',
+          attempt_number = $6,
+          queue_job_id = $5,
+          started_at = NOW(),
+          completed_at = NULL,
+          failed_at = NULL,
+          error_code = NULL,
+          error_stage = NULL,
+          error_message = NULL,
+          error_retryable = NULL,
+          updated_at = NOW()
+        FROM contracts AS contract
+        WHERE run.id = $1
+          AND run.contract_id = $2
+          AND run.document_id = $3
+          AND contract.id = run.contract_id
+          AND contract.organization_id = $4
+          AND (
+            run.status = 'QUEUED'
+            OR (
+              run.status = 'PROCESSING'
+              AND run.attempt_number < $6
+              AND run.queue_job_id = $5
+            )
+          )
+          AND NOT EXISTS (
+            SELECT 1
+            FROM contract_processing_runs AS newer_run
+            WHERE newer_run.contract_id = run.contract_id
+              AND newer_run.created_at > run.created_at
+          )
+        RETURNING run.*
+      `,
+      [
+        input.processingRunId,
+        input.contractId,
+        input.documentId,
+        input.organizationId,
+        input.queueJobId,
+        input.attemptNumber,
+      ],
+    );
+
+    return result.rows[0] ? mapProcessingRun(result.rows[0]) : null;
+  }
+
+  async markCompleted(
+    input: CompleteContractProcessingRunInput,
+    transaction: TransactionContext,
+  ): Promise<ContractProcessingRunRecord> {
+    return this.markTerminal("COMPLETED", input, transaction);
+  }
+
+  async markReviewRequired(
+    input: CompleteContractProcessingRunInput,
+    transaction: TransactionContext,
+  ): Promise<ContractProcessingRunRecord> {
+    return this.markTerminal("REVIEW_REQUIRED", input, transaction);
+  }
+
+  async markRetryableFailure(
+    input: FailContractProcessingRunInput,
+    transaction: TransactionContext,
+  ): Promise<ContractProcessingRunRecord> {
+    const result = await transaction.client.query<ContractProcessingRunRow>(
+      `
+        UPDATE contract_processing_runs AS run
+        SET
+          status = 'QUEUED',
+          error_code = $5,
+          error_stage = $6,
+          error_message = $7,
+          error_retryable = TRUE,
+          updated_at = NOW()
+        FROM contracts AS contract
+        WHERE run.id = $1
+          AND run.contract_id = $2
+          AND run.document_id = $3
+          AND contract.id = run.contract_id
+          AND contract.organization_id = $4
+          AND run.status = 'PROCESSING'
+        RETURNING run.*
+      `,
+      [
+        input.processingRunId,
+        input.contractId,
+        input.documentId,
+        input.organizationId,
+        input.errorCode,
+        input.errorStage,
+        input.message,
+      ],
+    );
+
+    const row = result.rows[0];
+    if (!row) {
+      throw new Error("Processing run retryable failure update returned no row");
+    }
+    return mapProcessingRun(row);
+  }
+
+  async markFailed(
+    input: FailContractProcessingRunInput,
+    transaction: TransactionContext,
+  ): Promise<ContractProcessingRunRecord> {
+    const result = await transaction.client.query<ContractProcessingRunRow>(
+      `
+        UPDATE contract_processing_runs AS run
+        SET
+          status = 'FAILED',
+          error_code = $5,
+          error_stage = $6,
+          error_message = $7,
+          error_retryable = $8,
+          failed_at = NOW(),
+          completed_at = NOW(),
+          updated_at = NOW()
+        FROM contracts AS contract
+        WHERE run.id = $1
+          AND run.contract_id = $2
+          AND run.document_id = $3
+          AND contract.id = run.contract_id
+          AND contract.organization_id = $4
+          AND run.status = 'PROCESSING'
+        RETURNING run.*
+      `,
+      [
+        input.processingRunId,
+        input.contractId,
+        input.documentId,
+        input.organizationId,
+        input.errorCode,
+        input.errorStage,
+        input.message,
+        input.retryable,
+      ],
+    );
+
+    const row = result.rows[0];
+    if (!row) {
+      throw new Error("Processing run failed update returned no row");
+    }
+    return mapProcessingRun(row);
+  }
+
+  private async markTerminal(
+    status: "COMPLETED" | "REVIEW_REQUIRED",
+    input: CompleteContractProcessingRunInput,
+    transaction: TransactionContext,
+  ): Promise<ContractProcessingRunRecord> {
+    const result = await transaction.client.query<ContractProcessingRunRow>(
+      `
+        UPDATE contract_processing_runs AS run
+        SET
+          status = $5,
+          completed_at = NOW(),
+          failed_at = NULL,
+          error_code = NULL,
+          error_stage = NULL,
+          error_message = NULL,
+          error_retryable = NULL,
+          updated_at = NOW()
+        FROM contracts AS contract
+        WHERE run.id = $1
+          AND run.contract_id = $2
+          AND run.document_id = $3
+          AND contract.id = run.contract_id
+          AND contract.organization_id = $4
+          AND run.status = 'PROCESSING'
+        RETURNING run.*
+      `,
+      [input.processingRunId, input.contractId, input.documentId, input.organizationId, status],
+    );
+
+    const row = result.rows[0];
+    if (!row) {
+      throw new Error(`Processing run ${status.toLowerCase()} update returned no row`);
+    }
+    return mapProcessingRun(row);
   }
 }

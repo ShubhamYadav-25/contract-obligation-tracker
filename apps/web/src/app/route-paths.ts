@@ -1,5 +1,7 @@
 export const routePaths = {
   home: "/",
+  login: "/login",
+  dashboard: "/dashboard",
   contracts: "/contracts",
   contractUpload: "/contracts/upload",
   contractDetail: (contractId: string) => `/contracts/${contractId}`,
