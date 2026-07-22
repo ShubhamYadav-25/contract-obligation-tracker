@@ -220,6 +220,7 @@ function createDependencies(
       };
     }),
     download: vi.fn(),
+    downloadStream: vi.fn(),
     remove: vi.fn(),
     delete: vi.fn(async () => {
       calls.storageDeletes += 1;

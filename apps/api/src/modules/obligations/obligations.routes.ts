@@ -10,7 +10,23 @@ export function createObligationRouter(): Router {
   const deps = createObligationServiceDependencies();
   const controller = new ObligationController(deps.service, deps.obligations);
 
-  router.get("/", asyncRoute((request, response) => controller.list(request, response)));
+  router.get(
+    "/",
+    requireAuthContext,
+    asyncRoute((request, response) => controller.list(request, response)),
+  );
+
+  router.get(
+    "/:obligationId",
+    requireAuthContext,
+    asyncRoute((request, response) => controller.detail(request, response)),
+  );
+
+  router.patch(
+    "/:obligationId/status",
+    requireAuthContext,
+    asyncRoute((request, response) => controller.transition(request, response)),
+  );
 
   router.post(
     "/:obligationId/transition",

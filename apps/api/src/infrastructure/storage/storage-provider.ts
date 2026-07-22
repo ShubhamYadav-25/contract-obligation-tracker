@@ -1,3 +1,5 @@
+import type { Readable } from "node:stream";
+
 export interface StoredObjectReference {
   readonly provider: string;
   readonly objectKey: string;
@@ -18,9 +20,24 @@ export interface UploadObjectInput {
   readonly contractId?: string;
 }
 
+export interface DownloadObjectStreamInput {
+  readonly objectKey: string;
+  readonly range?: string;
+}
+
+export interface DownloadObjectStreamResult {
+  readonly statusCode: 200 | 206;
+  readonly contentType?: string;
+  readonly contentLength?: number;
+  readonly contentRange?: string;
+  readonly acceptRanges?: string;
+  readonly body: Readable;
+}
+
 export interface StorageProvider {
   upload(input: UploadObjectInput): Promise<StoredObjectReference>;
   download(objectKey: string): Promise<Buffer>;
+  downloadStream(input: DownloadObjectStreamInput): Promise<DownloadObjectStreamResult>;
   remove(objectKey: string): Promise<void>;
   delete(objectKey: string): Promise<void>;
   createSignedUrl(objectKey: string, expiresInSeconds: number): Promise<string>;

@@ -1,6 +1,8 @@
 export const queryKeys = {
   contracts: {
     all: ["contracts"] as const,
+    list: (input: { readonly search?: string; readonly limit: number; readonly offset: number }) =>
+      ["contracts", "list", input] as const,
     detail: (id: string) => ["contracts", id] as const,
     processingStatus: (id: string) => ["contracts", id, "processing-status"] as const,
     textPages: (id: string) => ["contracts", id, "text-pages"] as const,
@@ -11,6 +13,13 @@ export const queryKeys = {
   },
   obligations: {
     all: ["obligations"] as const,
+    list: (input: {
+      readonly contractId?: string;
+      readonly search?: string;
+      readonly limit: number;
+      readonly offset: number;
+    }) => ["obligations", "list", input] as const,
+    byContract: (contractId: string) => ["obligations", "contract", contractId] as const,
     detail: (id: string) => ["obligations", id] as const,
   },
   kpis: {

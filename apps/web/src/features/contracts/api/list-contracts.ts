@@ -60,8 +60,27 @@ export const contractSummarySchema = z.object({
 
 const contractListSchema = z.array(contractSummarySchema);
 
-export function listContracts(signal?: AbortSignal) {
-  return apiRequest<readonly ContractSummary[]>("/api/v1/contracts", {
+export interface ListContractsInput {
+  readonly search?: string;
+  readonly limit?: number;
+  readonly offset?: number;
+}
+
+export function listContracts(input: ListContractsInput = {}, signal?: AbortSignal) {
+  const query = new URLSearchParams();
+  if (input.search?.trim()) {
+    query.set("search", input.search.trim());
+  }
+  if (input.limit !== undefined) {
+    query.set("limit", String(input.limit));
+  }
+  if (input.offset !== undefined) {
+    query.set("offset", String(input.offset));
+  }
+
+  const path = query.size > 0 ? `/api/v1/contracts?${query.toString()}` : "/api/v1/contracts";
+
+  return apiRequest<readonly ContractSummary[]>(path, {
     signal,
     responseSchema: contractListSchema,
   });

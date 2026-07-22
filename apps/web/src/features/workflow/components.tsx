@@ -131,14 +131,30 @@ export function TableHead({ columns }: { readonly columns: readonly string[] }) 
 }
 
 export function Pagination({ label }: { readonly label: string }) {
+  return <PaginationControls label={label} />;
+}
+
+export function PaginationControls({
+  label,
+  onNext,
+  onPrevious,
+  nextDisabled = true,
+  previousDisabled = true,
+}: {
+  readonly label: string;
+  readonly onNext?: () => void;
+  readonly onPrevious?: () => void;
+  readonly nextDisabled?: boolean;
+  readonly previousDisabled?: boolean;
+}) {
   return (
     <div className="mt-4 flex flex-col gap-3 text-sm text-muted sm:flex-row sm:items-center sm:justify-between">
       <p>{label}</p>
       <div className="flex items-center gap-2">
-        <Button disabled type="button" variant="secondary">
+        <Button disabled={previousDisabled} onClick={onPrevious} type="button" variant="secondary">
           Previous
         </Button>
-        <Button disabled type="button" variant="secondary">
+        <Button disabled={nextDisabled} onClick={onNext} type="button" variant="secondary">
           Next
         </Button>
       </div>
@@ -154,7 +170,15 @@ export function FilterBar({ children }: PropsWithChildren) {
   );
 }
 
-export function SearchInput({ placeholder }: { readonly placeholder: string }) {
+export function SearchInput({
+  onChange,
+  placeholder,
+  value,
+}: {
+  readonly placeholder: string;
+  readonly value?: string;
+  readonly onChange?: (value: string) => void;
+}) {
   return (
     <label className="relative min-w-0 flex-1">
       <span className="sr-only">Search</span>
@@ -163,7 +187,13 @@ export function SearchInput({ placeholder }: { readonly placeholder: string }) {
         className="absolute left-3 top-1/2 -translate-y-1/2 text-muted"
         size={16}
       />
-      <Input className="w-full pl-9" placeholder={placeholder} type="search" />
+      <Input
+        className="w-full pl-9"
+        onChange={(event) => onChange?.(event.target.value)}
+        placeholder={placeholder}
+        type="search"
+        value={value}
+      />
     </label>
   );
 }
@@ -484,8 +514,8 @@ export function PdfViewer() {
         <FileText aria-hidden className="mx-auto text-muted" size={32} />
         <h2 className="mt-3 text-base font-semibold">Source PDF unavailable</h2>
         <p className="mt-2 max-w-md text-sm text-muted">
-          The backend does not currently expose a signed document-viewing endpoint, so the UI does
-          not show a fabricated PDF preview.
+          The backend returns parsed text and source excerpts from Postgres. PDF viewing is not part
+          of this screen.
         </p>
       </div>
     </div>
@@ -498,11 +528,10 @@ export function SourceEvidencePanel({ detail }: { readonly detail?: string | und
       <h2 className="text-base font-semibold">Source Evidence</h2>
       <p className="mt-2 text-sm text-muted">
         {detail ??
-          "Review source anchors require a backend endpoint that returns page number, line range, exact excerpt, and a viewable document URL."}
+          "Source excerpts are loaded from backend text pages and obligation anchors when available."}
       </p>
       <div className="mt-4 rounded-md bg-surface p-3 text-sm text-muted">
-        Page, line range, normalized value, confidence, and review status will appear here when the
-        review/source APIs are implemented.
+        Page text, normalized excerpts, OCR method, confidence, and warnings are read from Postgres.
       </div>
     </div>
   );
@@ -544,7 +573,7 @@ export function CorrectionForm() {
           className="mt-2 w-full"
           disabled
           id="correction"
-          placeholder="Review API not implemented"
+          placeholder="Select a backend review candidate"
         />
       </label>
       <label className="block text-sm font-medium" htmlFor="review-note">
@@ -553,7 +582,7 @@ export function CorrectionForm() {
           className="mt-2 w-full"
           disabled
           id="review-note"
-          placeholder="Review API not implemented"
+          placeholder="Select a backend review candidate"
         />
       </label>
     </div>

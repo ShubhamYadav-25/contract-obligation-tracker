@@ -253,6 +253,7 @@ export class PostgresContractRepository implements ContractRepository, ContractW
 
   async listByOrganization(input: {
     readonly organizationId: string;
+    readonly search?: string;
     readonly limit: number;
     readonly offset: number;
   }): Promise<readonly ContractWorkspaceRecord[]> {
@@ -293,10 +294,17 @@ export class PostgresContractRepository implements ContractRepository, ContractW
             )
         ) AS text_stats ON TRUE
         WHERE contract.organization_id = $1
+          AND (
+            $4::text IS NULL
+            OR contract.display_name ILIKE '%' || $4 || '%'
+            OR contract.external_ref ILIKE '%' || $4 || '%'
+            OR document.original_filename ILIKE '%' || $4 || '%'
+            OR document.file_hash_sha256 ILIKE '%' || $4 || '%'
+          )
         ORDER BY contract.created_at DESC
         LIMIT $2 OFFSET $3
       `,
-      [input.organizationId, input.limit, input.offset],
+      [input.organizationId, input.limit, input.offset, input.search ?? null],
     );
 
     return result.rows.map(mapWorkspace);
@@ -797,7 +805,7 @@ export class PostgresContractProcessingRepository implements ContractProcessingR
           AND run.document_id = $3
           AND contract.id = run.contract_id
           AND contract.organization_id = $4
-          AND run.status IN ('PROCESSING', 'PARSING', 'OCR_PROCESSING')
+          AND run.status IN ('PROCESSING', 'PARSING', 'OCR_PROCESSING', 'TEXT_SEGMENTED')
         RETURNING run.*
       `,
       [
@@ -862,7 +870,7 @@ export class PostgresContractProcessingRepository implements ContractProcessingR
         UPDATE contract_processing_runs AS run
         SET
           status = 'TEXT_SEGMENTED',
-          completed_at = NOW(),
+          completed_at = NULL,
           failed_at = NULL,
           error_code = NULL,
           error_stage = NULL,
@@ -875,7 +883,7 @@ export class PostgresContractProcessingRepository implements ContractProcessingR
           AND run.document_id = $3
           AND contract.id = run.contract_id
           AND contract.organization_id = $4
-          AND run.status IN ('PROCESSING', 'PARSING', 'OCR_PROCESSING')
+          AND run.status IN ('PROCESSING', 'PARSING', 'OCR_PROCESSING', 'TEXT_SEGMENTED')
         RETURNING run.*
       `,
       [input.processingRunId, input.contractId, input.documentId, input.organizationId],
@@ -937,6 +945,7 @@ export class PostgresContractProcessingRepository implements ContractProcessingR
     input: CompleteContractProcessingRunInput,
     transaction: TransactionContext,
   ): Promise<ContractProcessingRunRecord> {
+    const allowedSourceStatuses = ["PROCESSING", "PARSING", "OCR_PROCESSING", "TEXT_SEGMENTED"];
     const result = await transaction.client.query<ContractProcessingRunRow>(
       `
         UPDATE contract_processing_runs AS run
@@ -955,10 +964,17 @@ export class PostgresContractProcessingRepository implements ContractProcessingR
           AND run.document_id = $3
           AND contract.id = run.contract_id
           AND contract.organization_id = $4
-          AND run.status = 'PROCESSING'
+          AND run.status = ANY($6::text[])
         RETURNING run.*
       `,
-      [input.processingRunId, input.contractId, input.documentId, input.organizationId, status],
+      [
+        input.processingRunId,
+        input.contractId,
+        input.documentId,
+        input.organizationId,
+        status,
+        allowedSourceStatuses,
+      ],
     );
 
     const row = result.rows[0];

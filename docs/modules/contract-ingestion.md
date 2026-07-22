@@ -7,7 +7,7 @@ stores immutable originals in private object storage, records durable metadata i
 PostgreSQL, writes audit events, and returns stable identifiers for future
 processing.
 
-This module does not parse PDFs, run OCR, call Gemini for extraction, generate
+This module does not parse PDFs, run OCR, call Groq for extraction, generate
 obligations, schedule reminders, or create frontend upload UI.
 
 ## Module Boundaries

@@ -4,6 +4,8 @@ export type ReminderStatus =
 export interface ReminderRecord {
   readonly id: string;
   readonly obligationId: string;
+  readonly contractId?: string;
+  readonly obligationTitle?: string;
   readonly scheduledFor: Date;
   readonly occurrenceKey: string;
   readonly status: ReminderStatus;

@@ -1,6 +1,9 @@
 export interface LlmStructuredRequest {
   readonly prompt: string;
   readonly responseSchemaName: string;
+  readonly model?: string;
+  readonly systemInstruction?: string;
+  readonly timeoutMilliseconds?: number;
   readonly correlationId?: string;
 }
 

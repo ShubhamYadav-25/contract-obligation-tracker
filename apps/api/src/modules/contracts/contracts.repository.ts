@@ -106,6 +106,7 @@ export interface DocumentTextPageRepository {
 export interface ContractWorkspaceRepository {
   listByOrganization(input: {
     readonly organizationId: string;
+    readonly search?: string;
     readonly limit: number;
     readonly offset: number;
   }): Promise<readonly ContractWorkspaceRecord[]>;

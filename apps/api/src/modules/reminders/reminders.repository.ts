@@ -1,5 +1,14 @@
 import type { ReminderRecord, ReminderStatus } from "./reminders.types.js";
 
+export interface ReminderReadRepository {
+  listByOrganization(input: {
+    readonly organizationId: string;
+    readonly obligationId?: string;
+    readonly limit: number;
+    readonly offset: number;
+  }): Promise<readonly ReminderRecord[]>;
+}
+
 export interface ReminderRepository {
   createScheduled(input: {
     readonly obligationId: string;

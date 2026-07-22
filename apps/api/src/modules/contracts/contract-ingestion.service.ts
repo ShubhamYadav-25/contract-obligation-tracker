@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import type { Logger } from "../../config/logger.js";
 import type { TransactionManager } from "../../infrastructure/database/transaction-manager.js";
 import type { StorageProvider } from "../../infrastructure/storage/storage-provider.js";
+import type { DownloadObjectStreamResult } from "../../infrastructure/storage/storage-provider.js";
 import type { AuditRepository } from "../audit/audit.repository.js";
 import { ContractIngestionError, isUniqueViolation } from "./contract-ingestion.errors.js";
 import {
@@ -20,7 +21,11 @@ import type {
   ExistingContractDocument,
 } from "./contracts.repository.js";
 import type { ContractProcessingQueue } from "./contract-processing.queue.js";
-import type { ContractDocumentSourceType, ContractTrackingResult } from "./contracts.types.js";
+import type {
+  ContractDocumentRecord,
+  ContractDocumentSourceType,
+  ContractTrackingResult,
+} from "./contracts.types.js";
 import { FileHashService } from "./file-hash.service.js";
 
 export interface ContractIngestionInput {
@@ -51,6 +56,11 @@ export interface ContractIngestionDependencies {
   readonly transactions: TransactionManager;
   readonly validation: ContractFileValidationConfig;
   readonly logger: Logger;
+}
+
+export interface ContractDocumentStreamResult {
+  readonly document: ContractDocumentRecord;
+  readonly stream: DownloadObjectStreamResult;
 }
 
 function duplicateResult(existing: ExistingContractDocument): ContractTrackingResult {
@@ -256,6 +266,25 @@ export class ContractIngestionService {
       throw new Error("Document text page read repository is not configured");
     }
     return this.dependencies.documentTextPages.listByContract(input);
+  }
+
+  async streamCurrentDocument(input: {
+    readonly organizationId: string;
+    readonly contractId: string;
+    readonly range?: string;
+  }): Promise<ContractDocumentStreamResult | null> {
+    const contract = await this.findContract(input);
+    if (!contract?.currentDocument || contract.currentDocument.uploadStatus !== "STORED") {
+      return null;
+    }
+
+    return {
+      document: contract.currentDocument,
+      stream: await this.dependencies.storage.downloadStream({
+        objectKey: contract.currentDocument.storageKey,
+        ...(input.range ? { range: input.range } : {}),
+      }),
+    };
   }
 
   private async queueProcessing(input: {

@@ -23,6 +23,11 @@ import type { ParsedDocumentPage } from "../../src/modules/document-processing/d
 import type { PdfPageRenderer } from "../../src/modules/document-processing/document-processing.types.js";
 import { evaluateTextQuality } from "../../src/modules/document-processing/document-quality.js";
 import { splitPageLines } from "../../src/modules/document-processing/text-normalizer.js";
+import type {
+  ExtractedObligationInput,
+  ObligationRepository,
+} from "../../src/modules/obligations/obligations.repository.js";
+import type { ObligationExtractionProvider } from "../../src/modules/extraction/obligation-extraction.provider.js";
 
 const command = {
   organizationId: "00000000-0000-4000-8000-000000000001",
@@ -71,6 +76,7 @@ function setup(input: {
   readonly tesseractText?: string;
   readonly tesseractConfidence?: number;
   readonly geminiText?: string;
+  readonly obligationExtractor?: ObligationExtractionProvider;
   readonly persistenceFails?: boolean;
   readonly renderFails?: boolean;
 }) {
@@ -119,6 +125,28 @@ function setup(input: {
       persisted = value;
     }),
   };
+  const obligations: ObligationRepository = {
+    listByOrganization: vi.fn(),
+    findById: vi.fn(),
+    findDetailByOrganizationAndId: vi.fn(),
+    updateStatus: vi.fn(),
+    upsertExtractedForContract: vi.fn(
+      async (value: {
+        readonly contractId: string;
+        readonly obligations: readonly ExtractedObligationInput[];
+      }) =>
+        value.obligations.map((obligation, index) => ({
+          id: `obligation-${index + 1}`,
+          contractId: value.contractId,
+          title: obligation.title,
+          description: obligation.description,
+          status: "UPCOMING" as const,
+          ...(obligation.dueAt ? { dueAt: obligation.dueAt } : {}),
+          sourceAnchors: [],
+          version: 0,
+        })),
+    ),
+  };
   const parser = {
     extract: vi.fn(async () => ({
       contractId: command.contractId,
@@ -160,6 +188,7 @@ function setup(input: {
   const storage: StorageProvider = {
     upload: vi.fn(),
     download: vi.fn(async () => Buffer.from("%PDF-1.4\n%%EOF")),
+    downloadStream: vi.fn(),
     remove: vi.fn(),
     delete: vi.fn(),
     createSignedUrl: vi.fn(),
@@ -176,10 +205,11 @@ function setup(input: {
     warn: vi.fn(),
     error: vi.fn(),
   };
-  const pipeline = new DocumentTextProcessingPipeline({
+  const pipelineDependencies = {
     documents,
     processingRuns,
     textPages,
+    obligations,
     audit,
     storage,
     parser,
@@ -189,10 +219,13 @@ function setup(input: {
     transactions,
     logger,
     config,
-  });
+    ...(input.obligationExtractor ? { obligationExtractor: input.obligationExtractor } : {}),
+  };
+  const pipeline = new DocumentTextProcessingPipeline(pipelineDependencies);
 
   return {
     geminiVisionOcr,
+    obligations,
     pageRenderer,
     persisted: () => persisted,
     pipeline,
@@ -205,25 +238,105 @@ describe("DocumentTextProcessingPipeline", () => {
   it("segments machine-readable PDF pages without OCR", async () => {
     const firstPage = page(
       1,
-      "Section 1. This agreement starts on July 21, 2026.\nPayment is due monthly.",
+      "Section 1. This agreement starts on July 21, 2026.\nVendor shall deliver monthly reports by 2026-08-15.",
     );
     const secondPage = page(2, "Section 2. Confidentiality obligations survive termination.");
-    const { pageRenderer, persisted, pipeline, tesseractOcr } = setup({
+    const { obligations, pageRenderer, persisted, pipeline, tesseractOcr } = setup({
       pages: [firstPage, secondPage],
     });
 
     const result = await pipeline.run(command);
 
-    expect(result.outcome).toBe("TEXT_SEGMENTED");
+    expect(result.outcome).toBe("COMPLETED");
     expect(pageRenderer.renderPage).not.toHaveBeenCalled();
     expect(tesseractOcr.extractPageText).not.toHaveBeenCalled();
     expect(persisted()?.pages).toHaveLength(2);
+    expect(obligations.upsertExtractedForContract).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contractId: command.contractId,
+        obligations: [
+          expect.objectContaining({
+            title: "Vendor shall deliver monthly reports by 2026-08-15.",
+            description: "Vendor shall deliver monthly reports by 2026-08-15.",
+            dueAt: new Date(Date.UTC(2026, 7, 15)),
+          }),
+        ],
+      }),
+      expect.anything(),
+    );
     expect(persisted()?.pages[0]?.segments[0]).toMatchObject({
       documentId: command.documentId,
       pageNumber: 1,
       lineStart: 1,
       extractionMethod: "PDF_TEXT",
     });
+  });
+
+  it("uses the configured obligation extractor and persists its result once", async () => {
+    const obligationExtractor: ObligationExtractionProvider = {
+      extract: vi.fn(async () => ({
+        extraction: {
+          obligations: [
+            {
+              text: "Vendor shall deliver monthly reports by 2026-08-15.",
+              anchor: {
+                page_number: 1,
+                line_offset: 1,
+                quoted_text: "Vendor shall deliver monthly reports by 2026-08-15.",
+                start_line: 2,
+                end_line: 2,
+                source: "groq_obligation",
+              },
+            },
+          ],
+        },
+        confidence: 0.9,
+        provider: "GROQ" as const,
+      })),
+    };
+    const firstPage = page(
+      1,
+      "Section 1. This agreement starts on July 21, 2026.\nVendor shall deliver monthly reports by 2026-08-15.",
+    );
+    const { obligations, pipeline } = setup({
+      pages: [firstPage],
+      obligationExtractor,
+    });
+
+    const result = await pipeline.run(command);
+
+    expect(result.summary?.obligationCount).toBe(1);
+    expect(obligationExtractor.extract).toHaveBeenCalledWith({
+      pages: [
+        {
+          pageNumber: 1,
+          rawText:
+            "Section 1. This agreement starts on July 21, 2026.\nVendor shall deliver monthly reports by 2026-08-15.",
+        },
+      ],
+      context: command,
+    });
+    expect(obligations.upsertExtractedForContract).toHaveBeenCalledTimes(1);
+    expect(obligations.upsertExtractedForContract).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contractId: command.contractId,
+        obligations: [
+          expect.objectContaining({
+            description: "Vendor shall deliver monthly reports by 2026-08-15.",
+            anchors: [
+              expect.objectContaining({
+                source: "groq_obligation",
+                pageNumber: 1,
+                startLine: 2,
+                endLine: 2,
+                boxes: expect.arrayContaining([expect.objectContaining({ y: expect.any(Number) })]),
+              }),
+            ],
+          }),
+        ],
+      }),
+      expect.anything(),
+    );
   });
 
   it("runs OCR only for low-quality mixed pages and falls back to Gemini when Tesseract is rejected", async () => {

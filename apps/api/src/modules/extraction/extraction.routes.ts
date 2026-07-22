@@ -20,11 +20,25 @@ export function createExtractionRouter(): Router {
   );
 
   // Review-compatible endpoints expected by the web UI
-  router.get("/reviews", requireAuthContext, asyncRoute((req, res) => controller.listAll(req, res)));
+  router.get(
+    "/reviews",
+    requireAuthContext,
+    asyncRoute((req, res) => controller.listAll(req, res)),
+  );
+  router.get(
+    "/reviews/:candidateId",
+    requireAuthContext,
+    asyncRoute((req, res) => controller.detail(req, res)),
+  );
   router.post(
     "/reviews/:candidateId/approve",
     requireAuthContext,
     asyncRoute((req, res) => controller.approveCandidate(req, res)),
+  );
+  router.post(
+    "/reviews/:candidateId/reject",
+    requireAuthContext,
+    asyncRoute((req, res) => controller.rejectCandidate(req, res)),
   );
 
   return router;

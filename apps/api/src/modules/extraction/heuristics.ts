@@ -1,6 +1,29 @@
 export type Page = { pageNumber: number; rawText: string };
 
-export type Anchor = { page_number: number; line_offset: number; quoted_text: string };
+export type Anchor = {
+  page_number: number;
+  line_offset: number;
+  quoted_text: string;
+  start_line?: number;
+  end_line?: number;
+  start_offset?: number;
+  end_offset?: number;
+  source?: string;
+  obligation_type?: string;
+  obligated_party?: string | null;
+  beneficiary_party?: string | null;
+  action?: string;
+  deliverable?: string | null;
+  timing?: Record<string, unknown>;
+  conditions?: readonly string[];
+  exceptions?: readonly string[];
+  financial_terms?: Record<string, unknown>;
+  consequence?: string | null;
+  penalty?: string | null;
+  confidence?: Record<string, unknown>;
+  warnings?: readonly string[];
+  missing_fields?: readonly string[];
+};
 
 export type FieldAnchor = { text: string; anchor: Anchor };
 
@@ -37,14 +60,20 @@ function parseDurationMonths(text: string): number | undefined {
   return n;
 }
 
-export function extractFieldsFromPages(pages: Page[]): { extraction: StructuredExtraction; confidence: number } {
+export function extractFieldsFromPages(pages: Page[]): {
+  extraction: StructuredExtraction;
+  confidence: number;
+} {
   const extraction: StructuredExtraction = {};
   let confidences: number[] = [];
 
   // Flatten lines with page & offset for easier search
   const lines: { page: number; offset: number; text: string }[] = [];
   for (const p of pages) {
-    const pageLines = p.rawText.split(/\r?\n/).map((l) => l.trim()).filter((l) => l.length > 0);
+    const pageLines = p.rawText
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0);
     for (let i = 0; i < pageLines.length; i++) {
       const pageText = pageLines[i];
       if (pageText !== undefined) {
@@ -54,19 +83,34 @@ export function extractFieldsFromPages(pages: Page[]): { extraction: StructuredE
   }
 
   // Heuristics: find parties
-  const partyLine = lines.find((l) => /\bby and between\b|\bbetween\b|\bis between\b/i.test(l.text));
+  const partyLine = lines.find((l) =>
+    /\bby and between\b|\bbetween\b|\bis between\b/i.test(l.text),
+  );
   if (partyLine) {
-    extraction.parties = { text: partyLine.text, anchor: { page_number: partyLine.page, line_offset: partyLine.offset, quoted_text: partyLine.text } };
+    extraction.parties = {
+      text: partyLine.text,
+      anchor: {
+        page_number: partyLine.page,
+        line_offset: partyLine.offset,
+        quoted_text: partyLine.text,
+      },
+    };
     confidences.push(0.9);
   }
 
   // Contract value
-  const valueLine = lines.find((l) => /\b(total contract value|contract value|tcv|total value)\b/i.test(l.text)) || lines.find((l) => /[$£€]/.test(l.text));
+  const valueLine =
+    lines.find((l) => /\b(total contract value|contract value|tcv|total value)\b/i.test(l.text)) ||
+    lines.find((l) => /[$£€]/.test(l.text));
   if (valueLine) {
     const amount = parseCurrencyAmount(valueLine.text);
     const contractValue = {
       text: valueLine.text,
-      anchor: { page_number: valueLine.page, line_offset: valueLine.offset, quoted_text: valueLine.text },
+      anchor: {
+        page_number: valueLine.page,
+        line_offset: valueLine.offset,
+        quoted_text: valueLine.text,
+      },
     } as { text: string; amount?: number; anchor: Anchor };
     if (amount !== undefined) contractValue.amount = amount;
     extraction.contractValue = contractValue;
@@ -74,12 +118,18 @@ export function extractFieldsFromPages(pages: Page[]): { extraction: StructuredE
   }
 
   // Term
-  const termLine = lines.find((l) => /\bterm\b|\bcommenc(e|ing)\b|\bend(s)?\b|\bfor a period of\b/i.test(l.text));
+  const termLine = lines.find((l) =>
+    /\bterm\b|\bcommenc(e|ing)\b|\bend(s)?\b|\bfor a period of\b/i.test(l.text),
+  );
   if (termLine) {
     const months = parseDurationMonths(termLine.text);
     const term = {
       text: termLine.text,
-      anchor: { page_number: termLine.page, line_offset: termLine.offset, quoted_text: termLine.text },
+      anchor: {
+        page_number: termLine.page,
+        line_offset: termLine.offset,
+        quoted_text: termLine.text,
+      },
     } as { text: string; durationMonths?: number; anchor: Anchor };
     if (months !== undefined) term.durationMonths = months;
     extraction.term = term;
@@ -87,20 +137,35 @@ export function extractFieldsFromPages(pages: Page[]): { extraction: StructuredE
   }
 
   // Renewal
-  const renewalLine = lines.find((l) => /\brenewal\b|\brenew(s|al)\b|\bautomatically renew\b/i.test(l.text));
+  const renewalLine = lines.find((l) =>
+    /\brenewal\b|\brenew(s|al)\b|\bautomatically renew\b/i.test(l.text),
+  );
   if (renewalLine) {
-    extraction.renewal = { text: renewalLine.text, anchor: { page_number: renewalLine.page, line_offset: renewalLine.offset, quoted_text: renewalLine.text } };
+    extraction.renewal = {
+      text: renewalLine.text,
+      anchor: {
+        page_number: renewalLine.page,
+        line_offset: renewalLine.offset,
+        quoted_text: renewalLine.text,
+      },
+    };
     confidences.push(0.85);
   }
 
   // Notice period
-  const noticeLine = lines.find((l) => /\bnotice\b/i.test(l.text) && /\d+\s*(day|days|month|months|year|years)/i.test(l.text));
+  const noticeLine = lines.find(
+    (l) => /\bnotice\b/i.test(l.text) && /\d+\s*(day|days|month|months|year|years)/i.test(l.text),
+  );
   if (noticeLine) {
     const m = noticeLine.text.match(/(\d+)\s*(day|days|month|months|year|years)/i);
     const days = m ? (m[2]?.toLowerCase().startsWith("day") ? Number(m[1]) : undefined) : undefined;
     const noticePeriod = {
       text: noticeLine.text,
-      anchor: { page_number: noticeLine.page, line_offset: noticeLine.offset, quoted_text: noticeLine.text },
+      anchor: {
+        page_number: noticeLine.page,
+        line_offset: noticeLine.offset,
+        quoted_text: noticeLine.text,
+      },
     } as { text: string; days?: number; anchor: Anchor };
     if (days !== undefined) noticePeriod.days = days;
     extraction.noticePeriod = noticePeriod;
@@ -108,14 +173,26 @@ export function extractFieldsFromPages(pages: Page[]): { extraction: StructuredE
   }
 
   // Obligations: lines with shall/must/obligat
-  extraction.obligations = lines.filter((l) => /\b(shall|must|is required to|will)\b/i.test(l.text)).slice(0, 10).map((l) => ({ text: l.text, anchor: { page_number: l.page, line_offset: l.offset, quoted_text: l.text } }));
-  if (extraction.obligations.length > 0) confidences.push(0.8 + Math.min(0.15, extraction.obligations.length * 0.01));
+  extraction.obligations = lines
+    .filter((l) => /\b(shall|must|is required to|will)\b/i.test(l.text))
+    .slice(0, 10)
+    .map((l) => ({
+      text: l.text,
+      anchor: { page_number: l.page, line_offset: l.offset, quoted_text: l.text },
+    }));
+  if (extraction.obligations.length > 0)
+    confidences.push(0.8 + Math.min(0.15, extraction.obligations.length * 0.01));
 
   // Aggregate confidence: average, but penalize missing critical fields
-  let baseConfidence = confidences.length ? confidences.reduce((a, b) => a + b, 0) / confidences.length : 0.5;
+  let baseConfidence = confidences.length
+    ? confidences.reduce((a, b) => a + b, 0) / confidences.length
+    : 0.5;
 
   // If parties and contractValue and noticePeriod present, boost
-  const critical = (extraction.parties ? 1 : 0) + (extraction.contractValue ? 1 : 0) + (extraction.noticePeriod ? 1 : 0);
+  const critical =
+    (extraction.parties ? 1 : 0) +
+    (extraction.contractValue ? 1 : 0) +
+    (extraction.noticePeriod ? 1 : 0);
   if (critical >= 2) baseConfidence = Math.max(baseConfidence, 0.85);
 
   // Cap

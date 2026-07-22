@@ -1,11 +1,13 @@
 import type { FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 
 import { routePaths } from "../../app/route-paths.js";
 import { InlineError } from "../../components/feedback/inline-error.js";
 import { ContentContainer } from "../../components/layout/content-container.js";
 import { PageHeader } from "../../components/layout/page-header.js";
+import { PdfViewerContainer } from "../../components/pdf-viewer/pdf-viewer-container.js";
+import type { PdfSourceNavigationCommand } from "../../components/pdf-viewer/pdf-source-navigation.js";
 import { Button } from "../../components/ui/button.js";
 import { Input } from "../../components/ui/input.js";
 import { useUploadContract } from "../contract-upload/hooks/use-upload-contract.js";
@@ -19,21 +21,19 @@ import type {
   DocumentTextPage,
 } from "../contracts/types/contracts.js";
 import { useObligations } from "../obligations/hooks/use-obligations.js";
+import type { ObligationSourceAnchor } from "../obligations/types/obligation.js";
 import {
   AuditTimeline,
   DataTable,
-  Drawer,
   EmptyState,
   ErrorState,
   FileDropzone,
   FilterBar,
-  FilterSelect,
   KpiCard,
   LoadingSkeleton,
   Modal,
   MutationSpinner,
-  Pagination,
-  PdfViewer,
+  PaginationControls,
   ProcessingTimeline,
   SearchInput,
   SectionCard,
@@ -41,10 +41,37 @@ import {
   StatusBadge,
   TableHead,
   TableSkeleton,
-  Toast,
   formatStatusLabel,
   statusTone,
 } from "./components.js";
+
+const listPageSize = 10;
+
+interface ContractWorkspaceLocationState {
+  readonly tab?: string;
+  readonly sourceCommand?: PdfSourceNavigationCommand;
+}
+
+function sourceCommandFromAnchor(
+  anchor: ObligationSourceAnchor | undefined,
+): PdfSourceNavigationCommand | null {
+  if (!anchor) return null;
+  return {
+    type: "PDF_NAVIGATE_TO_SOURCE",
+    payload: {
+      pageNumber: anchor.pageNumber,
+      boxes: anchor.boxes,
+    },
+  };
+}
+
+function sourceLinkState(anchor: ObligationSourceAnchor | undefined): ContractWorkspaceLocationState {
+  const sourceCommand = sourceCommandFromAnchor(anchor);
+  return {
+    tab: "Review & Evidence",
+    ...(sourceCommand ? { sourceCommand } : {}),
+  };
+}
 
 type UploadRecord = {
   readonly contractId: string;
@@ -65,30 +92,6 @@ type UploadRecord = {
   readonly textSegmentCount?: number;
   readonly ocrPageCount?: number;
 };
-
-const uploadStorageKey = "contract-obligation-tracker.uploads";
-
-function normalizeUploadRecord(record: UploadRecord): UploadRecord {
-  return {
-    ...record,
-    uploadStatus: record.uploadStatus ?? (record.duplicate ? "duplicate" : "stored"),
-    isDuplicate: record.isDuplicate ?? record.duplicate,
-    originalFilename: record.originalFilename ?? record.displayName,
-  };
-}
-
-function readUploads(): readonly UploadRecord[] {
-  try {
-    const raw = window.localStorage.getItem(uploadStorageKey);
-    return raw ? (JSON.parse(raw) as readonly UploadRecord[]).map(normalizeUploadRecord) : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeUploads(records: readonly UploadRecord[]) {
-  window.localStorage.setItem(uploadStorageKey, JSON.stringify(records.slice(0, 10)));
-}
 
 function contractToUploadRecord(contract: ContractSummary): UploadRecord {
   return {
@@ -118,30 +121,12 @@ function contractToUploadRecord(contract: ContractSummary): UploadRecord {
   };
 }
 
-function useLocalUploads() {
-  const [uploads, setUploads] = useState<readonly UploadRecord[]>(() =>
-    typeof window === "undefined" ? [] : readUploads(),
-  );
-
-  function addUpload(record: UploadRecord) {
-    setUploads((current) => {
-      const next = [record, ...current.filter((item) => item.contractId !== record.contractId)];
-      writeUploads(next);
-      return next;
-    });
-  }
-
-  return { uploads, addUpload };
-}
-
 function UploadContractDialog({
-  onUploaded,
   open,
   onClose,
 }: {
   readonly open: boolean;
   readonly onClose: () => void;
-  readonly onUploaded: (record: UploadRecord) => void;
 }) {
   const upload = useUploadContract();
   const [file, setFile] = useState<File | null>(null);
@@ -197,7 +182,6 @@ function UploadContractDialog({
             checksumSha256: result.checksumSha256,
           };
           setUploaded(record);
-          onUploaded(record);
         },
       },
     );
@@ -333,26 +317,37 @@ function RecentContractsTable({ uploads }: { readonly uploads: readonly UploadRe
           ))}
         </tbody>
       </DataTable>
-      <Pagination label={`Showing ${uploads.length} contract${uploads.length === 1 ? "" : "s"}`} />
     </>
   );
 }
 
 export function DashboardPage() {
   const [uploadOpen, setUploadOpen] = useState(false);
-  const { addUpload, uploads } = useLocalUploads();
   const contracts = useContracts();
+  const obligations = useObligations();
   const backendUploads = useMemo(
     () => (contracts.data ?? []).map(contractToUploadRecord),
     [contracts.data],
   );
-  const visibleUploads = backendUploads.length > 0 || !contracts.isError ? backendUploads : uploads;
+  const visibleUploads = backendUploads;
+  const obligationRows = obligations.data ?? [];
+  const nextDeadlines = obligationRows
+    .filter((item) => item.dueAt && item.status !== "MET")
+    .sort((left, right) => Date.parse(left.dueAt ?? "") - Date.parse(right.dueAt ?? ""))
+    .slice(0, 5);
   const storedCount = visibleUploads.filter((item) =>
-    ["STORED", "QUEUED", "PROCESSING", "PARSING", "OCR_PROCESSING", "TEXT_SEGMENTED"].includes(
-      item.status,
-    ),
+    [
+      "STORED",
+      "QUEUED",
+      "PROCESSING",
+      "PARSING",
+      "OCR_PROCESSING",
+      "TEXT_SEGMENTED",
+      "COMPLETED",
+      "REVIEW_REQUIRED",
+    ].includes(item.status),
   ).length;
-  const segmentedCount = visibleUploads.filter((item) => item.status === "TEXT_SEGMENTED").length;
+  const segmentedCount = visibleUploads.filter((item) => (item.textPageCount ?? 0) > 0).length;
 
   return (
     <ContentContainer>
@@ -367,10 +362,16 @@ export function DashboardPage() {
       />
       <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard
-          helper={contracts.isError ? "Local fallback" : "Backend list"}
+          helper="Backend list"
           label="Total Contracts"
           tone="info"
-          value={contracts.isLoading ? "Loading" : String(visibleUploads.length)}
+          value={
+            contracts.isError
+              ? "Unavailable"
+              : contracts.isLoading
+                ? "Loading"
+                : String(visibleUploads.length)
+          }
         />
         <KpiCard
           helper="Stored by backend"
@@ -384,7 +385,17 @@ export function DashboardPage() {
           tone="success"
           value={String(segmentedCount)}
         />
-        <KpiCard helper="Structured extraction not built" label="Obligations" value="Unavailable" />
+        <KpiCard
+          helper="Backend list"
+          label="Obligations"
+          value={
+            obligations.isError
+              ? "Unavailable"
+              : obligations.isLoading
+                ? "Loading"
+                : String(obligationRows.length)
+          }
+        />
       </div>
       {contracts.isError ? (
         <div className="mb-5">
@@ -426,10 +437,39 @@ export function DashboardPage() {
           )}
         </SectionCard>
         <SectionCard title="Next Deadlines">
-          <EmptyState title="No obligation deadlines available.">
-            The global obligation endpoint currently returns a backend implementation error, so no
-            deadline rows are fabricated.
-          </EmptyState>
+          {obligations.isLoading ? <LoadingSkeleton label="Loading obligation deadlines" /> : null}
+          {obligations.isError ? <InlineError error={obligations.error} /> : null}
+          {obligations.isSuccess && nextDeadlines.length === 0 ? (
+            <EmptyState title="No obligation deadlines available.">
+              Deadlines will appear when obligations with due dates are stored.
+            </EmptyState>
+          ) : null}
+          {nextDeadlines.length > 0 ? (
+            <div className="space-y-3">
+              {nextDeadlines.map((item) => (
+                <div
+                  className="flex flex-col gap-2 rounded-lg border border-border p-3 sm:flex-row sm:items-center sm:justify-between"
+                  key={item.id}
+                >
+                  <div>
+                    <h3 className="text-sm font-semibold">{item.title}</h3>
+                    <p className="mt-1 text-xs text-muted">
+                      {item.contractDisplayName ?? item.contractId}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <StatusBadge
+                      label={formatStatusLabel(item.status)}
+                      tone={statusTone(item.status)}
+                    />
+                    <span className="text-sm text-muted">
+                      {item.dueAt ? new Date(item.dueAt).toLocaleDateString() : "No due date"}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : null}
         </SectionCard>
         <SectionCard className="xl:col-span-2" title="Recent Contracts">
           {contracts.isLoading ? (
@@ -439,25 +479,29 @@ export function DashboardPage() {
           )}
         </SectionCard>
       </div>
-      <UploadContractDialog
-        onClose={() => setUploadOpen(false)}
-        onUploaded={addUpload}
-        open={uploadOpen}
-      />
+      <UploadContractDialog onClose={() => setUploadOpen(false)} open={uploadOpen} />
     </ContentContainer>
   );
 }
 
 export function ContractsPage() {
   const [uploadOpen, setUploadOpen] = useState(false);
-  const { addUpload, uploads } = useLocalUploads();
-  const contracts = useContracts();
+  const [search, setSearch] = useState("");
+  const [pageIndex, setPageIndex] = useState(0);
+  const contracts = useContracts({
+    search,
+    limit: listPageSize + 1,
+    offset: pageIndex * listPageSize,
+  });
   const backendUploads = useMemo(
     () => (contracts.data ?? []).map(contractToUploadRecord),
     [contracts.data],
   );
-  const visibleUploads = backendUploads.length > 0 || !contracts.isError ? backendUploads : uploads;
+  const visibleUploads = backendUploads.slice(0, listPageSize);
   const hasUploads = visibleUploads.length > 0;
+  const hasNextPage = backendUploads.length > listPageSize;
+  const pageStart = pageIndex * listPageSize + 1;
+  const pageEnd = pageIndex * listPageSize + visibleUploads.length;
 
   return (
     <ContentContainer>
@@ -470,22 +514,27 @@ export function ContractsPage() {
         description="Upload and monitor contracts through storage, parsing, OCR fallback, and text segmentation."
         title="Contracts"
       />
-      {hasUploads ? (
-        <FilterBar>
-          <SearchInput placeholder="Search uploaded contract names" />
-          <FilterSelect
-            label="Upload status"
-            options={["All upload statuses", "Stored", "Duplicate"]}
-          />
-          <FilterSelect
-            label="Processing status"
-            options={["All processing statuses", "Queued", "Parsing", "OCR", "Text segmented"]}
-          />
-          <Button type="button" variant="secondary">
-            Clear Filters
-          </Button>
-        </FilterBar>
-      ) : null}
+      <FilterBar>
+        <SearchInput
+          onChange={(value) => {
+            setSearch(value);
+            setPageIndex(0);
+          }}
+          placeholder="Search contract name, file name, reference, or hash"
+          value={search}
+        />
+        <Button
+          disabled={!search && pageIndex === 0}
+          onClick={() => {
+            setSearch("");
+            setPageIndex(0);
+          }}
+          type="button"
+          variant="secondary"
+        >
+          Clear
+        </Button>
+      </FilterBar>
       <SectionCard
         description="Rows are loaded from the backend contract list endpoint for the current organization."
         title="Contracts"
@@ -493,7 +542,16 @@ export function ContractsPage() {
         {contracts.isLoading ? <TableSkeleton /> : null}
         {contracts.isError ? <InlineError error={contracts.error} /> : null}
         {!contracts.isLoading && hasUploads ? (
-          <RecentContractsTable uploads={visibleUploads} />
+          <>
+            <RecentContractsTable uploads={visibleUploads} />
+            <PaginationControls
+              label={`Showing ${pageStart}-${pageEnd}`}
+              nextDisabled={!hasNextPage || contracts.isFetching}
+              onNext={() => setPageIndex((current) => current + 1)}
+              onPrevious={() => setPageIndex((current) => Math.max(current - 1, 0))}
+              previousDisabled={pageIndex === 0 || contracts.isFetching}
+            />
+          </>
         ) : null}
         {!contracts.isLoading && !hasUploads ? (
           <EmptyState
@@ -502,17 +560,15 @@ export function ContractsPage() {
                 Upload Contract
               </Button>
             }
-            title="No contracts uploaded yet."
+            title={search ? "No contracts match the current search." : "No contracts uploaded yet."}
           >
-            Upload a PDF to begin tracking obligations.
+            {search
+              ? "Change or clear the search to load other Postgres rows."
+              : "Upload a PDF to begin tracking obligations."}
           </EmptyState>
         ) : null}
       </SectionCard>
-      <UploadContractDialog
-        onClose={() => setUploadOpen(false)}
-        onUploaded={addUpload}
-        open={uploadOpen}
-      />
+      <UploadContractDialog onClose={() => setUploadOpen(false)} open={uploadOpen} />
     </ContentContainer>
   );
 }
@@ -520,7 +576,13 @@ export function ContractsPage() {
 function SummaryTab({ contractId }: { readonly contractId: string }) {
   const contract = useContract(contractId);
   const status = useProcessingStatus(contractId);
+  const obligations = useObligations(contractId);
   const detail = contract.data;
+  const obligationRows = obligations.data ?? [];
+  const unresolvedObligations = obligationRows.filter((item) => item.status !== "MET").length;
+  const nextDeadline = obligationRows
+    .filter((item) => item.dueAt && item.status !== "MET")
+    .sort((left, right) => Date.parse(left.dueAt ?? "") - Date.parse(right.dueAt ?? ""))[0];
 
   return (
     <div className="grid gap-5 xl:grid-cols-[1fr_0.9fr]">
@@ -584,19 +646,23 @@ function SummaryTab({ contractId }: { readonly contractId: string }) {
       <SectionCard className="xl:col-span-2" title="Workflow Counts">
         <div className="grid gap-4 md:grid-cols-3">
           <KpiCard
-            helper="Source API not exposed"
-            label="Unresolved Review Items"
-            value="Unavailable"
+            helper="Backend obligation API"
+            label="Open Obligations"
+            value={obligations.isSuccess ? String(unresolvedObligations) : "Unavailable"}
           />
           <KpiCard
-            helper="Obligation API not implemented"
+            helper="Backend obligation API"
             label="Total Obligations"
-            value="Unavailable"
+            value={obligations.isSuccess ? String(obligationRows.length) : "Unavailable"}
           />
           <KpiCard
-            helper="Requires obligation extraction endpoint"
+            helper="Derived from obligation due dates"
             label="Next Obligation Deadline"
-            value="Unavailable"
+            value={
+              obligations.isSuccess && nextDeadline?.dueAt
+                ? new Date(nextDeadline.dueAt).toLocaleDateString()
+                : "Unavailable"
+            }
           />
         </div>
       </SectionCard>
@@ -654,7 +720,13 @@ function TextSegmentsTable({ pages }: { readonly pages: readonly DocumentTextPag
   );
 }
 
-function ReviewEvidenceTab({ contractId }: { readonly contractId: string }) {
+function ReviewEvidenceTab({
+  contractId,
+  sourceCommand,
+}: {
+  readonly contractId: string;
+  readonly sourceCommand?: PdfSourceNavigationCommand | null;
+}) {
   const textPages = useContractTextPages(contractId, true);
 
   return (
@@ -665,7 +737,11 @@ function ReviewEvidenceTab({ contractId }: { readonly contractId: string }) {
         {textPages.isSuccess ? <TextSegmentsTable pages={textPages.data.pages} /> : null}
       </SectionCard>
       <div className="space-y-5">
-        <PdfViewer />
+        <PdfViewerContainer
+          contractId={contractId}
+          initialPage={sourceCommand?.payload.pageNumber ?? 1}
+          sourceCommand={sourceCommand}
+        />
         <SourceEvidencePanel
           detail={
             textPages.isSuccess
@@ -678,8 +754,8 @@ function ReviewEvidenceTab({ contractId }: { readonly contractId: string }) {
   );
 }
 
-function WorkspaceObligationsTab() {
-  const obligations = useObligations();
+function WorkspaceObligationsTab({ contractId }: { readonly contractId: string }) {
+  const obligations = useObligations(contractId);
 
   if (obligations.isLoading) return <TableSkeleton />;
   if (obligations.isError) {
@@ -689,7 +765,7 @@ function WorkspaceObligationsTab() {
   if (rows.length === 0) {
     return (
       <EmptyState title="No obligations found for this contract.">
-        Obligations will appear after extraction and review are implemented.
+        Obligations will appear after the worker extracts and stores them.
       </EmptyState>
     );
   }
@@ -697,33 +773,35 @@ function WorkspaceObligationsTab() {
   return (
     <DataTable>
       <TableHead
-        columns={[
-          "Obligation",
-          "Type",
-          "Due Date",
-          "Status",
-          "Reminder Status",
-          "Source",
-          "Actions",
-        ]}
+        columns={["Obligation", "Due Date", "Status", "Reminder Status", "Source", "Actions"]}
       />
       <tbody className="divide-y divide-border">
         {rows.map((item) => (
           <tr key={item.id}>
             <td className="px-4 py-3 font-medium">{item.title}</td>
-            <td className="px-4 py-3 text-muted">Unavailable</td>
             <td className="px-4 py-3">
-              {item.dueAt ? new Date(item.dueAt).toLocaleDateString() : "Unavailable"}
+              {item.dueAt ? new Date(item.dueAt).toLocaleDateString() : "Not set"}
             </td>
             <td className="px-4 py-3">
               <StatusBadge label={formatStatusLabel(item.status)} tone={statusTone(item.status)} />
             </td>
-            <td className="px-4 py-3 text-muted">Unavailable</td>
-            <td className="px-4 py-3 text-muted">Unavailable</td>
+            <td className="px-4 py-3 text-muted">{item.reminderStatus ?? "No reminder"}</td>
             <td className="px-4 py-3">
-              <Button disabled type="button" variant="secondary">
+              <Link
+                className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-white px-3 text-sm font-medium hover:bg-surface focus-visible:shadow-focus"
+                state={sourceLinkState(item.sourceAnchors?.[0])}
+                to={routePaths.contractDetail(item.contractId)}
+              >
+                View Source
+              </Link>
+            </td>
+            <td className="px-4 py-3">
+              <Link
+                className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-white px-3 text-sm font-medium hover:bg-surface focus-visible:shadow-focus"
+                to={routePaths.obligationDetail(item.id)}
+              >
                 Open
-              </Button>
+              </Link>
             </td>
           </tr>
         ))}
@@ -734,8 +812,17 @@ function WorkspaceObligationsTab() {
 
 export function ContractWorkspacePage() {
   const contractId = useParams().contractId ?? "";
-  const [tab, setTab] = useState("Summary");
+  const location = useLocation();
+  const locationState = location.state as ContractWorkspaceLocationState | null;
+  const requestedTab = locationState?.tab === "Review & Evidence" ? "Review & Evidence" : null;
+  const [tab, setTab] = useState(requestedTab ?? "Summary");
   const tabs = ["Summary", "Review & Evidence", "Obligations", "Activity"];
+
+  useEffect(() => {
+    if (requestedTab) {
+      setTab(requestedTab);
+    }
+  }, [requestedTab]);
 
   return (
     <ContentContainer>
@@ -776,8 +863,13 @@ export function ContractWorkspacePage() {
           </div>
         </div>
         {tab === "Summary" ? <SummaryTab contractId={contractId} /> : null}
-        {tab === "Review & Evidence" ? <ReviewEvidenceTab contractId={contractId} /> : null}
-        {tab === "Obligations" ? <WorkspaceObligationsTab /> : null}
+        {tab === "Review & Evidence" ? (
+          <ReviewEvidenceTab
+            contractId={contractId}
+            sourceCommand={locationState?.sourceCommand ?? null}
+          />
+        ) : null}
+        {tab === "Obligations" ? <WorkspaceObligationsTab contractId={contractId} /> : null}
         {tab === "Activity" ? <AuditTimeline /> : null}
       </div>
     </ContentContainer>
@@ -785,17 +877,24 @@ export function ContractWorkspacePage() {
 }
 
 export function ObligationsPage() {
-  const obligations = useObligations();
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [toast, setToast] = useState("");
+  const [search, setSearch] = useState("");
+  const [pageIndex, setPageIndex] = useState(0);
+  const obligations = useObligations(undefined, {
+    search,
+    limit: listPageSize + 1,
+    offset: pageIndex * listPageSize,
+  });
+  const visibleObligations = (obligations.data ?? []).slice(0, listPageSize);
+  const hasNextPage = (obligations.data ?? []).length > listPageSize;
+  const pageStart = pageIndex * listPageSize + 1;
+  const pageEnd = pageIndex * listPageSize + visibleObligations.length;
   const counts = useMemo(() => {
-    const rows = obligations.data ?? [];
     return {
-      upcoming: rows.filter((item) => item.status === "UPCOMING").length,
-      due: rows.filter((item) => item.status === "DUE").length,
-      missed: rows.filter((item) => item.status === "MISSED").length,
+      upcoming: visibleObligations.filter((item) => item.status === "UPCOMING").length,
+      due: visibleObligations.filter((item) => item.status === "DUE").length,
+      missed: visibleObligations.filter((item) => item.status === "MISSED").length,
     };
-  }, [obligations.data]);
+  }, [visibleObligations]);
 
   return (
     <ContentContainer>
@@ -805,50 +904,58 @@ export function ObligationsPage() {
       />
       <div className="mb-5 grid gap-4 sm:grid-cols-3">
         <KpiCard
-          helper="Backend count"
+          helper="Visible rows"
           label="Upcoming"
           tone="info"
           value={obligations.isSuccess ? String(counts.upcoming) : "Unavailable"}
         />
         <KpiCard
-          helper="Backend count"
+          helper="Visible rows"
           label="Due"
           tone="warning"
           value={obligations.isSuccess ? String(counts.due) : "Unavailable"}
         />
         <KpiCard
-          helper="Backend count"
+          helper="Visible rows"
           label="Missed"
           tone="danger"
           value={obligations.isSuccess ? String(counts.missed) : "Unavailable"}
         />
       </div>
       <FilterBar>
-        <SearchInput placeholder="Search obligations" />
-        <FilterSelect
-          label="Status"
-          options={["All statuses", "Upcoming", "Due", "Met", "Missed"]}
+        <SearchInput
+          onChange={(value) => {
+            setSearch(value);
+            setPageIndex(0);
+          }}
+          placeholder="Search obligation, description, or contract"
+          value={search}
         />
-        <FilterSelect
-          label="Due-date range"
-          options={["Any due date", "Next 7 days", "Next 30 days", "Next 60 days"]}
-        />
-        <FilterSelect label="Obligation type" options={["All types"]} />
+        <Button
+          disabled={!search && pageIndex === 0}
+          onClick={() => {
+            setSearch("");
+            setPageIndex(0);
+          }}
+          type="button"
+          variant="secondary"
+        >
+          Clear
+        </Button>
       </FilterBar>
       {obligations.isLoading ? <TableSkeleton /> : null}
       {obligations.isError ? (
         <ErrorState
-          detail="The backend route exists but currently returns an implementation error. No obligation or reminder rows are fabricated."
+          detail="The backend obligation route returned an error. Rows are shown only when Postgres returns them."
           title="Obligation API unavailable."
         />
       ) : null}
-      {obligations.isSuccess && obligations.data.length === 0 ? (
+      {obligations.isSuccess && visibleObligations.length === 0 ? (
         <EmptyState title="No obligations match the current filters.">
-          Obligations will appear here after extraction, review, and obligation persistence are
-          available.
+          Obligations will appear here after the worker extracts and stores them.
         </EmptyState>
       ) : null}
-      {obligations.isSuccess && obligations.data.length > 0 ? (
+      {obligations.isSuccess && visibleObligations.length > 0 ? (
         <>
           <DataTable>
             <TableHead
@@ -864,55 +971,55 @@ export function ObligationsPage() {
               ]}
             />
             <tbody className="divide-y divide-border">
-              {obligations.data.map((item) => (
+              {visibleObligations.map((item) => (
                 <tr className="hover:bg-slate-50" key={item.id}>
                   <td className="px-4 py-3 font-medium">{item.title}</td>
                   <td className="px-4 py-3">{item.contractId}</td>
                   <td className="px-4 py-3">
                     {item.dueAt ? new Date(item.dueAt).toLocaleDateString() : "Unavailable"}
                   </td>
-                  <td className="px-4 py-3 text-muted">Unavailable</td>
+                  <td className="px-4 py-3 text-muted">
+                    {item.dueAt
+                      ? Math.ceil((Date.parse(item.dueAt) - Date.now()) / (1000 * 60 * 60 * 24))
+                      : "Unavailable"}
+                  </td>
                   <td className="px-4 py-3">
                     <StatusBadge
                       label={formatStatusLabel(item.status)}
                       tone={statusTone(item.status)}
                     />
                   </td>
-                  <td className="px-4 py-3 text-muted">Unavailable</td>
-                  <td className="px-4 py-3 text-muted">Unavailable</td>
+                  <td className="px-4 py-3 text-muted">{item.reminderStatus ?? "No reminder"}</td>
                   <td className="px-4 py-3">
-                    <Button onClick={() => setDrawerOpen(true)} type="button" variant="secondary">
+                    <Link
+                      className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-white px-3 text-sm font-medium hover:bg-surface focus-visible:shadow-focus"
+                      state={sourceLinkState(item.sourceAnchors?.[0])}
+                      to={routePaths.contractDetail(item.contractId)}
+                    >
+                      View Source
+                    </Link>
+                  </td>
+                  <td className="px-4 py-3">
+                    <Link
+                      className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-white px-3 text-sm font-medium hover:bg-surface focus-visible:shadow-focus"
+                      to={routePaths.obligationDetail(item.id)}
+                    >
                       Open Details
-                    </Button>
+                    </Link>
                   </td>
                 </tr>
               ))}
             </tbody>
           </DataTable>
-          <Pagination
-            label={`Showing ${obligations.data.length} obligation${obligations.data.length === 1 ? "" : "s"}`}
+          <PaginationControls
+            label={`Showing ${pageStart}-${pageEnd}`}
+            nextDisabled={!hasNextPage || obligations.isFetching}
+            onNext={() => setPageIndex((current) => current + 1)}
+            onPrevious={() => setPageIndex((current) => Math.max(current - 1, 0))}
+            previousDisabled={pageIndex === 0 || obligations.isFetching}
           />
         </>
       ) : null}
-      <Drawer onClose={() => setDrawerOpen(false)} open={drawerOpen} title="Obligation Details">
-        <div className="space-y-5">
-          <ErrorState
-            detail="The backend list DTO does not yet include description, derivation, source anchors, reminder history, or transition history."
-            title="Details unavailable."
-          />
-          <Button
-            onClick={() => {
-              setToast("Transition rejected. Obligation transition endpoint is not implemented.");
-              window.setTimeout(() => setToast(""), 2400);
-            }}
-            type="button"
-            variant="secondary"
-          >
-            Test backend-authoritative transition handling
-          </Button>
-        </div>
-      </Drawer>
-      {toast ? <Toast message={toast} /> : null}
     </ContentContainer>
   );
 }

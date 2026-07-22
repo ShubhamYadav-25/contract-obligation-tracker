@@ -9,6 +9,8 @@ describe("environment validation", () => {
     expect(env.NODE_ENV).toBe("development");
     expect(env.API_PORT).toBe(3000);
     expect(env.DATABASE_SSL).toBe(true);
+    expect(env.GROQ_EXTRACTION_MODEL).toBe("llama-3.1-8b-instant");
+    expect(env.GROQ_EXTRACTION_MAX_ATTEMPTS).toBe(3);
   });
 
   it("requires JWT_SECRET in production", () => {

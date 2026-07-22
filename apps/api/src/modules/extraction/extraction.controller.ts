@@ -4,6 +4,54 @@ import { createDatabaseConfig } from "../../config/database.js";
 import { loadEnv } from "../../config/env.js";
 import { PgTransactionManager } from "../../infrastructure/database/transaction-manager.js";
 import { PostgresExtractionCandidateRepository } from "./postgres-extraction.repository.js";
+import type { ExtractionCandidate } from "./extraction.types.js";
+
+function toReviewCandidate(row: ExtractionCandidate) {
+  const extracted = row.extractedJson as any;
+  const anchors: any[] = [];
+
+  if (extracted && typeof extracted === "object") {
+    if (Array.isArray(extracted.obligations)) {
+      for (const obligation of extracted.obligations) {
+        if (obligation && obligation.anchor) {
+          anchors.push({
+            pageNumber: obligation.anchor.page_number,
+            startLine: obligation.anchor.line_offset,
+            endLine: obligation.anchor.line_offset,
+            quotedText: obligation.anchor.quoted_text,
+          });
+        }
+      }
+    }
+
+    for (const fieldName of ["parties", "contractValue", "term", "renewal", "noticePeriod"]) {
+      const field = extracted[fieldName];
+      if (field && field.anchor) {
+        anchors.push({
+          pageNumber: field.anchor.page_number,
+          startLine: field.anchor.line_offset,
+          endLine: field.anchor.line_offset,
+          quotedText: field.anchor.quoted_text,
+        });
+      }
+    }
+  }
+
+  const title =
+    (extracted && extracted.parties && extracted.parties.text) ||
+    (extracted && extracted.obligations && extracted.obligations[0]?.text) ||
+    "Extraction candidate";
+
+  return {
+    id: row.id,
+    contractId: row.contractId,
+    title,
+    description: JSON.stringify(extracted),
+    confidence: Math.round((Number(row.confidence) || 0) * 100),
+    reviewReasons: row.validationIssues ?? [],
+    sourceAnchors: anchors,
+  };
+}
 
 export class ExtractionController {
   private readonly database = new PgPoolClient(createDatabaseConfig(loadEnv()));
@@ -20,54 +68,28 @@ export class ExtractionController {
 
   async listAll(request: Request, response: Response): Promise<void> {
     const rows = await this.candidates.listAll();
+    response.json({ success: true, data: rows.map(toReviewCandidate) });
+  }
 
-    // Map internal extraction candidate format to frontend ReviewCandidate schema
-    const mapped = rows.map((row) => {
-      const extracted = row.extractedJson as any;
-      const anchors: any[] = [];
+  async detail(request: Request, response: Response): Promise<void> {
+    const candidateId = Array.isArray(request.params.candidateId)
+      ? request.params.candidateId[0]
+      : request.params.candidateId;
+    const candidate = await this.candidates.findPendingById(candidateId ?? "");
+    if (!candidate) {
+      response.status(404).json({
+        success: false,
+        error: {
+          code: "NOT_FOUND",
+          message: "Review candidate not found",
+          details: { candidateId },
+          correlationId: String(response.locals.correlationId ?? "unknown"),
+        },
+      });
+      return;
+    }
 
-      // collect anchors from structured extraction
-      if (extracted && typeof extracted === "object") {
-        if (Array.isArray(extracted.obligations)) {
-          for (const o of extracted.obligations) {
-            if (o && o.anchor) {
-              anchors.push({
-                pageNumber: o.anchor.page_number,
-                startLine: o.anchor.line_offset,
-                endLine: o.anchor.line_offset,
-                quotedText: o.anchor.quoted_text,
-              });
-            }
-          }
-        }
-        // other fields
-        for (const fname of ["parties", "contractValue", "term", "renewal", "noticePeriod"]) {
-          const f = extracted[fname];
-          if (f && f.anchor) {
-            anchors.push({
-              pageNumber: f.anchor.page_number,
-              startLine: f.anchor.line_offset,
-              endLine: f.anchor.line_offset,
-              quotedText: f.anchor.quoted_text,
-            });
-          }
-        }
-      }
-
-      const title = (extracted && extracted.parties && extracted.parties.text) || (extracted && extracted.obligations && extracted.obligations[0]?.text) || "Extraction candidate";
-
-      return {
-        id: row.id,
-        contractId: row.contractId,
-        title,
-        description: JSON.stringify(extracted),
-        confidence: Math.round((Number(row.confidence) || 0) * 100),
-        reviewReasons: row.validationIssues ?? [],
-        sourceAnchors: anchors,
-      };
-    });
-
-    response.json(mapped);
+    response.json({ success: true, data: toReviewCandidate(candidate) });
   }
 
   async approveCandidate(request: Request, response: Response): Promise<void> {
@@ -82,12 +104,15 @@ export class ExtractionController {
 
     // promote to obligations in a transaction: mark candidate approved and create obligation
     await this.transactions.inTransaction(async ({ client }) => {
-      await client.query(`UPDATE extraction_candidates SET status = 'APPROVED', reviewed_at = NOW() WHERE id = $1`, [candidateId]);
+      await client.query(
+        `UPDATE extraction_candidates SET status = 'APPROVED', reviewed_at = NOW() WHERE id = $1`,
+        [candidateId],
+      );
 
       const extracted = candidate.extractedJson as any;
       // build anchors array from extracted fields anchors if present
       const anchors: any[] = [];
-      if (extracted && typeof extracted === 'object') {
+      if (extracted && typeof extracted === "object") {
         for (const key of Object.keys(extracted)) {
           const value = extracted[key];
           if (value && value.anchor) {
@@ -96,7 +121,10 @@ export class ExtractionController {
         }
       }
 
-      const title = (extracted && extracted.parties && extracted.parties.text) ? extracted.parties.text : (extracted && extracted.obligation_text) || 'Extracted obligation';
+      const title =
+        extracted && extracted.parties && extracted.parties.text
+          ? extracted.parties.text
+          : (extracted && extracted.obligation_text) || "Extracted obligation";
 
       await client.query(
         `INSERT INTO obligations (contract_id, title, description, anchors) VALUES ($1, $2, $3, $4::jsonb)`,
@@ -104,6 +132,39 @@ export class ExtractionController {
       );
     });
 
-    response.status(200).json({ ok: true });
+    response.status(200).json({ success: true, data: { id: candidateId, status: "APPROVED" } });
+  }
+
+  async rejectCandidate(request: Request, response: Response): Promise<void> {
+    const candidateId = Array.isArray(request.params.candidateId)
+      ? request.params.candidateId[0]
+      : request.params.candidateId;
+    const candidate = await this.candidates.findPendingById(candidateId ?? "");
+    if (!candidate) {
+      response.status(404).json({
+        success: false,
+        error: {
+          code: "NOT_FOUND",
+          message: "Review candidate not found",
+          details: { candidateId },
+          correlationId: String(response.locals.correlationId ?? "unknown"),
+        },
+      });
+      return;
+    }
+
+    await this.candidates.markStatus(candidate.id, "REJECTED");
+
+    response.status(200).json({
+      success: true,
+      data: {
+        id: candidate.id,
+        status: "REJECTED",
+        reason:
+          typeof request.body === "object" && request.body && "reason" in request.body
+            ? String(request.body.reason)
+            : null,
+      },
+    });
   }
 }

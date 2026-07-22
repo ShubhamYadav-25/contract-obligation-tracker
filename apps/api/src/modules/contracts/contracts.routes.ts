@@ -70,6 +70,11 @@ export function createContractRouter(
     asyncRoute((request, response) => controller.textPages(request, response)),
   );
   router.get(
+    "/:contractId/document.pdf",
+    requireAuthContext,
+    asyncRoute((request, response) => controller.streamDocument(request, response)),
+  );
+  router.get(
     "/:contractId",
     requireAuthContext,
     asyncRoute((request, response) => controller.detail(request, response)),

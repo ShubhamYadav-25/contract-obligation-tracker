@@ -19,6 +19,15 @@ import {
   type TextSegmentationConfig,
 } from "../document-processing/text-segmentation.js";
 import { normalizeExtractedText, splitPageLines } from "../document-processing/text-normalizer.js";
+import { type Anchor, type FieldAnchor } from "../extraction/heuristics.js";
+import {
+  HeuristicObligationExtractionProvider,
+  type ObligationExtractionProvider,
+} from "../extraction/obligation-extraction.provider.js";
+import type {
+  ExtractedObligationInput,
+  ObligationRepository,
+} from "../obligations/obligations.repository.js";
 import type { ProcessContractJobPayload } from "./contract-processing-job.schema.js";
 import type {
   ContractProcessingPipeline,
@@ -47,12 +56,14 @@ export interface DocumentTextProcessingPipelineDependencies {
   readonly documents: ContractDocumentRepository;
   readonly processingRuns: ContractProcessingRepository;
   readonly textPages: DocumentTextPageRepository;
+  readonly obligations: ObligationRepository;
   readonly audit: AuditRepository;
   readonly storage: StorageProvider;
   readonly parser: DocumentTextExtractor;
   readonly pageRenderer: PdfPageRenderer;
   readonly tesseractOcr: OcrProvider;
   readonly geminiVisionOcr?: OcrProvider;
+  readonly obligationExtractor?: ObligationExtractionProvider;
   readonly transactions: TransactionManager;
   readonly logger: Logger;
   readonly config: DocumentTextProcessingConfig;
@@ -122,6 +133,106 @@ function toPersistencePage(page: SegmentedDocumentPage) {
     segments: page.segments.map((segment) => ({ ...segment })),
     warnings: [...page.warnings],
   };
+}
+
+function normalizeObligationText(text: string): string {
+  return text.replace(/\s+/g, " ").trim();
+}
+
+function toObligationTitle(text: string, index: number): string {
+  const normalized = normalizeObligationText(text);
+  if (!normalized) return `Extracted obligation ${index + 1}`;
+  return normalized.length > 180 ? `${normalized.slice(0, 177)}...` : normalized;
+}
+
+function toAnchorRecord(anchor: Anchor): Record<string, unknown> {
+  const lineOffset = Math.max(0, anchor.line_offset);
+  const startLineOffset = Math.max(0, (anchor.start_line ?? lineOffset + 1) - 1);
+  const endLineOffset = Math.max(startLineOffset, (anchor.end_line ?? lineOffset + 1) - 1);
+  const boxes = Array.from({ length: endLineOffset - startLineOffset + 1 }, (_, index) => {
+    const y = Math.max(0.04, Math.min(0.94, 0.075 + (startLineOffset + index) * 0.022));
+    return {
+      x: 0.08,
+      y,
+      width: 0.84,
+      height: 0.026,
+    };
+  });
+
+  return {
+    source: anchor.source ?? "heuristic_obligation",
+    pageNumber: anchor.page_number,
+    lineOffset,
+    ...(anchor.start_line ? { startLine: anchor.start_line } : {}),
+    ...(anchor.end_line ? { endLine: anchor.end_line } : {}),
+    ...(anchor.start_offset !== undefined ? { startOffset: anchor.start_offset } : {}),
+    ...(anchor.end_offset !== undefined ? { endOffset: anchor.end_offset } : {}),
+    quotedText: anchor.quoted_text,
+    ...(anchor.obligation_type ? { obligationType: anchor.obligation_type } : {}),
+    ...(anchor.obligated_party !== undefined ? { obligatedParty: anchor.obligated_party } : {}),
+    ...(anchor.beneficiary_party !== undefined ? { beneficiaryParty: anchor.beneficiary_party } : {}),
+    ...(anchor.action ? { action: anchor.action } : {}),
+    ...(anchor.deliverable !== undefined ? { deliverable: anchor.deliverable } : {}),
+    ...(anchor.timing ? { timing: anchor.timing } : {}),
+    ...(anchor.conditions ? { conditions: anchor.conditions } : {}),
+    ...(anchor.exceptions ? { exceptions: anchor.exceptions } : {}),
+    ...(anchor.financial_terms ? { financialTerms: anchor.financial_terms } : {}),
+    ...(anchor.consequence !== undefined ? { consequence: anchor.consequence } : {}),
+    ...(anchor.penalty !== undefined ? { penalty: anchor.penalty } : {}),
+    ...(anchor.confidence ? { confidence: anchor.confidence } : {}),
+    ...(anchor.warnings ? { warnings: anchor.warnings } : {}),
+    ...(anchor.missing_fields ? { missingFields: anchor.missing_fields } : {}),
+    boxes,
+  };
+}
+
+function parseExplicitDueDate(text: string): Date | undefined {
+  const isoMatch = text.match(/\b(20\d{2})[-/](0?[1-9]|1[0-2])[-/](0?[1-9]|[12]\d|3[01])\b/);
+  if (isoMatch?.[1] && isoMatch[2] && isoMatch[3]) {
+    return toValidDate(Number(isoMatch[1]), Number(isoMatch[2]), Number(isoMatch[3]));
+  }
+
+  const usMatch = text.match(/\b(0?[1-9]|1[0-2])\/(0?[1-9]|[12]\d|3[01])\/(20\d{2})\b/);
+  if (usMatch?.[1] && usMatch[2] && usMatch[3]) {
+    return toValidDate(Number(usMatch[3]), Number(usMatch[1]), Number(usMatch[2]));
+  }
+
+  return undefined;
+}
+
+function toValidDate(year: number, month: number, day: number): Date | undefined {
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    return undefined;
+  }
+  return date;
+}
+
+function parseAnchorDueDate(anchor: Anchor): Date | undefined {
+  const explicitDueDate =
+    anchor.timing && typeof anchor.timing.explicitDueDate === "string"
+      ? anchor.timing.explicitDueDate
+      : undefined;
+  return explicitDueDate ? parseExplicitDueDate(explicitDueDate) : undefined;
+}
+
+function toExtractedObligations(
+  obligations: readonly FieldAnchor[] | undefined,
+): readonly ExtractedObligationInput[] {
+  return (obligations ?? []).map((obligation, index) => {
+    const description = normalizeObligationText(obligation.text);
+    const dueAt = parseAnchorDueDate(obligation.anchor) ?? parseExplicitDueDate(description);
+    return {
+      title: toObligationTitle(description, index),
+      description,
+      ...(dueAt ? { dueAt } : {}),
+      anchors: [toAnchorRecord(obligation.anchor)],
+    };
+  });
 }
 
 export class DocumentTextProcessingPipeline implements ContractProcessingPipeline {
@@ -216,6 +327,28 @@ export class DocumentTextProcessingPipeline implements ContractProcessingPipelin
       });
     }
 
+    const extractionPages = segmentedPages.map((page) => ({
+      pageNumber: page.pageNumber,
+      rawText: page.rawText || page.normalizedText,
+    }));
+    const extractor =
+      this.dependencies.obligationExtractor ?? new HeuristicObligationExtractionProvider();
+    const {
+      extraction,
+      confidence,
+      provider: extractionProvider,
+    } = await extractor.extract({
+      pages: extractionPages,
+      context: input,
+    });
+    const extractedObligations = toExtractedObligations(extraction.obligations);
+    let obligationCount = 0;
+    const pageCount = segmentedPages.length;
+    const segmentCount = segmentedPages.reduce((count, page) => count + page.segments.length, 0);
+    const ocrPageCount = segmentedPages.filter(
+      (page) => page.extractionMethod !== "PDF_TEXT",
+    ).length;
+
     try {
       await this.dependencies.transactions.inTransaction(async (transaction) => {
         await this.dependencies.textPages.replacePages(
@@ -225,6 +358,14 @@ export class DocumentTextProcessingPipeline implements ContractProcessingPipelin
           },
           transaction,
         );
+        const persistedObligations = await this.dependencies.obligations.upsertExtractedForContract(
+          {
+            contractId: input.contractId,
+            obligations: extractedObligations,
+          },
+          transaction,
+        );
+        obligationCount = persistedObligations.length;
         await this.dependencies.processingRuns.markTextSegmented(input, transaction);
         await this.dependencies.audit.append(
           {
@@ -235,10 +376,27 @@ export class DocumentTextProcessingPipeline implements ContractProcessingPipelin
             newData: {
               documentId: input.documentId,
               processingRunId: input.processingRunId,
-              pageCount: segmentedPages.length,
-              segmentCount: segmentedPages.reduce((count, page) => count + page.segments.length, 0),
-              ocrPageCount: segmentedPages.filter((page) => page.extractionMethod !== "PDF_TEXT")
-                .length,
+              pageCount,
+              segmentCount,
+              ocrPageCount,
+            },
+            correlationId: input.processingRunId,
+            timestamp: new Date(),
+          },
+          transaction,
+        );
+        await this.dependencies.audit.append(
+          {
+            actor: { id: "contract-processing-worker", type: "SYSTEM" },
+            action: "CONTRACT_OBLIGATIONS_EXTRACTED",
+            entityType: "CONTRACT",
+            entityId: input.contractId,
+            newData: {
+              documentId: input.documentId,
+              processingRunId: input.processingRunId,
+              obligationCount,
+              extractionConfidence: confidence,
+              extractionProvider,
             },
             correlationId: input.processingRunId,
             timestamp: new Date(),
@@ -255,11 +413,13 @@ export class DocumentTextProcessingPipeline implements ContractProcessingPipelin
     }
 
     return {
-      outcome: "TEXT_SEGMENTED",
+      outcome: "COMPLETED",
       summary: {
-        pageCount: segmentedPages.length,
-        segmentCount: segmentedPages.reduce((count, page) => count + page.segments.length, 0),
-        ocrPageCount: segmentedPages.filter((page) => page.extractionMethod !== "PDF_TEXT").length,
+        pageCount,
+        segmentCount,
+        ocrPageCount,
+        obligationCount,
+        extractionConfidence: confidence,
       },
     };
   }

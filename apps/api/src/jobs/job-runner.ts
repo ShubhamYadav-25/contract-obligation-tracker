@@ -16,6 +16,7 @@ export class JobRunner {
   ) {}
 
   async runOnce(): Promise<number> {
+    await this.jobs.recoverExpiredJobs(this.clock.now());
     const claimedJobs = await this.jobs.claimJobs({
       limit: this.config.batchSize,
       workerId: this.config.workerId,

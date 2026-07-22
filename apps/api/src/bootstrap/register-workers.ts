@@ -11,15 +11,21 @@ import { NativePdfTextExtractorAdapter } from "../infrastructure/pdf/native-pdf-
 import { PdfJsPageRendererAdapter } from "../infrastructure/pdf/pdfjs-page-renderer.adapter.js";
 import { GeminiVisionOcrAdapter } from "../infrastructure/ocr/gemini-vision.adapter.js";
 import { TesseractOcrAdapter } from "../infrastructure/ocr/tesseract.adapter.js";
+import { GroqLlmAdapter } from "../infrastructure/llm/groq.adapter.js";
 import { SupabaseStorageProvider } from "../infrastructure/storage/supabase-storage.provider.js";
 import { ContractProcessingOrchestrator } from "../modules/contracts/contract-processing-orchestrator.service.js";
 import { DocumentTextProcessingPipeline } from "../modules/contracts/document-text-processing.pipeline.js";
+import {
+  GroqObligationExtractionProvider,
+  HeuristicObligationExtractionProvider,
+} from "../modules/extraction/obligation-extraction.provider.js";
 import { PostgresAuditRepository } from "../modules/audit/postgres-audit.repository.js";
 import {
   PostgresContractDocumentRepository,
   PostgresContractProcessingRepository,
   PostgresDocumentTextPageRepository,
 } from "../modules/contracts/postgres-contract.repository.js";
+import { PostgresObligationRepository } from "../modules/obligations/postgres-obligation.repository.js";
 import { JobRepository, PostgresJobRepository } from "../jobs/job.repository.js";
 import { JobRunner } from "../jobs/job-runner.js";
 import { JobPoller } from "../jobs/pollers/job-poller.js";
@@ -35,6 +41,7 @@ export interface WorkerRegistry extends CloseableResource {
 export interface WorkerRuntime extends CloseableResource {
   readonly names: readonly string[];
   start(): void;
+  runOnce(): Promise<number>;
 }
 
 export function createWorkerRuntime({ logger }: { readonly logger: Logger }): WorkerRuntime {
@@ -45,7 +52,28 @@ export function createWorkerRuntime({ logger }: { readonly logger: Logger }): Wo
   const transactions = new PgTransactionManager(database.pool);
   const audit = new PostgresAuditRepository(database);
   const processingRuns = new PostgresContractProcessingRepository(database);
+  const obligations = new PostgresObligationRepository(transactions);
   const jobs: JobRepository = new PostgresJobRepository(database, transactions);
+  const heuristicObligationExtractor = new HeuristicObligationExtractionProvider();
+  const obligationExtractor = env.GROQ_API_KEY
+    ? new GroqObligationExtractionProvider({
+        llm: new GroqLlmAdapter({
+          apiKey: env.GROQ_API_KEY,
+          defaultModel: env.GROQ_EXTRACTION_MODEL,
+          temperature: env.GROQ_EXTRACTION_TEMPERATURE,
+          maxTokens: env.GROQ_EXTRACTION_MAX_TOKENS,
+        }),
+        fallback: heuristicObligationExtractor,
+        logger,
+        config: {
+          model: env.GROQ_EXTRACTION_MODEL,
+          timeoutMilliseconds: env.GROQ_EXTRACTION_TIMEOUT_MS,
+          maxAttempts: env.GROQ_EXTRACTION_MAX_ATTEMPTS,
+          retryBaseDelayMilliseconds: env.GROQ_EXTRACTION_RETRY_BASE_DELAY_MS,
+          retryMaxDelayMilliseconds: env.GROQ_EXTRACTION_RETRY_MAX_DELAY_MS,
+        },
+      })
+    : heuristicObligationExtractor;
   const orchestrator = new ContractProcessingOrchestrator({
     processingRuns,
     audit,
@@ -54,12 +82,14 @@ export function createWorkerRuntime({ logger }: { readonly logger: Logger }): Wo
       documents: new PostgresContractDocumentRepository(database),
       processingRuns,
       textPages: new PostgresDocumentTextPageRepository(database),
+      obligations,
       audit,
       storage: new SupabaseStorageProvider(storageConfig),
       parser: new NativePdfTextExtractorAdapter(),
       pageRenderer: new PdfJsPageRendererAdapter(),
       tesseractOcr: new TesseractOcrAdapter(),
       geminiVisionOcr: new GeminiVisionOcrAdapter(),
+      obligationExtractor,
       transactions,
       logger,
       config: {
@@ -102,6 +132,9 @@ export function createWorkerRuntime({ logger }: { readonly logger: Logger }): Wo
     start() {
       pollingLoop.start();
       logger.info("workers_registered", { workers: names });
+    },
+    runOnce() {
+      return runner.runOnce();
     },
     async close() {
       pollingLoop.close();

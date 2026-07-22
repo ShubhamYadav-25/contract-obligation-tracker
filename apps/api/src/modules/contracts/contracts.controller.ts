@@ -26,10 +26,12 @@ function requireContext(request: Request) {
 function parsePagination(query: Request["query"]) {
   const rawLimit = typeof query.limit === "string" ? Number.parseInt(query.limit, 10) : 50;
   const rawOffset = typeof query.offset === "string" ? Number.parseInt(query.offset, 10) : 0;
+  const rawSearch = typeof query.search === "string" ? query.search.trim() : "";
 
   return {
     limit: Number.isFinite(rawLimit) ? Math.min(Math.max(rawLimit, 1), 100) : 50,
     offset: Number.isFinite(rawOffset) ? Math.max(rawOffset, 0) : 0,
+    ...(rawSearch ? { search: rawSearch.slice(0, 120) } : {}),
   };
 }
 
@@ -98,6 +100,10 @@ function serializeTextPage(page: DocumentTextPageRecord) {
     warnings: page.warnings,
     createdAt: page.createdAt.toISOString(),
   };
+}
+
+function inlinePdfFilename(filename: string): string {
+  return filename.replace(/["\r\n\\]/g, "_");
 }
 
 export class ContractController {
@@ -281,5 +287,54 @@ export class ContractController {
         requestId: String(response.locals.correlationId ?? "unknown"),
       },
     });
+  }
+
+  async streamDocument(request: Request, response: Response): Promise<void> {
+    const context = requireContext(request);
+    const contractId = request.params.contractId;
+    if (typeof contractId !== "string") {
+      throw new ApplicationError({
+        code: "INVALID_CONTRACT_ID",
+        message: "Contract ID is required",
+        statusCode: 400,
+      });
+    }
+
+    const range = request.header("range");
+    const result = await this.createService().streamCurrentDocument({
+      organizationId: context.organizationId,
+      contractId,
+      ...(range ? { range } : {}),
+    });
+
+    if (!result) {
+      throw new ApplicationError({
+        code: "CONTRACT_DOCUMENT_NOT_FOUND",
+        message: "Stored PDF document was not found for this contract",
+        statusCode: 404,
+      });
+    }
+
+    const { document, stream } = result;
+    response.status(stream.statusCode);
+    response.setHeader("accept-ranges", stream.acceptRanges ?? "bytes");
+    response.setHeader("content-type", "application/pdf");
+    response.setHeader(
+      "content-disposition",
+      `inline; filename="${inlinePdfFilename(document.originalFilename)}"`,
+    );
+    if (stream.contentRange) {
+      response.setHeader("content-range", stream.contentRange);
+    }
+    if (stream.contentLength !== undefined) {
+      response.setHeader("content-length", String(stream.contentLength));
+    } else if (stream.statusCode === 200) {
+      response.setHeader("content-length", String(document.fileSizeBytes));
+    }
+
+    stream.body.on("error", (error) => {
+      response.destroy(error);
+    });
+    stream.body.pipe(response);
   }
 }

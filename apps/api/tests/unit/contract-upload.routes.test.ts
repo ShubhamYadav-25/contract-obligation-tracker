@@ -1,4 +1,5 @@
 import express from "express";
+import { Readable } from "node:stream";
 import request from "supertest";
 import { describe, expect, it, vi } from "vitest";
 
@@ -252,6 +253,41 @@ describe("contract upload route", () => {
     expect(service.listDocumentTextPages).toHaveBeenCalledWith({
       organizationId,
       contractId: "00000000-0000-4000-8000-000000000003",
+    });
+  });
+
+  it("streams authenticated contract PDFs with byte-range response headers", async () => {
+    const workspace = createWorkspaceRecord();
+    const service = {
+      streamCurrentDocument: vi.fn(async () => ({
+        document: workspace.currentDocument,
+        stream: {
+          statusCode: 206,
+          contentType: "application/pdf",
+          contentLength: 4,
+          contentRange: "bytes 0-3/128",
+          acceptRanges: "bytes",
+          body: Readable.from(Buffer.from("%PDF")),
+        },
+      })),
+    };
+
+    const response = await request(createTestApp(service))
+      .get("/api/v1/contracts/00000000-0000-4000-8000-000000000003/document.pdf")
+      .set("x-user-id", userId)
+      .set("x-organization-id", organizationId)
+      .set("range", "bytes=0-3")
+      .expect(206);
+
+    expect(response.headers["accept-ranges"]).toBe("bytes");
+    expect(response.headers["content-range"]).toBe("bytes 0-3/128");
+    expect(response.headers["content-length"]).toBe("4");
+    expect(response.headers["content-type"]).toContain("application/pdf");
+    expect(Buffer.from(response.body).toString("utf8")).toBe("%PDF");
+    expect(service.streamCurrentDocument).toHaveBeenCalledWith({
+      organizationId,
+      contractId: "00000000-0000-4000-8000-000000000003",
+      range: "bytes=0-3",
     });
   });
 });

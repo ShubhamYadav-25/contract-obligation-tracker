@@ -16,6 +16,7 @@ describe("registerWorkers", () => {
     const runtime: WorkerRuntime = {
       names: ["PROCESS_CONTRACT"],
       start,
+      runOnce: vi.fn(async () => 0),
       close,
     };
 

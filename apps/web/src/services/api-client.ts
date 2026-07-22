@@ -36,6 +36,15 @@ export function getApiBaseUrl(rawValue = import.meta.env.VITE_API_BASE_URL): str
   }
 }
 
+export function getDevAuthHeaders(): Record<string, string> {
+  return {
+    ...(import.meta.env.VITE_DEV_USER_ID ? { "x-user-id": import.meta.env.VITE_DEV_USER_ID } : {}),
+    ...(import.meta.env.VITE_DEV_ORGANIZATION_ID
+      ? { "x-organization-id": import.meta.env.VITE_DEV_ORGANIZATION_ID }
+      : {}),
+  };
+}
+
 async function parseResponseBody(response: Response): Promise<unknown> {
   const text = await response.text();
   if (!text) {
@@ -80,11 +89,8 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions<T> 
     body = JSON.stringify(options.body);
   }
 
-  if (import.meta.env.VITE_DEV_USER_ID) {
-    headers.set("x-user-id", import.meta.env.VITE_DEV_USER_ID);
-  }
-  if (import.meta.env.VITE_DEV_ORGANIZATION_ID) {
-    headers.set("x-organization-id", import.meta.env.VITE_DEV_ORGANIZATION_ID);
+  for (const [key, value] of Object.entries(getDevAuthHeaders())) {
+    headers.set(key, value);
   }
 
   const requestInit: RequestInit = {

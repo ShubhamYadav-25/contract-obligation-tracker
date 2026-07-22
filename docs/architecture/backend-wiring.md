@@ -17,7 +17,7 @@ The backend is intentionally a modular monolith. HTTP, workers, schedulers, pers
 | Jobs                 | PostgreSQL-backed `background_jobs` table    | Durable job enqueue, claim, retry, recovery                           |
 | Tests                | Vitest, Supertest                            | Unit, integration, API route tests                                    |
 | Frontend integration | CORS, JSON REST                              | React/Vite web app calls API routes                                   |
-| LLM boundary         | Gemini 2.5 Flash target                      | Adapter exists, not wired to provider yet                             |
+| LLM boundary         | Groq OpenAI-compatible chat completions      | Adapter wired for obligation extraction when `GROQ_API_KEY` is set    |
 | OCR boundary         | Tesseract.js or Gemini Vision target         | Adapters exist, not wired to provider yet                             |
 | Email boundary       | Console, Mailtrap, Resend target             | Console provider works; Mailtrap/Resend adapters are placeholders     |
 
@@ -156,7 +156,7 @@ JobRunner
 
 | Component          | File                  | Responsibility                                                                                               |
 | ------------------ | --------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Environment schema | `config/env.ts`       | Zod parsing for app, API, database, storage, Gemini, OCR, email, JWT, jobs, scheduler, and logging variables |
+| Environment schema | `config/env.ts`       | Zod parsing for app, API, database, storage, Groq, OCR, email, JWT, jobs, scheduler, and logging variables |
 | Database config    | `config/database.ts`  | Maps env to PostgreSQL pool config                                                                           |
 | Job config         | `config/jobs.ts`      | Poll interval, batch size, lock duration, retry limits, worker ID                                            |
 | Scheduler config   | `config/scheduler.ts` | Cron expression, timezone, reminder lookahead                                                                |
@@ -269,10 +269,10 @@ Current status: interfaces and adapter boundaries exist; OCR providers are not f
 | Prompt builder                  | `modules/extraction/prompt-builder.ts`             | Prompt construction boundary                 |
 | Confidence evaluator            | `modules/extraction/confidence-evaluator.ts`       | Confidence scoring boundary                  |
 | LLM provider interface          | `infrastructure/llm/llm-provider.ts`               | Structured generation contract               |
-| Gemini adapter                  | `infrastructure/llm/gemini.adapter.ts`             | Placeholder for Gemini structured extraction |
+| Groq adapter                    | `infrastructure/llm/groq.adapter.ts`               | OpenAI-compatible chat completions adapter for structured extraction |
 | Structured parser               | `infrastructure/llm/structured-response-parser.ts` | Structured response parsing boundary         |
 
-Current status: validation and boundaries exist; Gemini API calls are not wired yet.
+Current status: validation and boundaries exist; Groq obligation extraction is wired into the contract-processing worker when `GROQ_API_KEY` is configured.
 
 ### Source Anchoring Services
 
@@ -385,7 +385,7 @@ Reminder enqueueing also uses a short transaction. The scheduler claims due remi
 | API              | `API_HOST`, `API_PORT`, `CORS_ORIGIN`                                                                                                                  |
 | PostgreSQL       | `DATABASE_URL`, `DATABASE_SSL`, `DATABASE_POOL_MAX`, `DATABASE_CONNECTION_TIMEOUT_MS`, `DATABASE_IDLE_TIMEOUT_MS`                                      |
 | Supabase Storage | `STORAGE_PROVIDER`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_BUCKET`                                                             |
-| Gemini           | `GEMINI_API_KEY`, `GEMINI_MODEL`                                                                                                                       |
+| Groq             | `GROQ_API_KEY`, `GROQ_EXTRACTION_MODEL`, `GROQ_EXTRACTION_TEMPERATURE`, `GROQ_EXTRACTION_MAX_TOKENS`                                                    |
 | OCR              | `OCR_PROVIDER`, `TESSERACT_WORKER_COUNT`                                                                                                               |
 | Email            | `EMAIL_PROVIDER`, `EMAIL_FROM`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`                                                                 |
 | JWT              | `JWT_SECRET`, `JWT_ISSUER`, `JWT_AUDIENCE`, `JWT_ACCESS_TOKEN_TTL_SECONDS`                                                                             |
@@ -415,7 +415,7 @@ Prepared but not fully functional:
 - Contract PostgreSQL repository implementation.
 - Native PDF extraction.
 - OCR extraction.
-- Gemini structured extraction.
+- Groq structured extraction.
 - Source anchoring integration into extraction workflow.
 - Review HTTP routes and persistence implementation.
 - Obligation HTTP persistence implementation.
