@@ -41,6 +41,7 @@ describeWithDatabase("PostgresContractProcessingRepository integration", () => {
     await applyMigration(pool, "202607210001_contract_ingestion.up.sql");
     await applyMigration(pool, "202607210002_contract_processing_lifecycle.up.sql");
     await applyMigration(pool, "202607210003_contract_document_upload_lifecycle.up.sql");
+    await applyMigration(pool, "202607210004_document_text_segmentation.up.sql");
 
     database = new PgPoolClient({
       connectionString: testDatabaseUrl,

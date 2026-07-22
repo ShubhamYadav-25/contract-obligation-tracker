@@ -1,10 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { Logger } from "../../src/config/logger.js";
-import type { TransactionContext, TransactionManager } from "../../src/infrastructure/database/transaction-manager.js";
+import type {
+  TransactionContext,
+  TransactionManager,
+} from "../../src/infrastructure/database/transaction-manager.js";
 import type { AuditRepository } from "../../src/modules/audit/audit.repository.js";
 import type { AuditRecordInput } from "../../src/modules/audit/audit.types.js";
-import { PermanentContractProcessingError, RetryableContractProcessingError } from "../../src/modules/contracts/contract-processing.errors.js";
+import {
+  PermanentContractProcessingError,
+  RetryableContractProcessingError,
+} from "../../src/modules/contracts/contract-processing.errors.js";
 import { ContractProcessingOrchestrator } from "../../src/modules/contracts/contract-processing-orchestrator.service.js";
 import type { ContractProcessingPipeline } from "../../src/modules/contracts/contract-processing.pipeline.js";
 import type {
@@ -13,7 +19,10 @@ import type {
   ContractProcessingRepository,
   FailContractProcessingRunInput,
 } from "../../src/modules/contracts/contracts.repository.js";
-import type { ContractProcessingRunRecord, ContractProcessingRunStatus } from "../../src/modules/contracts/contracts.types.js";
+import type {
+  ContractProcessingRunRecord,
+  ContractProcessingRunStatus,
+} from "../../src/modules/contracts/contracts.types.js";
 
 const command = {
   organizationId: "00000000-0000-4000-8000-000000000001",
@@ -41,6 +50,7 @@ class FakeProcessingRepository implements ContractProcessingRepository {
     reviewRequired: 0,
     retryableFailure: 0,
     failed: 0,
+    textSegmented: 0,
   };
 
   constructor(status: ContractProcessingRunStatus = "QUEUED") {
@@ -73,11 +83,14 @@ class FakeProcessingRepository implements ContractProcessingRepository {
     return this.run;
   }
 
-  async claimForProcessing(input: ClaimContractProcessingRunInput): Promise<ContractProcessingRunRecord | null> {
+  async claimForProcessing(
+    input: ClaimContractProcessingRunInput,
+  ): Promise<ContractProcessingRunRecord | null> {
     this.calls.claim += 1;
     if (
       this.run.status === "QUEUED" ||
-      (this.run.status === "PROCESSING" && this.run.attemptNumber < input.attemptNumber)
+      (["PROCESSING", "PARSING", "OCR_PROCESSING"].includes(this.run.status) &&
+        this.run.attemptNumber < input.attemptNumber)
     ) {
       this.run = {
         ...this.run,
@@ -90,20 +103,29 @@ class FakeProcessingRepository implements ContractProcessingRepository {
     return null;
   }
 
-  async markCompleted(_input: CompleteContractProcessingRunInput): Promise<ContractProcessingRunRecord> {
+  async markCompleted(
+    _input: CompleteContractProcessingRunInput,
+  ): Promise<ContractProcessingRunRecord> {
     this.calls.completed += 1;
     this.run = { ...this.run, status: "COMPLETED", completedAt: new Date() };
     return this.run;
   }
 
-  async markReviewRequired(_input: CompleteContractProcessingRunInput): Promise<ContractProcessingRunRecord> {
+  async markReviewRequired(
+    _input: CompleteContractProcessingRunInput,
+  ): Promise<ContractProcessingRunRecord> {
     this.calls.reviewRequired += 1;
     this.run = { ...this.run, status: "REVIEW_REQUIRED", completedAt: new Date() };
     return this.run;
   }
 
-  async markRetryableFailure(input: FailContractProcessingRunInput): Promise<ContractProcessingRunRecord> {
+  async markRetryableFailure(
+    input: FailContractProcessingRunInput,
+  ): Promise<ContractProcessingRunRecord> {
     this.calls.retryableFailure += 1;
+    if (!["PROCESSING", "PARSING", "OCR_PROCESSING"].includes(this.run.status)) {
+      throw new Error("Processing run retryable failure update returned no row");
+    }
     this.run = {
       ...this.run,
       status: "QUEUED",
@@ -117,6 +139,9 @@ class FakeProcessingRepository implements ContractProcessingRepository {
 
   async markFailed(input: FailContractProcessingRunInput): Promise<ContractProcessingRunRecord> {
     this.calls.failed += 1;
+    if (!["PROCESSING", "PARSING", "OCR_PROCESSING"].includes(this.run.status)) {
+      throw new Error("Processing run failed update returned no row");
+    }
     this.run = {
       ...this.run,
       status: "FAILED",
@@ -127,6 +152,18 @@ class FakeProcessingRepository implements ContractProcessingRepository {
       failedAt: new Date(),
       completedAt: new Date(),
     };
+    return this.run;
+  }
+
+  async markStage(): Promise<ContractProcessingRunRecord> {
+    return this.run;
+  }
+
+  async markTextSegmented(
+    _input: CompleteContractProcessingRunInput,
+  ): Promise<ContractProcessingRunRecord> {
+    this.calls.textSegmented += 1;
+    this.run = { ...this.run, status: "TEXT_SEGMENTED", completedAt: new Date() };
     return this.run;
   }
 }
@@ -191,6 +228,19 @@ describe("ContractProcessingOrchestrator", () => {
     expect(auditEvents.at(-1)?.action).toBe("CONTRACT_PROCESSING_REVIEW_REQUIRED");
   });
 
+  it("treats text-segmented pipeline results as terminal without running extraction", async () => {
+    const { auditEvents, orchestrator, processingRuns } = setup({
+      pipeline: { run: vi.fn(async () => ({ outcome: "TEXT_SEGMENTED" as const })) },
+    });
+
+    const result = await orchestrator.processContract(command);
+
+    expect(result).toEqual({ outcome: "CLAIMED_AND_COMPLETED", status: "TEXT_SEGMENTED" });
+    expect(processingRuns.run.status).toBe("PROCESSING");
+    expect(processingRuns.calls.completed).toBe(0);
+    expect(auditEvents.map((event) => event.action)).toEqual(["CONTRACT_PROCESSING_STARTED"]);
+  });
+
   it("does not reprocess terminal completed runs on duplicate delivery", async () => {
     const pipeline = { run: vi.fn(async () => ({ outcome: "COMPLETED" as const })) };
     const { orchestrator, processingRuns } = setup({ status: "COMPLETED", pipeline });
@@ -225,6 +275,38 @@ describe("ContractProcessingOrchestrator", () => {
     expect(processingRuns.run.status).toBe("QUEUED");
     expect(processingRuns.run.errorRetryable).toBe(true);
     expect(processingRuns.calls.retryableFailure).toBe(1);
+  });
+
+  it("records retryable failures after the pipeline has advanced to parsing", async () => {
+    const { orchestrator, processingRuns } = setup({
+      pipeline: {
+        run: vi.fn(async () => {
+          processingRuns.run = { ...processingRuns.run, status: "PARSING" };
+          throw new RetryableContractProcessingError({
+            code: "TEXT_PERSISTENCE_FAILED",
+            stage: "PERSISTENCE",
+            message: "Database write failed",
+          });
+        }),
+      },
+    });
+
+    await expect(orchestrator.processContract(command)).rejects.toBeInstanceOf(
+      RetryableContractProcessingError,
+    );
+    expect(processingRuns.run.status).toBe("QUEUED");
+    expect(processingRuns.calls.retryableFailure).toBe(1);
+  });
+
+  it("reclaims interrupted OCR processing attempts on a later job attempt", async () => {
+    const pipeline = { run: vi.fn(async () => ({ outcome: "TEXT_SEGMENTED" as const })) };
+    const { orchestrator, processingRuns } = setup({ status: "OCR_PROCESSING", pipeline });
+    processingRuns.run = { ...processingRuns.run, attemptNumber: 1 };
+
+    const result = await orchestrator.processContract({ ...command, attemptNumber: 2 });
+
+    expect(result).toEqual({ outcome: "CLAIMED_AND_COMPLETED", status: "TEXT_SEGMENTED" });
+    expect(pipeline.run).toHaveBeenCalledTimes(1);
   });
 
   it("records permanent pipeline failures as failed", async () => {

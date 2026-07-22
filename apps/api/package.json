@@ -18,12 +18,15 @@
     "test:kpi": "vitest run tests/kpi --passWithNoTests"
   },
   "dependencies": {
+    "@napi-rs/canvas": "^1.0.2",
     "@supabase/supabase-js": "^2.110.7",
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "multer": "^2.2.0",
     "node-cron": "^4.6.0",
+    "pdfjs-dist": "^6.1.200",
     "pg": "^8.22.0",
+    "tesseract.js": "^7.0.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {

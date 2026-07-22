@@ -15,8 +15,11 @@ import type {
   ContractDocumentRepository,
   ContractProcessingRepository,
   ContractRepository,
+  ContractWorkspaceRepository,
+  DocumentTextPageReadRepository,
   ExistingContractDocument,
 } from "./contracts.repository.js";
+import type { ContractProcessingQueue } from "./contract-processing.queue.js";
 import type { ContractDocumentSourceType, ContractTrackingResult } from "./contracts.types.js";
 import { FileHashService } from "./file-hash.service.js";
 
@@ -33,8 +36,11 @@ export interface ContractIngestionInput {
 
 export interface ContractIngestionDependencies {
   readonly contracts: ContractRepository;
+  readonly contractReads?: ContractWorkspaceRepository;
   readonly documents: ContractDocumentRepository;
+  readonly documentTextPages?: DocumentTextPageReadRepository;
   readonly processingRuns: ContractProcessingRepository;
+  readonly processingQueue: ContractProcessingQueue;
   readonly audit: AuditRepository;
   readonly storage: StorageProvider;
   readonly storageMetadata: {
@@ -170,6 +176,12 @@ export class ContractIngestionService {
         fileHashSha256,
         fileSizeBytes: validatedFile.sizeBytes,
       });
+      await this.queueProcessing({
+        organizationId: input.organizationId,
+        contractId,
+        documentId,
+        processingRunId,
+      });
 
       return {
         contractId,
@@ -219,6 +231,58 @@ export class ContractIngestionService {
 
   findProcessingStatus(input: { readonly organizationId: string; readonly contractId: string }) {
     return this.dependencies.processingRuns.findLatestByContractId(input);
+  }
+
+  listContracts(input: {
+    readonly organizationId: string;
+    readonly limit: number;
+    readonly offset: number;
+  }) {
+    if (!this.dependencies.contractReads) {
+      throw new Error("Contract read repository is not configured");
+    }
+    return this.dependencies.contractReads.listByOrganization(input);
+  }
+
+  findContract(input: { readonly organizationId: string; readonly contractId: string }) {
+    if (!this.dependencies.contractReads) {
+      throw new Error("Contract read repository is not configured");
+    }
+    return this.dependencies.contractReads.findByOrganizationAndId(input);
+  }
+
+  listDocumentTextPages(input: { readonly organizationId: string; readonly contractId: string }) {
+    if (!this.dependencies.documentTextPages) {
+      throw new Error("Document text page read repository is not configured");
+    }
+    return this.dependencies.documentTextPages.listByContract(input);
+  }
+
+  private async queueProcessing(input: {
+    readonly organizationId: string;
+    readonly contractId: string;
+    readonly documentId: string;
+    readonly processingRunId: string;
+  }): Promise<void> {
+    try {
+      const queueJobId = await this.dependencies.processingQueue.enqueue(input);
+      await this.dependencies.processingRuns.markQueued({
+        processingRunId: input.processingRunId,
+        queueJobId,
+      });
+    } catch (error) {
+      this.dependencies.logger.error("contract_processing_enqueue_failed", {
+        contractId: input.contractId,
+        documentId: input.documentId,
+        processingRunId: input.processingRunId,
+        message: safeErrorMessage(error),
+      });
+      throw new ContractIngestionError(
+        "CONTRACT_PERSISTENCE_FAILED",
+        "Contract processing job could not be queued",
+        500,
+      );
+    }
   }
 
   private async createPendingMetadata(input: {

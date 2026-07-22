@@ -90,6 +90,7 @@ function createDependencies(
     documentsFailed: 0,
     currentDocumentsAssigned: 0,
     runsCreated: 0,
+    jobsQueued: 0,
     audits: 0,
   };
   const duplicate = overrides.duplicate ?? null;
@@ -121,6 +122,7 @@ function createDependencies(
       }
       return duplicate;
     }),
+    findStoredForProcessing: vi.fn(),
     createPending: vi.fn(async (input) => {
       if (overrides.pendingUniqueViolation) {
         throw { code: "23505" };
@@ -196,6 +198,14 @@ function createDependencies(
     markReviewRequired: vi.fn(),
     markRetryableFailure: vi.fn(),
     markFailed: vi.fn(),
+    markStage: vi.fn(),
+    markTextSegmented: vi.fn(),
+  };
+  const processingQueue = {
+    enqueue: vi.fn(async () => {
+      calls.jobsQueued += 1;
+      return "contract-processing:document";
+    }),
   };
   const storage: StorageProvider = {
     upload: vi.fn(async (input) => {
@@ -242,6 +252,7 @@ function createDependencies(
       contracts,
       documents,
       processingRuns,
+      processingQueue,
       audit,
       storage,
       storageMetadata: {
@@ -289,6 +300,7 @@ describe("ContractIngestionService", () => {
     expect(calls.documentsStored).toBe(1);
     expect(calls.currentDocumentsAssigned).toBe(1);
     expect(calls.runsCreated).toBe(1);
+    expect(calls.jobsQueued).toBe(1);
     expect(calls.audits).toBe(2);
   });
 
@@ -333,6 +345,7 @@ describe("ContractIngestionService", () => {
     expect(result.isDuplicate).toBe(true);
     expect(calls.storageUploads).toBe(0);
     expect(calls.documentsCreated).toBe(0);
+    expect(calls.jobsQueued).toBe(0);
   });
 
   it("resolves concurrent duplicate inserts by returning the surviving document", async () => {
@@ -347,5 +360,6 @@ describe("ContractIngestionService", () => {
     expect(result.isDuplicate).toBe(true);
     expect(result.contractId).toBe(survivingDocument.contract.id);
     expect(calls.storageUploads).toBe(0);
+    expect(calls.jobsQueued).toBe(0);
   });
 });

@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { PermanentContractProcessingError, RetryableContractProcessingError } from "../../src/modules/contracts/contract-processing.errors.js";
+import {
+  PermanentContractProcessingError,
+  RetryableContractProcessingError,
+} from "../../src/modules/contracts/contract-processing.errors.js";
 import type { ContractProcessingOrchestrator } from "../../src/modules/contracts/contract-processing-orchestrator.service.js";
 import { ContractProcessingProcessor } from "../../src/jobs/processors/contract-processing.processor.js";
 import type { BackgroundJob } from "../../src/jobs/job.types.js";

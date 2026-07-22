@@ -9,8 +9,13 @@ import type {
   CreateContractProcessingRunInput,
   ClaimContractProcessingRunInput,
   CompleteContractProcessingRunInput,
+  DocumentTextPageRepository,
+  DocumentTextPageReadRepository,
   ExistingContractDocument,
   FailContractProcessingRunInput,
+  MarkContractProcessingStageInput,
+  PersistDocumentTextPagesInput,
+  ContractWorkspaceRepository,
 } from "./contracts.repository.js";
 import type {
   ContractDocumentRecord,
@@ -20,6 +25,8 @@ import type {
   ContractProcessingRunStatus,
   ContractRecord,
   ContractStatus,
+  ContractWorkspaceRecord,
+  DocumentTextPageRecord,
 } from "./contracts.types.js";
 
 type PgTimestamp = Date | string;
@@ -76,12 +83,66 @@ interface ContractProcessingRunRow {
   readonly updated_at: PgTimestamp;
 }
 
+type PgNumeric = number | string;
+
+interface ContractWorkspaceRow {
+  readonly contract: ContractRow;
+  readonly document: ContractDocumentRow | null;
+  readonly processing_run: ContractProcessingRunRow | null;
+  readonly text_page_count: PgNumeric;
+  readonly text_segment_count: PgNumeric;
+  readonly ocr_page_count: PgNumeric;
+}
+
+interface DocumentTextPageRow {
+  readonly organization_id: string;
+  readonly contract_id: string;
+  readonly document_id: string;
+  readonly processing_run_id: string;
+  readonly page_number: number;
+  readonly extraction_method: DocumentTextPageRecord["extractionMethod"];
+  readonly raw_text: string;
+  readonly normalized_text: string;
+  readonly char_count: number;
+  readonly word_count: number;
+  readonly printable_ratio: PgNumeric;
+  readonly ocr_confidence: PgNumeric | null;
+  readonly page_width: PgNumeric | null;
+  readonly page_height: PgNumeric | null;
+  readonly segments: unknown;
+  readonly warnings: unknown;
+  readonly created_at: PgTimestamp;
+}
+
 function toDate(value: PgTimestamp): Date {
   return value instanceof Date ? value : new Date(value);
 }
 
 function toOptionalDate(value: PgTimestamp | null): Date | undefined {
   return value ? toDate(value) : undefined;
+}
+
+function toNumber(value: PgNumeric): number {
+  return typeof value === "number" ? value : Number(value);
+}
+
+function toOptionalNumber(value: PgNumeric | null): number | undefined {
+  return value === null ? undefined : toNumber(value);
+}
+
+function toRecordArray(value: unknown): readonly Record<string, unknown>[] {
+  return Array.isArray(value)
+    ? value.filter(
+        (item): item is Record<string, unknown> =>
+          typeof item === "object" && item !== null && !Array.isArray(item),
+      )
+    : [];
+}
+
+function toStringArray(value: unknown): readonly string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
 }
 
 function mapContract(row: ContractRow): ContractRecord {
@@ -148,8 +209,148 @@ function mapProcessingRun(row: ContractProcessingRunRow): ContractProcessingRunR
   };
 }
 
-export class PostgresContractRepository implements ContractRepository {
+function mapWorkspace(row: ContractWorkspaceRow): ContractWorkspaceRecord {
+  return {
+    contract: mapContract(row.contract),
+    ...(row.document ? { currentDocument: mapDocument(row.document) } : {}),
+    ...(row.processing_run ? { latestProcessingRun: mapProcessingRun(row.processing_run) } : {}),
+    text: {
+      pageCount: toNumber(row.text_page_count),
+      segmentCount: toNumber(row.text_segment_count),
+      ocrPageCount: toNumber(row.ocr_page_count),
+    },
+  };
+}
+
+function mapDocumentTextPage(row: DocumentTextPageRow): DocumentTextPageRecord {
+  const ocrConfidence = toOptionalNumber(row.ocr_confidence);
+  const pageWidth = toOptionalNumber(row.page_width);
+  const pageHeight = toOptionalNumber(row.page_height);
+
+  return {
+    organizationId: row.organization_id,
+    contractId: row.contract_id,
+    documentId: row.document_id,
+    processingRunId: row.processing_run_id,
+    pageNumber: row.page_number,
+    extractionMethod: row.extraction_method,
+    rawText: row.raw_text,
+    normalizedText: row.normalized_text,
+    charCount: row.char_count,
+    wordCount: row.word_count,
+    printableRatio: toNumber(row.printable_ratio),
+    ...(ocrConfidence !== undefined ? { ocrConfidence } : {}),
+    ...(pageWidth !== undefined ? { pageWidth } : {}),
+    ...(pageHeight !== undefined ? { pageHeight } : {}),
+    segments: toRecordArray(row.segments),
+    warnings: toStringArray(row.warnings),
+    createdAt: toDate(row.created_at),
+  };
+}
+
+export class PostgresContractRepository implements ContractRepository, ContractWorkspaceRepository {
   constructor(private readonly database: PostgreSqlClient) {}
+
+  async listByOrganization(input: {
+    readonly organizationId: string;
+    readonly limit: number;
+    readonly offset: number;
+  }): Promise<readonly ContractWorkspaceRecord[]> {
+    const result = await this.database.query<ContractWorkspaceRow>(
+      `
+        SELECT
+          to_jsonb(contract.*) AS contract,
+          to_jsonb(document.*) AS document,
+          to_jsonb(run.*) AS processing_run,
+          COALESCE(text_stats.page_count, 0) AS text_page_count,
+          COALESCE(text_stats.segment_count, 0) AS text_segment_count,
+          COALESCE(text_stats.ocr_page_count, 0) AS ocr_page_count
+        FROM contracts AS contract
+        LEFT JOIN contract_documents AS document
+          ON document.id = contract.current_document_id
+          AND document.organization_id = contract.organization_id
+        LEFT JOIN LATERAL (
+          SELECT *
+          FROM contract_processing_runs AS run
+          WHERE run.contract_id = contract.id
+            AND (
+              contract.current_document_id IS NULL
+              OR run.document_id = contract.current_document_id
+            )
+          ORDER BY run.created_at DESC
+          LIMIT 1
+        ) AS run ON TRUE
+        LEFT JOIN LATERAL (
+          SELECT
+            COUNT(*)::int AS page_count,
+            COALESCE(SUM(jsonb_array_length(page.segments)), 0)::int AS segment_count,
+            COUNT(*) FILTER (WHERE page.extraction_method <> 'PDF_TEXT')::int AS ocr_page_count
+          FROM document_text_pages AS page
+          WHERE page.contract_id = contract.id
+            AND (
+              contract.current_document_id IS NULL
+              OR page.document_id = contract.current_document_id
+            )
+        ) AS text_stats ON TRUE
+        WHERE contract.organization_id = $1
+        ORDER BY contract.created_at DESC
+        LIMIT $2 OFFSET $3
+      `,
+      [input.organizationId, input.limit, input.offset],
+    );
+
+    return result.rows.map(mapWorkspace);
+  }
+
+  async findByOrganizationAndId(input: {
+    readonly organizationId: string;
+    readonly contractId: string;
+  }): Promise<ContractWorkspaceRecord | null> {
+    const result = await this.database.query<ContractWorkspaceRow>(
+      `
+        SELECT
+          to_jsonb(contract.*) AS contract,
+          to_jsonb(document.*) AS document,
+          to_jsonb(run.*) AS processing_run,
+          COALESCE(text_stats.page_count, 0) AS text_page_count,
+          COALESCE(text_stats.segment_count, 0) AS text_segment_count,
+          COALESCE(text_stats.ocr_page_count, 0) AS ocr_page_count
+        FROM contracts AS contract
+        LEFT JOIN contract_documents AS document
+          ON document.id = contract.current_document_id
+          AND document.organization_id = contract.organization_id
+        LEFT JOIN LATERAL (
+          SELECT *
+          FROM contract_processing_runs AS run
+          WHERE run.contract_id = contract.id
+            AND (
+              contract.current_document_id IS NULL
+              OR run.document_id = contract.current_document_id
+            )
+          ORDER BY run.created_at DESC
+          LIMIT 1
+        ) AS run ON TRUE
+        LEFT JOIN LATERAL (
+          SELECT
+            COUNT(*)::int AS page_count,
+            COALESCE(SUM(jsonb_array_length(page.segments)), 0)::int AS segment_count,
+            COUNT(*) FILTER (WHERE page.extraction_method <> 'PDF_TEXT')::int AS ocr_page_count
+          FROM document_text_pages AS page
+          WHERE page.contract_id = contract.id
+            AND (
+              contract.current_document_id IS NULL
+              OR page.document_id = contract.current_document_id
+            )
+        ) AS text_stats ON TRUE
+        WHERE contract.organization_id = $1
+          AND contract.id = $2
+        LIMIT 1
+      `,
+      [input.organizationId, input.contractId],
+    );
+
+    return result.rows[0] ? mapWorkspace(result.rows[0]) : null;
+  }
 
   async findById(id: string): Promise<ContractRecord | null> {
     const result = await this.database.query<ContractRow>(
@@ -334,6 +535,31 @@ export class PostgresContractDocumentRepository implements ContractDocumentRepos
     return mapDocument(row);
   }
 
+  async findStoredForProcessing(input: {
+    readonly organizationId: string;
+    readonly contractId: string;
+    readonly documentId: string;
+  }): Promise<ContractDocumentRecord | null> {
+    const result = await this.database.query<ContractDocumentRow>(
+      `
+        SELECT document.*
+        FROM contract_documents AS document
+        INNER JOIN contracts AS contract
+          ON contract.id = document.contract_id
+        WHERE document.organization_id = $1
+          AND document.contract_id = $2
+          AND document.id = $3
+          AND document.upload_status = 'STORED'
+          AND contract.organization_id = document.organization_id
+          AND contract.current_document_id = document.id
+        LIMIT 1
+      `,
+      [input.organizationId, input.contractId, input.documentId],
+    );
+
+    return result.rows[0] ? mapDocument(result.rows[0]) : null;
+  }
+
   async markStored(
     input: { readonly documentId: string },
     transaction: TransactionContext,
@@ -511,7 +737,7 @@ export class PostgresContractProcessingRepository implements ContractProcessingR
           AND (
             run.status = 'QUEUED'
             OR (
-              run.status = 'PROCESSING'
+              run.status IN ('PROCESSING', 'PARSING', 'OCR_PROCESSING')
               AND run.attempt_number < $6
               AND run.queue_job_id = $5
             )
@@ -571,7 +797,7 @@ export class PostgresContractProcessingRepository implements ContractProcessingR
           AND run.document_id = $3
           AND contract.id = run.contract_id
           AND contract.organization_id = $4
-          AND run.status = 'PROCESSING'
+          AND run.status IN ('PROCESSING', 'PARSING', 'OCR_PROCESSING')
         RETURNING run.*
       `,
       [
@@ -588,6 +814,76 @@ export class PostgresContractProcessingRepository implements ContractProcessingR
     const row = result.rows[0];
     if (!row) {
       throw new Error("Processing run retryable failure update returned no row");
+    }
+    return mapProcessingRun(row);
+  }
+
+  async markStage(
+    input: MarkContractProcessingStageInput,
+    transaction: TransactionContext,
+  ): Promise<ContractProcessingRunRecord> {
+    const result = await transaction.client.query<ContractProcessingRunRow>(
+      `
+        UPDATE contract_processing_runs AS run
+        SET
+          status = $5,
+          updated_at = NOW()
+        FROM contracts AS contract
+        WHERE run.id = $1
+          AND run.contract_id = $2
+          AND run.document_id = $3
+          AND contract.id = run.contract_id
+          AND contract.organization_id = $4
+          AND run.status IN ('PROCESSING', 'PARSING')
+        RETURNING run.*
+      `,
+      [
+        input.processingRunId,
+        input.contractId,
+        input.documentId,
+        input.organizationId,
+        input.status,
+      ],
+    );
+
+    const row = result.rows[0];
+    if (!row) {
+      throw new Error("Processing run stage update returned no row");
+    }
+    return mapProcessingRun(row);
+  }
+
+  async markTextSegmented(
+    input: CompleteContractProcessingRunInput,
+    transaction: TransactionContext,
+  ): Promise<ContractProcessingRunRecord> {
+    const result = await transaction.client.query<ContractProcessingRunRow>(
+      `
+        UPDATE contract_processing_runs AS run
+        SET
+          status = 'TEXT_SEGMENTED',
+          completed_at = NOW(),
+          failed_at = NULL,
+          error_code = NULL,
+          error_stage = NULL,
+          error_message = NULL,
+          error_retryable = NULL,
+          updated_at = NOW()
+        FROM contracts AS contract
+        WHERE run.id = $1
+          AND run.contract_id = $2
+          AND run.document_id = $3
+          AND contract.id = run.contract_id
+          AND contract.organization_id = $4
+          AND run.status IN ('PROCESSING', 'PARSING', 'OCR_PROCESSING')
+        RETURNING run.*
+      `,
+      [input.processingRunId, input.contractId, input.documentId, input.organizationId],
+    );
+
+    const row = result.rows[0];
+    if (!row) {
+      throw new Error("Processing run text segmented update returned no row");
     }
     return mapProcessingRun(row);
   }
@@ -614,7 +910,7 @@ export class PostgresContractProcessingRepository implements ContractProcessingR
           AND run.document_id = $3
           AND contract.id = run.contract_id
           AND contract.organization_id = $4
-          AND run.status = 'PROCESSING'
+          AND run.status IN ('PROCESSING', 'PARSING', 'OCR_PROCESSING')
         RETURNING run.*
       `,
       [
@@ -670,5 +966,121 @@ export class PostgresContractProcessingRepository implements ContractProcessingR
       throw new Error(`Processing run ${status.toLowerCase()} update returned no row`);
     }
     return mapProcessingRun(row);
+  }
+}
+
+export class PostgresDocumentTextPageRepository
+  implements DocumentTextPageRepository, DocumentTextPageReadRepository
+{
+  constructor(private readonly database: PostgreSqlClient) {}
+
+  async listByContract(input: {
+    readonly organizationId: string;
+    readonly contractId: string;
+  }): Promise<readonly DocumentTextPageRecord[]> {
+    const result = await this.database.query<DocumentTextPageRow>(
+      `
+        SELECT page.*
+        FROM document_text_pages AS page
+        INNER JOIN contracts AS contract
+          ON contract.id = page.contract_id
+          AND contract.organization_id = page.organization_id
+          AND contract.current_document_id = page.document_id
+        WHERE page.organization_id = $1
+          AND page.contract_id = $2
+        ORDER BY page.page_number ASC
+      `,
+      [input.organizationId, input.contractId],
+    );
+
+    return result.rows.map(mapDocumentTextPage);
+  }
+
+  async replacePages(
+    input: PersistDocumentTextPagesInput,
+    transaction: TransactionContext,
+  ): Promise<void> {
+    await transaction.client.query(
+      `
+        DELETE FROM document_text_pages
+        WHERE document_id = $1
+      `,
+      [input.documentId],
+    );
+
+    for (const page of input.pages) {
+      await transaction.client.query(
+        `
+          INSERT INTO document_text_pages (
+            organization_id,
+            contract_id,
+            document_id,
+            processing_run_id,
+            page_number,
+            extraction_method,
+            raw_text,
+            normalized_text,
+            char_count,
+            word_count,
+            printable_ratio,
+            ocr_confidence,
+            page_width,
+            page_height,
+            segments,
+            warnings
+          )
+          VALUES (
+            $1,
+            $2,
+            $3,
+            $4,
+            $5,
+            $6,
+            $7,
+            $8,
+            $9,
+            $10,
+            $11,
+            $12,
+            $13,
+            $14,
+            $15::jsonb,
+            $16::jsonb
+          )
+          ON CONFLICT (document_id, page_number)
+          DO UPDATE SET
+            processing_run_id = EXCLUDED.processing_run_id,
+            extraction_method = EXCLUDED.extraction_method,
+            raw_text = EXCLUDED.raw_text,
+            normalized_text = EXCLUDED.normalized_text,
+            char_count = EXCLUDED.char_count,
+            word_count = EXCLUDED.word_count,
+            printable_ratio = EXCLUDED.printable_ratio,
+            ocr_confidence = EXCLUDED.ocr_confidence,
+            page_width = EXCLUDED.page_width,
+            page_height = EXCLUDED.page_height,
+            segments = EXCLUDED.segments,
+            warnings = EXCLUDED.warnings
+        `,
+        [
+          input.organizationId,
+          input.contractId,
+          input.documentId,
+          input.processingRunId,
+          page.pageNumber,
+          page.extractionMethod,
+          page.rawText,
+          page.normalizedText,
+          page.charCount,
+          page.wordCount,
+          page.printableRatio,
+          page.ocrConfidence ?? null,
+          page.pageWidth ?? null,
+          page.pageHeight ?? null,
+          JSON.stringify(page.segments),
+          JSON.stringify(page.warnings),
+        ],
+      );
+    }
   }
 }

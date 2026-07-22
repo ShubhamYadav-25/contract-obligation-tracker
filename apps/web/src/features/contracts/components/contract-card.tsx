@@ -8,6 +8,9 @@ import { ContractStatusBadge } from "./contract-status-badge.js";
 import type { ContractSummary } from "../types/contracts.js";
 
 export function ContractCard({ contract }: { readonly contract: ContractSummary }) {
+  const status = contract.processing?.status ?? "RECEIVED";
+  const uploadedAt = contract.currentDocument?.uploadedAt ?? contract.createdAt;
+
   return (
     <Card>
       <div className="flex items-start justify-between gap-4">
@@ -17,20 +20,20 @@ export function ContractCard({ contract }: { readonly contract: ContractSummary 
             to={routePaths.contractDetail(contract.id)}
           >
             <FileText aria-hidden size={18} />
-            <span className="truncate">{contract.fileName}</span>
+            <span className="truncate">{contract.displayName}</span>
           </Link>
-          <p className="mt-1 text-sm text-muted">Uploaded {formatDateTime(contract.uploadedAt)}</p>
+          <p className="mt-1 text-sm text-muted">Uploaded {formatDateTime(uploadedAt)}</p>
         </div>
-        <ContractStatusBadge status={contract.status} />
+        <ContractStatusBadge status={status} />
       </div>
       <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
         <div>
-          <dt className="text-muted">Candidates</dt>
-          <dd className="font-semibold">{contract.candidateCount}</dd>
+          <dt className="text-muted">Pages</dt>
+          <dd className="font-semibold">{contract.text.pageCount}</dd>
         </div>
         <div>
-          <dt className="text-muted">Obligations</dt>
-          <dd className="font-semibold">{contract.obligationCount}</dd>
+          <dt className="text-muted">Segments</dt>
+          <dd className="font-semibold">{contract.text.segmentCount}</dd>
         </div>
       </dl>
     </Card>

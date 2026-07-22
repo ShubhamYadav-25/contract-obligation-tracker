@@ -11,7 +11,10 @@ import type {
 import type { ContractProcessingRunStatus } from "./contracts.types.js";
 
 export type ContractProcessingOrchestrationResult =
-  | { readonly outcome: "CLAIMED_AND_COMPLETED"; readonly status: "COMPLETED" }
+  | {
+      readonly outcome: "CLAIMED_AND_COMPLETED";
+      readonly status: "COMPLETED" | "TEXT_SEGMENTED";
+    }
   | { readonly outcome: "CLAIMED_AND_REVIEW_REQUIRED"; readonly status: "REVIEW_REQUIRED" }
   | {
       readonly outcome: "NO_OP";
@@ -34,6 +37,7 @@ export interface ContractProcessingOrchestratorDependencies {
 }
 
 const terminalStatuses = new Set<ContractProcessingRunStatus>([
+  "TEXT_SEGMENTED",
   "COMPLETED",
   "REVIEW_REQUIRED",
   "FAILED",
@@ -46,7 +50,9 @@ function safeMessage(message: string): string {
 export class ContractProcessingOrchestrator {
   constructor(private readonly dependencies: ContractProcessingOrchestratorDependencies) {}
 
-  async processContract(command: ProcessContractCommand): Promise<ContractProcessingOrchestrationResult> {
+  async processContract(
+    command: ProcessContractCommand,
+  ): Promise<ContractProcessingOrchestrationResult> {
     const startedAt = Date.now();
     const logContext = {
       jobId: command.jobId,
@@ -126,6 +132,18 @@ export class ContractProcessingOrchestrator {
         documentId: command.documentId,
         processingRunId: command.processingRunId,
       });
+
+      if (result.outcome === "TEXT_SEGMENTED") {
+        this.dependencies.logger.info("contract_processing_text_segmented", {
+          ...logContext,
+          processingStage: "PIPELINE",
+          durationMilliseconds: Date.now() - startedAt,
+          outcome: "TEXT_SEGMENTED",
+          summary: result.summary ?? {},
+        });
+
+        return { outcome: "CLAIMED_AND_COMPLETED", status: "TEXT_SEGMENTED" };
+      }
 
       if (result.outcome === "REVIEW_REQUIRED") {
         await this.dependencies.transactions.inTransaction(async (transaction) => {

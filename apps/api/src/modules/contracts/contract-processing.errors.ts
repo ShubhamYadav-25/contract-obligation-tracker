@@ -1,12 +1,5 @@
 export type ContractProcessingFailureStage =
-  | "CLAIM"
-  | "DOCUMENT_LOAD"
-  | "PARSE"
-  | "OCR"
-  | "EXTRACTION"
-  | "PERSISTENCE"
-  | "AUDIT"
-  | "PIPELINE";
+  "CLAIM" | "DOCUMENT_LOAD" | "PARSE" | "OCR" | "EXTRACTION" | "PERSISTENCE" | "AUDIT" | "PIPELINE";
 
 export interface ContractProcessingFailureDetails {
   readonly code: string;

@@ -6,7 +6,9 @@ import type {
   ContractProcessingRunRecord,
   ContractProcessingRunStatus,
   ContractRecord,
+  ContractWorkspaceRecord,
   ContractUploadMetadata,
+  DocumentTextPageRecord,
 } from "./contracts.types.js";
 
 export interface ContractRepository {
@@ -24,6 +26,11 @@ export interface ContractDocumentRepository {
     readonly organizationId: string;
     readonly fileHashSha256: string;
   }): Promise<ExistingContractDocument | null>;
+  findStoredForProcessing(input: {
+    readonly organizationId: string;
+    readonly contractId: string;
+    readonly documentId: string;
+  }): Promise<ContractDocumentRecord | null>;
   createPending(
     input: CreateContractDocumentInput,
     transaction: TransactionContext,
@@ -79,6 +86,40 @@ export interface ContractProcessingRepository {
     input: FailContractProcessingRunInput,
     transaction: TransactionContext,
   ): Promise<ContractProcessingRunRecord>;
+  markStage(
+    input: MarkContractProcessingStageInput,
+    transaction: TransactionContext,
+  ): Promise<ContractProcessingRunRecord>;
+  markTextSegmented(
+    input: CompleteContractProcessingRunInput,
+    transaction: TransactionContext,
+  ): Promise<ContractProcessingRunRecord>;
+}
+
+export interface DocumentTextPageRepository {
+  replacePages(
+    input: PersistDocumentTextPagesInput,
+    transaction: TransactionContext,
+  ): Promise<void>;
+}
+
+export interface ContractWorkspaceRepository {
+  listByOrganization(input: {
+    readonly organizationId: string;
+    readonly limit: number;
+    readonly offset: number;
+  }): Promise<readonly ContractWorkspaceRecord[]>;
+  findByOrganizationAndId(input: {
+    readonly organizationId: string;
+    readonly contractId: string;
+  }): Promise<ContractWorkspaceRecord | null>;
+}
+
+export interface DocumentTextPageReadRepository {
+  listByContract(input: {
+    readonly organizationId: string;
+    readonly contractId: string;
+  }): Promise<readonly DocumentTextPageRecord[]>;
 }
 
 export interface ExistingContractDocument {
@@ -142,6 +183,29 @@ export interface FailContractProcessingRunInput extends CompleteContractProcessi
   readonly errorStage: string;
   readonly retryable: boolean;
   readonly message: string;
+}
+
+export interface MarkContractProcessingStageInput extends CompleteContractProcessingRunInput {
+  readonly status: Extract<ContractProcessingRunStatus, "PARSING" | "OCR_PROCESSING">;
+}
+
+export interface PersistDocumentTextPagesInput extends CompleteContractProcessingRunInput {
+  readonly pages: readonly PersistDocumentTextPageInput[];
+}
+
+export interface PersistDocumentTextPageInput {
+  readonly pageNumber: number;
+  readonly extractionMethod: "PDF_TEXT" | "TESSERACT" | "GEMINI_VISION";
+  readonly rawText: string;
+  readonly normalizedText: string;
+  readonly charCount: number;
+  readonly wordCount: number;
+  readonly printableRatio: number;
+  readonly ocrConfidence?: number;
+  readonly pageWidth?: number;
+  readonly pageHeight?: number;
+  readonly segments: readonly Record<string, unknown>[];
+  readonly warnings: readonly string[];
 }
 
 export interface LegacyContractRepository extends ContractRepository {

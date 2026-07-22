@@ -3,6 +3,7 @@ export const queryKeys = {
     all: ["contracts"] as const,
     detail: (id: string) => ["contracts", id] as const,
     processingStatus: (id: string) => ["contracts", id, "processing-status"] as const,
+    textPages: (id: string) => ["contracts", id, "text-pages"] as const,
   },
   reviews: {
     all: ["reviews"] as const,

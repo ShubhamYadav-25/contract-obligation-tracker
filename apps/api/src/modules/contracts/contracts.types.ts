@@ -1,10 +1,21 @@
+import type { DocumentTextExtractionMethod } from "../document-processing/document-processing.types.js";
+
 export type ContractStatus = "DRAFT";
 
 export type ContractDocumentSourceType = "USER_UPLOAD" | "CUAD_SEED";
 export type ContractDocumentUploadStatus = "PENDING_UPLOAD" | "STORED" | "UPLOAD_FAILED";
 
 export type ContractProcessingRunStatus =
-  "RECEIVED" | "STORED" | "QUEUED" | "PROCESSING" | "COMPLETED" | "REVIEW_REQUIRED" | "FAILED";
+  | "RECEIVED"
+  | "STORED"
+  | "QUEUED"
+  | "PROCESSING"
+  | "PARSING"
+  | "OCR_PROCESSING"
+  | "TEXT_SEGMENTED"
+  | "COMPLETED"
+  | "REVIEW_REQUIRED"
+  | "FAILED";
 
 export interface ContractRecord {
   readonly id: string;
@@ -78,4 +89,37 @@ export interface ContractTrackingResult {
   readonly sizeBytes: number;
   readonly checksumSha256: string;
   readonly createdAt: string;
+}
+
+export interface ContractTextSummary {
+  readonly pageCount: number;
+  readonly segmentCount: number;
+  readonly ocrPageCount: number;
+}
+
+export interface ContractWorkspaceRecord {
+  readonly contract: ContractRecord;
+  readonly currentDocument?: ContractDocumentRecord;
+  readonly latestProcessingRun?: ContractProcessingRunRecord;
+  readonly text: ContractTextSummary;
+}
+
+export interface DocumentTextPageRecord {
+  readonly organizationId: string;
+  readonly contractId: string;
+  readonly documentId: string;
+  readonly processingRunId: string;
+  readonly pageNumber: number;
+  readonly extractionMethod: DocumentTextExtractionMethod;
+  readonly rawText: string;
+  readonly normalizedText: string;
+  readonly charCount: number;
+  readonly wordCount: number;
+  readonly printableRatio: number;
+  readonly ocrConfidence?: number;
+  readonly pageWidth?: number;
+  readonly pageHeight?: number;
+  readonly segments: readonly Record<string, unknown>[];
+  readonly warnings: readonly string[];
+  readonly createdAt: Date;
 }

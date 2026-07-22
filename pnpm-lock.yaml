@@ -22,6 +22,9 @@ importers:
 
   apps/api:
     dependencies:
+      "@napi-rs/canvas":
+        specifier: ^1.0.2
+        version: 1.0.2
       "@supabase/supabase-js":
         specifier: ^2.110.7
         version: 2.110.7
@@ -37,9 +40,15 @@ importers:
       node-cron:
         specifier: ^4.6.0
         version: 4.6.0
+      pdfjs-dist:
+        specifier: ^6.1.200
+        version: 6.1.200
       pg:
         specifier: ^8.22.0
         version: 8.22.0
+      tesseract.js:
+        specifier: ^7.0.0
+        version: 7.0.0
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -675,6 +684,112 @@ packages:
       {
         integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==,
       }
+
+  "@napi-rs/canvas-android-arm64@1.0.2":
+    resolution:
+      {
+        integrity: sha512-IMXKVQod0ol4vt3gmClUfXz4JAgHYESGPCUqmH3lQxBoL0K/2greJaQE1HVBVxWWFKfLc4OLZVdxg7kXVyXv+g==,
+      }
+    engines: { node: ">= 10" }
+    cpu: [arm64]
+    os: [android]
+
+  "@napi-rs/canvas-darwin-arm64@1.0.2":
+    resolution:
+      {
+        integrity: sha512-Sc8tPi6cF+5lqOzCCKFALJHhDiRwyMzTPYm3bbhdXsOunU0lQO5f05ucyOzN2r55I23Hg5bsjH63uSCvWp3EgQ==,
+      }
+    engines: { node: ">= 10" }
+    cpu: [arm64]
+    os: [darwin]
+
+  "@napi-rs/canvas-darwin-x64@1.0.2":
+    resolution:
+      {
+        integrity: sha512-niDXZ9LhKB1zLrUdYB64RHQFDGz9rr0eGx061qtJJU3U20EMMIx28ADF5fVYbhtOgkWQrBjFicfaye1yM0U62A==,
+      }
+    engines: { node: ">= 10" }
+    cpu: [x64]
+    os: [darwin]
+
+  "@napi-rs/canvas-linux-arm-gnueabihf@1.0.2":
+    resolution:
+      {
+        integrity: sha512-sgatQL9JxGRH/Amzcvu0P3t8Am3duou74CisfuJ41Dwt8cWy723z/9KZ8LlgmxfypEwEZxSTNFJtU8d281lmhQ==,
+      }
+    engines: { node: ">= 10" }
+    cpu: [arm]
+    os: [linux]
+
+  "@napi-rs/canvas-linux-arm64-gnu@1.0.2":
+    resolution:
+      {
+        integrity: sha512-dgKuX0peF3xwY6ZF5QxGS4wbfDqpoFAJYXiLSp+guZKARQUKMkRqZSDrXKj7nfrec3UCMzC0PFCPte0ES98AiA==,
+      }
+    engines: { node: ">= 10" }
+    cpu: [arm64]
+    os: [linux]
+
+  "@napi-rs/canvas-linux-arm64-musl@1.0.2":
+    resolution:
+      {
+        integrity: sha512-qwROoDIC9upfvDoRLuPn2aNg9CGW1x0Ygr4k2Or+8paA9d0qBLwk87U+g8KQpoOviKoPoiwl97kvBYuYD7qZoA==,
+      }
+    engines: { node: ">= 10" }
+    cpu: [arm64]
+    os: [linux]
+
+  "@napi-rs/canvas-linux-riscv64-gnu@1.0.2":
+    resolution:
+      {
+        integrity: sha512-fXRjnPihdnbO6qy1QQOgxAonb68A0TCEG7rj1x7v7rxNElsE8EVIKIEUTvyDtU+sthYSbX+8e7g3oZiLGnOmxw==,
+      }
+    engines: { node: ">= 10" }
+    cpu: [riscv64]
+    os: [linux]
+
+  "@napi-rs/canvas-linux-x64-gnu@1.0.2":
+    resolution:
+      {
+        integrity: sha512-nPR97DXhbWIAy7yazF3jc06kEPMqYMLmPzFOVNlwKPfIoSChnI+x7dc0hTLaihz3jxrjL6j4BbA7earxfx4X3g==,
+      }
+    engines: { node: ">= 10" }
+    cpu: [x64]
+    os: [linux]
+
+  "@napi-rs/canvas-linux-x64-musl@1.0.2":
+    resolution:
+      {
+        integrity: sha512-l7zZY5+jL5qnBZtDz7CoBtY6p7EkHu422g/0zWwrOrzIwWyWxZFRfZZORY1UG7YApymPLx+UbOkN206xXn/c1Q==,
+      }
+    engines: { node: ">= 10" }
+    cpu: [x64]
+    os: [linux]
+
+  "@napi-rs/canvas-win32-arm64-msvc@1.0.2":
+    resolution:
+      {
+        integrity: sha512-yE0koHCFF4PIbMc2o2SEALhnipz7WBISh5glLvQiomtIoCcW0np3H4Lw93ceJAfJttTTeIIWFbwH84F7EVzjMQ==,
+      }
+    engines: { node: ">= 10" }
+    cpu: [arm64]
+    os: [win32]
+
+  "@napi-rs/canvas-win32-x64-msvc@1.0.2":
+    resolution:
+      {
+        integrity: sha512-okU8/t2foV6C31n0GtvEMbfD5rOFc70+/6xUNME9Guld29sgSOIGUEDScAWFlcP3k5TYQRl9TNkwJEEjh15w8A==,
+      }
+    engines: { node: ">= 10" }
+    cpu: [x64]
+    os: [win32]
+
+  "@napi-rs/canvas@1.0.2":
+    resolution:
+      {
+        integrity: sha512-EYEqlMYaCbpZDz+IgDH5xp9MTd3ui4dmGqbQYryhMLnSRxrhHKq5KQWHHKxFUcEP4Hp8/BWgvqXocX4j7iSbOQ==,
+      }
+    engines: { node: ">= 10" }
 
   "@noble/hashes@1.8.0":
     resolution:
@@ -1363,6 +1478,12 @@ packages:
       }
     engines: { node: ">=8" }
 
+  bmp-js@0.1.0:
+    resolution:
+      {
+        integrity: sha512-vHdS19CnY3hwiNdkaqk93DvjVLfbEcI8mys4UjuWrlX1haDmroo8o4xCzh4wD6DGV6HxRCyauwhHRqMTfERtjw==,
+      }
+
   body-parser@2.3.0:
     resolution:
       {
@@ -1971,6 +2092,12 @@ packages:
       }
     engines: { node: ">=0.10.0" }
 
+  idb-keyval@6.3.0:
+    resolution:
+      {
+        integrity: sha512-um+2dgAWmYsu615EXpWVwSmapJhON0G43t3Ka/EVaohzPQXSMqKEqeDK/oIW3Ow+BXaF2PvSc+oBTFp793A5Ow==,
+      }
+
   indent-string@4.0.0:
     resolution:
       {
@@ -2036,6 +2163,12 @@ packages:
     resolution:
       {
         integrity: sha512-hvpoI6korhJMnej285dSg6nu1+e6uxs7zG3BYAm5byqDsgJNWwxzM6z6iZiAgQR4TJ30JmBTOwqZUw3WlyH3AQ==,
+      }
+
+  is-url@1.2.4:
+    resolution:
+      {
+        integrity: sha512-ITvGim8FhRiYe4IQ5uHSkj7pVaPDrCTkNd3yq3cV7iZAcJdHTUMPMEHcqSOy9xZ9qFenQCvi+2wjH9a1nXqHww==,
       }
 
   jiti@1.21.7:
@@ -2383,6 +2516,18 @@ packages:
       }
     engines: { node: ">=20" }
 
+  node-fetch@2.7.0:
+    resolution:
+      {
+        integrity: sha512-c4FRfUm/dbcWZ7U+1Wq0AwCyFL+3nt2bEw05wfxSz+DWpWsitgmSgYmy2dQdWyKC1694ELPqMs/YzUSNozLt8A==,
+      }
+    engines: { node: 4.x || >=6.0.0 }
+    peerDependencies:
+      encoding: ^0.1.0
+    peerDependenciesMeta:
+      encoding:
+        optional: true
+
   node-releases@2.0.51:
     resolution:
       {
@@ -2431,6 +2576,13 @@ packages:
         integrity: sha512-lNaJgI+2Q5URQBkccEKHTQOPaXdUxnZZElQTZY0MFUAuaEqe1E+Nyvgdz/aIyNi6Z9MzO5dv1H8n58/GELp3+w==,
       }
 
+  opencollective-postinstall@2.0.3:
+    resolution:
+      {
+        integrity: sha512-8AV/sCtuzUeTo8gQK5qDZzARrulB3egtLzFgteqB2tcT4Mw7B8Kt7JcDHmltjz6FOAHsvTevk70gZEbhM4ZS9Q==,
+      }
+    hasBin: true
+
   parse5@8.0.1:
     resolution:
       {
@@ -2468,6 +2620,13 @@ packages:
         integrity: sha512-//nshmD55c46FuFw26xV/xFAaB5HF9Xdap7HJBBnrKdAd6/GxDBaNA1870O79+9ueg61cZLSVc+OaFlfmObYVQ==,
       }
     engines: { node: ">= 14.16" }
+
+  pdfjs-dist@6.1.200:
+    resolution:
+      {
+        integrity: sha512-o8MolyzirkkLrcdsae/HEOiIcXWI7DS5zGpvqW8xTC2YUsW30rltFw2bDGvw/fskUdEMrQm2br68jzDS5BH2vw==,
+      }
+    engines: { node: ">=22.13.0 || >=24" }
 
   pg-cloudflare@1.4.0:
     resolution:
@@ -2794,6 +2953,12 @@ packages:
       }
     engines: { node: ">=8" }
 
+  regenerator-runtime@0.13.11:
+    resolution:
+      {
+        integrity: sha512-kY1AZVr2Ra+t+piVaJ4gxaFaReZVH40AKNo7UCX6W+dEwBo/2oZJzqfuN1qLq1oL45o56cPaTXELwrTh8Fpggg==,
+      }
+
   require-from-string@2.0.2:
     resolution:
       {
@@ -3031,6 +3196,18 @@ packages:
     engines: { node: ">=14.0.0" }
     hasBin: true
 
+  tesseract.js-core@7.0.0:
+    resolution:
+      {
+        integrity: sha512-WnNH518NzmbSq9zgTPeoF8c+xmilS8rFIl1YKbk/ptuuc7p6cLNELNuPAzcmsYw450ca6bLa8j3t0VAtq435Vw==,
+      }
+
+  tesseract.js@7.0.0:
+    resolution:
+      {
+        integrity: sha512-exPBkd+z+wM1BuMkx/Bjv43OeLBxhL5kKWsz/9JY+DXcXdiBjiAch0V49QR3oAJqCaL5qURE0vx9Eo+G5YE7mA==,
+      }
+
   thenify-all@1.6.0:
     resolution:
       {
@@ -3117,6 +3294,12 @@ packages:
         integrity: sha512-exgYmnmL/sJpR3upZfXG5PoatXQii55xAiXGXzY+sROLZ/Y+SLcp9PgJNI9Vz37HpQ74WvDcLT8eqm+kV3FzrA==,
       }
     engines: { node: ">=16" }
+
+  tr46@0.0.3:
+    resolution:
+      {
+        integrity: sha512-N3WMsuqV66lT30CrXNbEjx4GEwlow3v6rr4mCcv6prnfwhS01rkgyFdjPNBYd9br7LpXV1+Emh01fHnq2Gdgrw==,
+      }
 
   tr46@6.0.0:
     resolution:
@@ -3304,6 +3487,18 @@ packages:
       }
     engines: { node: ">=18" }
 
+  wasm-feature-detect@1.8.0:
+    resolution:
+      {
+        integrity: sha512-zksaLKM2fVlnB5jQQDqKXXwYHLQUVH9es+5TOOHwGOVJOCeRBCiPjwSg+3tN2AdTCzjgli4jijCH290kXb/zWQ==,
+      }
+
+  webidl-conversions@3.0.1:
+    resolution:
+      {
+        integrity: sha512-2JAn3z8AR6rjK8Sm8orRC0h/bcl/DqL7tRPdGZ4I1CjdF+EaMLmYxBHyXuKL849eucPFhvBoxMsflfOb8kxaeQ==,
+      }
+
   webidl-conversions@8.0.1:
     resolution:
       {
@@ -3324,6 +3519,12 @@ packages:
         integrity: sha512-1to4zXBxmXHV3IiSSEInrreIlu02vUOvrhxJJH5vcxYTBDAx51cqZiKdyTxlecdKNSjj8EcxGBxNf6Vg+945gw==,
       }
     engines: { node: ^20.19.0 || ^22.12.0 || >=24.0.0 }
+
+  whatwg-url@5.0.0:
+    resolution:
+      {
+        integrity: sha512-saE57nupxk6v3HY35+jzBwYa0rKSy0XR8JSxZPwgLr7ys0IBzhGviA1/TUGJLmSVqs8pb9AnvICXEuOHLprYTw==,
+      }
 
   why-is-node-running@2.3.0:
     resolution:
@@ -3372,6 +3573,12 @@ packages:
       }
     engines: { node: ">= 14.6" }
     hasBin: true
+
+  zlibjs@0.3.1:
+    resolution:
+      {
+        integrity: sha512-+J9RrgTKOmlxFSDHo0pI1xM6BLVUv+o0ZT9ANtCxGkjIVCCUdx9alUF8Gm+dGLKbkkkidWIHFDZHDMpfITt4+w==,
+      }
 
   zod@4.4.3:
     resolution:
@@ -3651,6 +3858,53 @@ snapshots:
     dependencies:
       "@jridgewell/resolve-uri": 3.1.2
       "@jridgewell/sourcemap-codec": 1.5.5
+
+  "@napi-rs/canvas-android-arm64@1.0.2":
+    optional: true
+
+  "@napi-rs/canvas-darwin-arm64@1.0.2":
+    optional: true
+
+  "@napi-rs/canvas-darwin-x64@1.0.2":
+    optional: true
+
+  "@napi-rs/canvas-linux-arm-gnueabihf@1.0.2":
+    optional: true
+
+  "@napi-rs/canvas-linux-arm64-gnu@1.0.2":
+    optional: true
+
+  "@napi-rs/canvas-linux-arm64-musl@1.0.2":
+    optional: true
+
+  "@napi-rs/canvas-linux-riscv64-gnu@1.0.2":
+    optional: true
+
+  "@napi-rs/canvas-linux-x64-gnu@1.0.2":
+    optional: true
+
+  "@napi-rs/canvas-linux-x64-musl@1.0.2":
+    optional: true
+
+  "@napi-rs/canvas-win32-arm64-msvc@1.0.2":
+    optional: true
+
+  "@napi-rs/canvas-win32-x64-msvc@1.0.2":
+    optional: true
+
+  "@napi-rs/canvas@1.0.2":
+    optionalDependencies:
+      "@napi-rs/canvas-android-arm64": 1.0.2
+      "@napi-rs/canvas-darwin-arm64": 1.0.2
+      "@napi-rs/canvas-darwin-x64": 1.0.2
+      "@napi-rs/canvas-linux-arm-gnueabihf": 1.0.2
+      "@napi-rs/canvas-linux-arm64-gnu": 1.0.2
+      "@napi-rs/canvas-linux-arm64-musl": 1.0.2
+      "@napi-rs/canvas-linux-riscv64-gnu": 1.0.2
+      "@napi-rs/canvas-linux-x64-gnu": 1.0.2
+      "@napi-rs/canvas-linux-x64-musl": 1.0.2
+      "@napi-rs/canvas-win32-arm64-msvc": 1.0.2
+      "@napi-rs/canvas-win32-x64-msvc": 1.0.2
 
   "@noble/hashes@1.8.0": {}
 
@@ -4038,6 +4292,8 @@ snapshots:
 
   binary-extensions@2.3.0: {}
 
+  bmp-js@0.1.0: {}
+
   body-parser@2.3.0:
     dependencies:
       bytes: 3.1.2
@@ -4419,6 +4675,8 @@ snapshots:
     dependencies:
       safer-buffer: 2.1.2
 
+  idb-keyval@6.3.0: {}
+
   indent-string@4.0.0: {}
 
   inherits@2.0.4: {}
@@ -4444,6 +4702,8 @@ snapshots:
   is-potential-custom-element-name@1.0.1: {}
 
   is-promise@4.0.0: {}
+
+  is-url@1.2.4: {}
 
   jiti@1.21.7: {}
 
@@ -4609,6 +4869,10 @@ snapshots:
 
   node-cron@4.6.0: {}
 
+  node-fetch@2.7.0:
+    dependencies:
+      whatwg-url: 5.0.0
+
   node-releases@2.0.51: {}
 
   normalize-path@3.0.0: {}
@@ -4627,6 +4891,8 @@ snapshots:
     dependencies:
       wrappy: 1.0.2
 
+  opencollective-postinstall@2.0.3: {}
+
   parse5@8.0.1:
     dependencies:
       entities: 8.0.0
@@ -4640,6 +4906,10 @@ snapshots:
   pathe@2.0.3: {}
 
   pathval@2.0.1: {}
+
+  pdfjs-dist@6.1.200:
+    optionalDependencies:
+      "@napi-rs/canvas": 1.0.2
 
   pg-cloudflare@1.4.0:
     optional: true
@@ -4811,6 +5081,8 @@ snapshots:
     dependencies:
       indent-string: 4.0.0
       strip-indent: 3.0.0
+
+  regenerator-runtime@0.13.11: {}
 
   require-from-string@2.0.2: {}
 
@@ -5026,6 +5298,22 @@ snapshots:
     transitivePeerDependencies:
       - ts-node
 
+  tesseract.js-core@7.0.0: {}
+
+  tesseract.js@7.0.0:
+    dependencies:
+      bmp-js: 0.1.0
+      idb-keyval: 6.3.0
+      is-url: 1.2.4
+      node-fetch: 2.7.0
+      opencollective-postinstall: 2.0.3
+      regenerator-runtime: 0.13.11
+      tesseract.js-core: 7.0.0
+      wasm-feature-detect: 1.8.0
+      zlibjs: 0.3.1
+    transitivePeerDependencies:
+      - encoding
+
   thenify-all@1.6.0:
     dependencies:
       thenify: 3.3.1
@@ -5064,6 +5352,8 @@ snapshots:
   tough-cookie@6.0.2:
     dependencies:
       tldts: 7.4.9
+
+  tr46@0.0.3: {}
 
   tr46@6.0.0:
     dependencies:
@@ -5193,6 +5483,10 @@ snapshots:
     dependencies:
       xml-name-validator: 5.0.0
 
+  wasm-feature-detect@1.8.0: {}
+
+  webidl-conversions@3.0.1: {}
+
   webidl-conversions@8.0.1: {}
 
   whatwg-mimetype@5.0.0: {}
@@ -5204,6 +5498,11 @@ snapshots:
       webidl-conversions: 8.0.1
     transitivePeerDependencies:
       - "@noble/hashes"
+
+  whatwg-url@5.0.0:
+    dependencies:
+      tr46: 0.0.3
+      webidl-conversions: 3.0.1
 
   why-is-node-running@2.3.0:
     dependencies:
@@ -5221,5 +5520,7 @@ snapshots:
   yallist@3.1.1: {}
 
   yaml@2.9.0: {}
+
+  zlibjs@0.3.1: {}
 
   zod@4.4.3: {}

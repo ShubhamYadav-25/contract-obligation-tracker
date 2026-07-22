@@ -1,13 +1,19 @@
 export interface OcrInput {
   readonly contractId: string;
+  readonly documentId: string;
+  readonly pageNumber: number;
   readonly fileBytes: Uint8Array;
+  readonly pageImageBytes?: Uint8Array;
+  readonly pageImageMimeType?: "image/png";
 }
 
 export interface OcrResult {
   readonly text: string;
   readonly confidence: number;
+  readonly provider: "TESSERACT" | "GEMINI_VISION";
+  readonly warnings?: readonly string[];
 }
 
 export interface OcrProvider {
-  extractText(input: OcrInput): Promise<OcrResult>;
+  extractPageText(input: OcrInput): Promise<OcrResult>;
 }

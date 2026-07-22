@@ -7,8 +7,11 @@ export interface ExtractionPromptInput {
 export interface ExtractionCandidate {
   readonly id: string;
   readonly contractId: string;
-  readonly status: "PENDING_REVIEW" | "APPROVED" | "REJECTED";
+  readonly documentId: string;
+  readonly status?: "PENDING_REVIEW" | "APPROVED" | "REJECTED";
   readonly extractedJson: unknown;
   readonly confidence: number;
   readonly validationIssues: readonly string[];
+  readonly createdAt: Date | string;
+  readonly reviewedAt?: Date | string;
 }

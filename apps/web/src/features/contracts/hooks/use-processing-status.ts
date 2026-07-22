@@ -3,7 +3,14 @@ import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "../../../services/query-keys.js";
 import { getProcessingStatus } from "../api/get-processing-status.js";
 
-const activeStatuses = new Set(["RECEIVED", "QUEUED", "PROCESSING"]);
+const activeStatuses = new Set([
+  "RECEIVED",
+  "STORED",
+  "QUEUED",
+  "PROCESSING",
+  "PARSING",
+  "OCR_PROCESSING",
+]);
 
 export function useProcessingStatus(contractId: string) {
   return useQuery({

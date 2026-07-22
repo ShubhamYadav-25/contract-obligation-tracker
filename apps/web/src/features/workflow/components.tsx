@@ -426,6 +426,9 @@ export function ProcessingTimeline({
     | "STORED"
     | "QUEUED"
     | "PROCESSING"
+    | "PARSING"
+    | "OCR_PROCESSING"
+    | "TEXT_SEGMENTED"
     | "COMPLETED"
     | "REVIEW_REQUIRED"
     | "FAILED"
@@ -436,6 +439,9 @@ export function ProcessingTimeline({
     "STORED",
     "QUEUED",
     "PROCESSING",
+    "PARSING",
+    "OCR_PROCESSING",
+    "TEXT_SEGMENTED",
     "COMPLETED",
     "REVIEW_REQUIRED",
     "FAILED",
@@ -486,13 +492,13 @@ export function PdfViewer() {
   );
 }
 
-export function SourceEvidencePanel() {
+export function SourceEvidencePanel({ detail }: { readonly detail?: string | undefined }) {
   return (
     <div className="rounded-lg border border-border bg-white p-5">
       <h2 className="text-base font-semibold">Source Evidence</h2>
       <p className="mt-2 text-sm text-muted">
-        Review source anchors require a backend endpoint that returns page number, line range, exact
-        excerpt, and a viewable document URL.
+        {detail ??
+          "Review source anchors require a backend endpoint that returns page number, line range, exact excerpt, and a viewable document URL."}
       </p>
       <div className="mt-4 rounded-md bg-surface p-3 text-sm text-muted">
         Page, line range, normalized value, confidence, and review status will appear here when the
@@ -566,7 +572,22 @@ export function formatStatusLabel(status: string | undefined): string {
 export function statusTone(status: string | undefined): Tone {
   if (status === "FAILED" || status === "MISSED") return "danger";
   if (status === "QUEUED" || status === "DUE") return "warning";
-  if (status === "STORED" || status === "MET") return "success";
-  if (status === "RECEIVED" || status === "UPCOMING") return "info";
+  if (
+    status === "STORED" ||
+    status === "TEXT_SEGMENTED" ||
+    status === "COMPLETED" ||
+    status === "MET"
+  ) {
+    return "success";
+  }
+  if (
+    status === "RECEIVED" ||
+    status === "PROCESSING" ||
+    status === "PARSING" ||
+    status === "OCR_PROCESSING" ||
+    status === "UPCOMING"
+  ) {
+    return "info";
+  }
   return "neutral";
 }

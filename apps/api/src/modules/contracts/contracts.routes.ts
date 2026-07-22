@@ -48,6 +48,11 @@ export function createContractRouter(
     });
   };
 
+  router.get(
+    "/",
+    requireAuthContext,
+    asyncRoute((request, response) => controller.list(request, response)),
+  );
   router.post(
     "/",
     requireAuthContext,
@@ -58,6 +63,50 @@ export function createContractRouter(
     "/:contractId/processing-status",
     requireAuthContext,
     asyncRoute((request, response) => controller.processingStatus(request, response)),
+  );
+  router.get(
+    "/:contractId/text-pages",
+    requireAuthContext,
+    asyncRoute((request, response) => controller.textPages(request, response)),
+  );
+  router.get(
+    "/:contractId",
+    requireAuthContext,
+    asyncRoute((request, response) => controller.detail(request, response)),
+  );
+
+  router.post(
+    "/:contractId/run-deterministic-extraction",
+    requireAuthContext,
+    asyncRoute(async (request, response) => {
+      const { createContractIngestionService } = await import("./contracts.dependencies.js");
+      const { DeterministicExtractor } = await import("../extraction/deterministic-extractor.js");
+      const service = createContractIngestionService();
+      const contractId = Array.isArray(request.params.contractId)
+        ? request.params.contractId[0] ?? ""
+        : request.params.contractId ?? "";
+      const orgId = request.authContext?.organizationId;
+      if (!orgId) {
+        response.status(401).json({ error: "AUTHENTICATION_REQUIRED" });
+        return;
+      }
+
+      const pages = await service.listDocumentTextPages({ organizationId: orgId, contractId });
+      // pages: DocumentTextPageRecord[] -> map to shape expected
+      const simplePages = pages.map((p: any) => ({ pageNumber: p.pageNumber, rawText: p.rawText }));
+
+      const extractor = new DeterministicExtractor();
+      const result = await extractor.run({
+        contractId: contractId ?? "",
+        documentId: (pages[0] && pages[0].documentId) || "",
+        pages: simplePages,
+      });
+
+      response.status(200).json({
+        approvedCount: result.promoted ? 1 : 0,
+        candidateCount: result.candidate ? 1 : 0,
+      });
+    }),
   );
 
   return router;

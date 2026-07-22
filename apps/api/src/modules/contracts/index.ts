@@ -21,6 +21,8 @@ export type {
   ContractDocumentRepository,
   ContractProcessingRepository,
   ContractRepository,
+  ContractWorkspaceRepository,
+  DocumentTextPageReadRepository,
   FailContractProcessingRunInput,
 } from "./contracts.repository.js";
 export type { ProcessContractJobPayload } from "./contract-processing-job.schema.js";
@@ -35,6 +37,9 @@ export type {
   ContractProcessingRunRecord,
   ContractProcessingRunStatus,
   ContractRecord,
+  ContractTextSummary,
   ContractTrackingResult,
   ContractUploadMetadata,
+  ContractWorkspaceRecord,
+  DocumentTextPageRecord,
 } from "./contracts.types.js";

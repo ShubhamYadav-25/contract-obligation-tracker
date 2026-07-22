@@ -9,12 +9,18 @@ import { PageHeader } from "../../components/layout/page-header.js";
 import { Button } from "../../components/ui/button.js";
 import { Input } from "../../components/ui/input.js";
 import { useUploadContract } from "../contract-upload/hooks/use-upload-contract.js";
+import { useContract } from "../contracts/hooks/use-contract.js";
+import { useContractTextPages } from "../contracts/hooks/use-contract-text-pages.js";
+import { useContracts } from "../contracts/hooks/use-contracts.js";
 import { useProcessingStatus } from "../contracts/hooks/use-processing-status.js";
+import type {
+  ContractProcessingStatus,
+  ContractSummary,
+  DocumentTextPage,
+} from "../contracts/types/contracts.js";
 import { useObligations } from "../obligations/hooks/use-obligations.js";
 import {
   AuditTimeline,
-  ConfidenceBadge,
-  CorrectionForm,
   DataTable,
   Drawer,
   EmptyState,
@@ -47,7 +53,7 @@ type UploadRecord = {
   readonly displayName: string;
   readonly externalRef?: string;
   readonly uploadedAt: string;
-  readonly status: "QUEUED" | "STORED";
+  readonly status: ContractProcessingStatus;
   readonly uploadStatus?: "stored" | "duplicate";
   readonly duplicate: boolean;
   readonly isDuplicate?: boolean;
@@ -55,6 +61,9 @@ type UploadRecord = {
   readonly mimeType?: "application/pdf";
   readonly sizeBytes?: number;
   readonly checksumSha256?: string;
+  readonly textPageCount?: number;
+  readonly textSegmentCount?: number;
+  readonly ocrPageCount?: number;
 };
 
 const uploadStorageKey = "contract-obligation-tracker.uploads";
@@ -79,6 +88,34 @@ function readUploads(): readonly UploadRecord[] {
 
 function writeUploads(records: readonly UploadRecord[]) {
   window.localStorage.setItem(uploadStorageKey, JSON.stringify(records.slice(0, 10)));
+}
+
+function contractToUploadRecord(contract: ContractSummary): UploadRecord {
+  return {
+    contractId: contract.id,
+    ...(contract.currentDocument ? { documentId: contract.currentDocument.id } : {}),
+    ...(contract.processing ? { processingRunId: contract.processing.id } : {}),
+    displayName: contract.displayName,
+    ...(contract.externalRef ? { externalRef: contract.externalRef } : {}),
+    uploadedAt: contract.currentDocument?.uploadedAt ?? contract.createdAt,
+    status: contract.processing?.status ?? "RECEIVED",
+    ...(contract.currentDocument?.uploadStatus === "STORED"
+      ? { uploadStatus: "stored" as const }
+      : {}),
+    duplicate: false,
+    isDuplicate: false,
+    ...(contract.currentDocument
+      ? {
+          originalFilename: contract.currentDocument.originalFilename,
+          mimeType: contract.currentDocument.mimeType,
+          sizeBytes: contract.currentDocument.sizeBytes,
+          checksumSha256: contract.currentDocument.checksumSha256,
+        }
+      : {}),
+    textPageCount: contract.text.pageCount,
+    textSegmentCount: contract.text.segmentCount,
+    ocrPageCount: contract.text.ocrPageCount,
+  };
 }
 
 function useLocalUploads() {
@@ -173,7 +210,8 @@ function UploadContractDialog({
           <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
             <h2 className="font-semibold">Contract stored.</h2>
             <p className="mt-1">
-              Backend status is {formatStatusLabel(uploaded.status)}.
+              Backend status is {formatStatusLabel(uploaded.status)} and processing will continue in
+              the worker.
               {uploaded.isDuplicate ? " This upload matched an existing document." : null}
             </p>
           </div>
@@ -222,8 +260,8 @@ function UploadContractDialog({
             />
           </label>
           <div className="rounded-md bg-surface p-3 text-sm text-muted">
-            The backend validates, deduplicates, and stores the original PDF. Parsing and OCR are
-            not started by this upload route.
+            The backend validates, deduplicates, stores the original PDF, then queues parsing,
+            selective OCR, and text segmentation.
           </div>
           {clientError ? <p className="text-sm font-medium text-red-700">{clientError}</p> : null}
           {upload.error ? <InlineError error={upload.error} /> : null}
@@ -246,8 +284,7 @@ function RecentContractsTable({ uploads }: { readonly uploads: readonly UploadRe
   if (uploads.length === 0) {
     return (
       <EmptyState title="No contracts uploaded yet.">
-        Upload a PDF to begin tracking obligations. Backend contract listing is not implemented yet,
-        so this table only shows real uploads made in this browser session.
+        Upload a PDF to start backend storage, parsing, OCR fallback, and text segmentation.
       </EmptyState>
     );
   }
@@ -255,16 +292,7 @@ function RecentContractsTable({ uploads }: { readonly uploads: readonly UploadRe
   return (
     <>
       <DataTable>
-        <TableHead
-          columns={[
-            "Contract",
-            "Upload Status",
-            "Review Status",
-            "Next Deadline",
-            "Uploaded At",
-            "Actions",
-          ]}
-        />
+        <TableHead columns={["Contract", "Processing", "Text", "OCR", "Uploaded At", "Actions"]} />
         <tbody className="divide-y divide-border">
           {uploads.map((record) => (
             <tr className="hover:bg-slate-50" key={record.contractId}>
@@ -289,9 +317,9 @@ function RecentContractsTable({ uploads }: { readonly uploads: readonly UploadRe
                 ) : null}
               </td>
               <td className="px-4 py-3">
-                <StatusBadge label="Unavailable" />
+                {record.textPageCount ?? 0} pages / {record.textSegmentCount ?? 0} segments
               </td>
-              <td className="px-4 py-3 text-muted">Unavailable</td>
+              <td className="px-4 py-3">{record.ocrPageCount ?? 0} pages</td>
               <td className="px-4 py-3">{new Date(record.uploadedAt).toLocaleString()}</td>
               <td className="px-4 py-3">
                 <Link
@@ -305,9 +333,7 @@ function RecentContractsTable({ uploads }: { readonly uploads: readonly UploadRe
           ))}
         </tbody>
       </DataTable>
-      <Pagination
-        label={`Showing ${uploads.length} browser-session upload${uploads.length === 1 ? "" : "s"}`}
-      />
+      <Pagination label={`Showing ${uploads.length} contract${uploads.length === 1 ? "" : "s"}`} />
     </>
   );
 }
@@ -315,8 +341,18 @@ function RecentContractsTable({ uploads }: { readonly uploads: readonly UploadRe
 export function DashboardPage() {
   const [uploadOpen, setUploadOpen] = useState(false);
   const { addUpload, uploads } = useLocalUploads();
-  const storedCount = uploads.filter((item) => item.status === "STORED").length;
-  const failedCount = 0;
+  const contracts = useContracts();
+  const backendUploads = useMemo(
+    () => (contracts.data ?? []).map(contractToUploadRecord),
+    [contracts.data],
+  );
+  const visibleUploads = backendUploads.length > 0 || !contracts.isError ? backendUploads : uploads;
+  const storedCount = visibleUploads.filter((item) =>
+    ["STORED", "QUEUED", "PROCESSING", "PARSING", "OCR_PROCESSING", "TEXT_SEGMENTED"].includes(
+      item.status,
+    ),
+  ).length;
+  const segmentedCount = visibleUploads.filter((item) => item.status === "TEXT_SEGMENTED").length;
 
   return (
     <ContentContainer>
@@ -331,33 +367,39 @@ export function DashboardPage() {
       />
       <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard
-          helper="From current browser session"
+          helper={contracts.isError ? "Local fallback" : "Backend list"}
           label="Total Contracts"
           tone="info"
-          value={String(uploads.length)}
+          value={contracts.isLoading ? "Loading" : String(visibleUploads.length)}
         />
         <KpiCard
-          helper="Original PDFs stored by backend"
+          helper="Stored by backend"
           label="Stored Contracts"
           tone="success"
           value={String(storedCount)}
         />
-        <KpiCard helper="Review API not exposed" label="Review Required" value="Unavailable" />
         <KpiCard
-          helper="Obligation API not implemented"
-          label="Due or Missed"
-          value={failedCount > 0 ? String(failedCount) : "Unavailable"}
+          helper="Text pages persisted"
+          label="Text Segmented"
+          tone="success"
+          value={String(segmentedCount)}
         />
+        <KpiCard helper="Structured extraction not built" label="Obligations" value="Unavailable" />
       </div>
+      {contracts.isError ? (
+        <div className="mb-5">
+          <InlineError error={contracts.error} />
+        </div>
+      ) : null}
       <div className="grid gap-5 xl:grid-cols-[1fr_1fr]">
         <SectionCard title="Attention Required">
-          {uploads.length === 0 ? (
+          {visibleUploads.length === 0 ? (
             <EmptyState title="No contracts require attention.">
-              Upload a contract to store the original PDF.
+              Upload a contract to start backend processing.
             </EmptyState>
           ) : (
             <div className="space-y-3">
-              {uploads.slice(0, 5).map((record) => (
+              {visibleUploads.slice(0, 5).map((record) => (
                 <div
                   className="flex flex-col gap-3 rounded-lg border border-border p-3 sm:flex-row sm:items-center sm:justify-between"
                   key={record.contractId}
@@ -369,7 +411,7 @@ export function DashboardPage() {
                     />
                     <h3 className="mt-2 text-sm font-semibold">{record.displayName}</h3>
                     <p className="mt-1 text-sm text-muted">
-                      Backend stored this contract. Open the workspace to view the stored status.
+                      Open the workspace to view processing status and parsed text pages.
                     </p>
                   </div>
                   <Link
@@ -390,7 +432,11 @@ export function DashboardPage() {
           </EmptyState>
         </SectionCard>
         <SectionCard className="xl:col-span-2" title="Recent Contracts">
-          <RecentContractsTable uploads={uploads.slice(0, 5)} />
+          {contracts.isLoading ? (
+            <TableSkeleton />
+          ) : (
+            <RecentContractsTable uploads={visibleUploads.slice(0, 5)} />
+          )}
         </SectionCard>
       </div>
       <UploadContractDialog
@@ -405,7 +451,13 @@ export function DashboardPage() {
 export function ContractsPage() {
   const [uploadOpen, setUploadOpen] = useState(false);
   const { addUpload, uploads } = useLocalUploads();
-  const hasUploads = uploads.length > 0;
+  const contracts = useContracts();
+  const backendUploads = useMemo(
+    () => (contracts.data ?? []).map(contractToUploadRecord),
+    [contracts.data],
+  );
+  const visibleUploads = backendUploads.length > 0 || !contracts.isError ? backendUploads : uploads;
+  const hasUploads = visibleUploads.length > 0;
 
   return (
     <ContentContainer>
@@ -415,7 +467,7 @@ export function ContractsPage() {
             Upload Contract
           </Button>
         }
-        description="Upload and monitor contracts through storage and later review."
+        description="Upload and monitor contracts through storage, parsing, OCR fallback, and text segmentation."
         title="Contracts"
       />
       {hasUploads ? (
@@ -425,19 +477,25 @@ export function ContractsPage() {
             label="Upload status"
             options={["All upload statuses", "Stored", "Duplicate"]}
           />
-          <FilterSelect label="Review status" options={["All review statuses", "Unavailable"]} />
+          <FilterSelect
+            label="Processing status"
+            options={["All processing statuses", "Queued", "Parsing", "OCR", "Text segmented"]}
+          />
           <Button type="button" variant="secondary">
             Clear Filters
           </Button>
         </FilterBar>
       ) : null}
       <SectionCard
-        description="The registered backend does not yet expose a server-side contract list endpoint. Rows below are real upload responses retained locally for this browser session."
+        description="Rows are loaded from the backend contract list endpoint for the current organization."
         title="Contracts"
       >
-        {hasUploads ? (
-          <RecentContractsTable uploads={uploads} />
-        ) : (
+        {contracts.isLoading ? <TableSkeleton /> : null}
+        {contracts.isError ? <InlineError error={contracts.error} /> : null}
+        {!contracts.isLoading && hasUploads ? (
+          <RecentContractsTable uploads={visibleUploads} />
+        ) : null}
+        {!contracts.isLoading && !hasUploads ? (
           <EmptyState
             action={
               <Button onClick={() => setUploadOpen(true)} type="button">
@@ -448,15 +506,8 @@ export function ContractsPage() {
           >
             Upload a PDF to begin tracking obligations.
           </EmptyState>
-        )}
+        ) : null}
       </SectionCard>
-      <div className="mt-5 grid gap-4 md:grid-cols-2">
-        <TableSkeleton />
-        <ErrorState
-          detail="Server-side contract listing, filtering, and pagination need a backend endpoint before this page can display organization-wide contracts."
-          title="Contract list API unavailable."
-        />
-      </div>
       <UploadContractDialog
         onClose={() => setUploadOpen(false)}
         onUploaded={addUpload}
@@ -467,27 +518,42 @@ export function ContractsPage() {
 }
 
 function SummaryTab({ contractId }: { readonly contractId: string }) {
+  const contract = useContract(contractId);
   const status = useProcessingStatus(contractId);
+  const detail = contract.data;
 
   return (
     <div className="grid gap-5 xl:grid-cols-[1fr_0.9fr]">
       <SectionCard title="Key Details">
+        {contract.isLoading ? <LoadingSkeleton label="Loading contract detail" /> : null}
+        {contract.isError ? <InlineError error={contract.error} /> : null}
         <dl className="grid gap-4 text-sm sm:grid-cols-2">
-          {[
-            "Parties",
-            "Contract Value",
-            "Effective Date",
-            "Expiration Date or Term",
-            "Renewal Terms",
-            "Notice Period",
-          ].map((label) => (
-            <div className="rounded-lg border border-border p-3" key={label}>
-              <dt className="text-xs font-semibold uppercase text-muted">{label}</dt>
-              <dd className="mt-2 text-muted">
-                Unavailable until contract-detail extraction API exists.
-              </dd>
-            </div>
-          ))}
+          <div className="rounded-lg border border-border p-3">
+            <dt className="text-xs font-semibold uppercase text-muted">Display Name</dt>
+            <dd className="mt-2">{detail?.displayName ?? "Unavailable"}</dd>
+          </div>
+          <div className="rounded-lg border border-border p-3">
+            <dt className="text-xs font-semibold uppercase text-muted">Original File</dt>
+            <dd className="mt-2">{detail?.currentDocument?.originalFilename ?? "Unavailable"}</dd>
+          </div>
+          <div className="rounded-lg border border-border p-3">
+            <dt className="text-xs font-semibold uppercase text-muted">Text Pages</dt>
+            <dd className="mt-2">{detail ? detail.text.pageCount : "Unavailable"}</dd>
+          </div>
+          <div className="rounded-lg border border-border p-3">
+            <dt className="text-xs font-semibold uppercase text-muted">Segments</dt>
+            <dd className="mt-2">{detail ? detail.text.segmentCount : "Unavailable"}</dd>
+          </div>
+          <div className="rounded-lg border border-border p-3">
+            <dt className="text-xs font-semibold uppercase text-muted">OCR Pages</dt>
+            <dd className="mt-2">{detail ? detail.text.ocrPageCount : "Unavailable"}</dd>
+          </div>
+          <div className="rounded-lg border border-border p-3">
+            <dt className="text-xs font-semibold uppercase text-muted">SHA-256</dt>
+            <dd className="mt-2 break-all font-mono text-xs">
+              {detail?.currentDocument?.checksumSha256 ?? "Unavailable"}
+            </dd>
+          </div>
         </dl>
       </SectionCard>
       <SectionCard title="Backend Status">
@@ -538,27 +604,75 @@ function SummaryTab({ contractId }: { readonly contractId: string }) {
   );
 }
 
-function ReviewEvidenceTab() {
+function TextSegmentsTable({ pages }: { readonly pages: readonly DocumentTextPage[] }) {
+  const segments = pages.flatMap((page) =>
+    page.segments.slice(0, 4).map((segment) => ({
+      ...segment,
+      extractionMethod: page.extractionMethod,
+      ocrConfidence: page.ocrConfidence,
+      warnings: page.warnings,
+    })),
+  );
+
+  if (segments.length === 0) {
+    return (
+      <EmptyState title="Parsed text is not ready.">
+        Text pages will appear here after the worker reaches Text Segmented.
+      </EmptyState>
+    );
+  }
+
+  return (
+    <DataTable minWidth="min-w-[860px]">
+      <TableHead columns={["Page", "Lines", "Method", "Excerpt"]} />
+      <tbody className="divide-y divide-border">
+        {segments.map((segment) => (
+          <tr key={`${segment.pageNumber}-${segment.lineStart}-${segment.startOffset}`}>
+            <td className="px-4 py-3">{segment.pageNumber}</td>
+            <td className="px-4 py-3">
+              {segment.lineStart}-{segment.lineEnd}
+            </td>
+            <td className="px-4 py-3">
+              <StatusBadge
+                label={formatStatusLabel(segment.extractionMethod)}
+                tone={segment.extractionMethod === "PDF_TEXT" ? "success" : "info"}
+              />
+            </td>
+            <td className="max-w-xl px-4 py-3 text-muted">
+              <p className="line-clamp-3">{segment.normalizedText}</p>
+              {segment.ocrConfidence !== null ? (
+                <p className="mt-2 text-xs">OCR confidence {segment.ocrConfidence}</p>
+              ) : null}
+              {segment.warnings.length > 0 ? (
+                <p className="mt-2 text-xs">Warnings: {segment.warnings.join(", ")}</p>
+              ) : null}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </DataTable>
+  );
+}
+
+function ReviewEvidenceTab({ contractId }: { readonly contractId: string }) {
+  const textPages = useContractTextPages(contractId, true);
+
   return (
     <div className="grid gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-      <SectionCard title="Review Items">
-        <EmptyState title="No items require review.">
-          The backend review routes are not registered yet. Approve, edit-and-approve, and reject
-          actions are omitted until a supported mutation exists.
-        </EmptyState>
-        <div className="mt-4 rounded-lg border border-border p-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge label="Review status unavailable" />
-            <ConfidenceBadge />
-          </div>
-          <div className="mt-4">
-            <CorrectionForm />
-          </div>
-        </div>
+      <SectionCard title="Parsed Text Segments">
+        {textPages.isLoading ? <TableSkeleton /> : null}
+        {textPages.isError ? <InlineError error={textPages.error} /> : null}
+        {textPages.isSuccess ? <TextSegmentsTable pages={textPages.data.pages} /> : null}
       </SectionCard>
       <div className="space-y-5">
         <PdfViewer />
-        <SourceEvidencePanel />
+        <SourceEvidencePanel
+          detail={
+            textPages.isSuccess
+              ? `${textPages.data.pages.length} parsed page${textPages.data.pages.length === 1 ? "" : "s"} loaded from backend.`
+              : undefined
+          }
+        />
       </div>
     </div>
   );
@@ -662,7 +776,7 @@ export function ContractWorkspacePage() {
           </div>
         </div>
         {tab === "Summary" ? <SummaryTab contractId={contractId} /> : null}
-        {tab === "Review & Evidence" ? <ReviewEvidenceTab /> : null}
+        {tab === "Review & Evidence" ? <ReviewEvidenceTab contractId={contractId} /> : null}
         {tab === "Obligations" ? <WorkspaceObligationsTab /> : null}
         {tab === "Activity" ? <AuditTimeline /> : null}
       </div>

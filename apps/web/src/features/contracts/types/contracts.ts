@@ -1,20 +1,88 @@
 export type ContractProcessingStatus =
-  "UPLOADED" | "QUEUED" | "PROCESSING" | "REVIEW_REQUIRED" | "ACTIVE" | "FAILED";
+  | "RECEIVED"
+  | "STORED"
+  | "QUEUED"
+  | "PROCESSING"
+  | "PARSING"
+  | "OCR_PROCESSING"
+  | "TEXT_SEGMENTED"
+  | "COMPLETED"
+  | "REVIEW_REQUIRED"
+  | "FAILED";
+
+export type DocumentTextExtractionMethod = "PDF_TEXT" | "TESSERACT" | "GEMINI_VISION";
+
+export interface CurrentDocumentSummary {
+  readonly id: string;
+  readonly originalFilename: string;
+  readonly mimeType: "application/pdf";
+  readonly sizeBytes: number;
+  readonly checksumSha256: string;
+  readonly uploadStatus: "PENDING_UPLOAD" | "STORED" | "UPLOAD_FAILED";
+  readonly uploadedAt: string;
+}
+
+export interface ContractProcessingSummary {
+  readonly id: string;
+  readonly documentId: string;
+  readonly status: ContractProcessingStatus;
+  readonly attemptNumber: number;
+  readonly queueJobId: string | null;
+  readonly errorCode: string | null;
+  readonly errorStage: string | null;
+  readonly errorMessage: string | null;
+  readonly errorRetryable: boolean | null;
+  readonly startedAt: string | null;
+  readonly completedAt: string | null;
+  readonly failedAt: string | null;
+  readonly updatedAt: string;
+}
+
+export interface ContractTextSummary {
+  readonly pageCount: number;
+  readonly segmentCount: number;
+  readonly ocrPageCount: number;
+}
 
 export interface ContractSummary {
   readonly id: string;
-  readonly fileName: string;
-  readonly status: ContractProcessingStatus;
-  readonly uploadedAt: string;
-  readonly obligationCount: number;
-  readonly candidateCount: number;
+  readonly displayName: string;
+  readonly externalRef: string | null;
+  readonly contractStatus: "DRAFT";
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly currentDocument: CurrentDocumentSummary | null;
+  readonly processing: ContractProcessingSummary | null;
+  readonly text: ContractTextSummary;
 }
 
-export interface ContractDetail extends ContractSummary {
-  readonly sha256: string;
-  readonly processingErrors: readonly string[];
-  readonly keyFields: readonly {
-    readonly label: string;
-    readonly value: string;
-  }[];
+export type ContractDetail = ContractSummary;
+
+export interface DocumentTextSegment {
+  readonly documentId: string;
+  readonly pageNumber: number;
+  readonly lineStart: number;
+  readonly lineEnd: number;
+  readonly text: string;
+  readonly normalizedText: string;
+  readonly startOffset: number;
+  readonly endOffset: number;
+  readonly extractionMethod: DocumentTextExtractionMethod;
+}
+
+export interface DocumentTextPage {
+  readonly documentId: string;
+  readonly processingRunId: string;
+  readonly pageNumber: number;
+  readonly extractionMethod: DocumentTextExtractionMethod;
+  readonly normalizedText: string;
+  readonly charCount: number;
+  readonly wordCount: number;
+  readonly printableRatio: number;
+  readonly ocrConfidence: number | null;
+  readonly pageWidth: number | null;
+  readonly pageHeight: number | null;
+  readonly segments: readonly DocumentTextSegment[];
+  readonly warnings: readonly string[];
+  readonly createdAt: string;
 }

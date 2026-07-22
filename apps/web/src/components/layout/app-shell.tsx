@@ -1,12 +1,4 @@
-import {
-  Bell,
-  ChevronRight,
-  FileText,
-  LayoutDashboard,
-  ListChecks,
-  Menu,
-  X,
-} from "lucide-react";
+import { Bell, ChevronRight, FileText, LayoutDashboard, ListChecks, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 
@@ -71,7 +63,9 @@ function Sidebar({ onNavigate }: { readonly onNavigate?: () => void }) {
               {session ? "Development Reviewer" : "No active session"}
             </p>
             <p className="truncate text-xs text-muted">
-              {import.meta.env.VITE_DEV_ORGANIZATION_ID ? "Development organization" : "Set auth env headers"}
+              {import.meta.env.VITE_DEV_ORGANIZATION_ID
+                ? "Development organization"
+                : "Set auth env headers"}
             </p>
           </div>
         </div>

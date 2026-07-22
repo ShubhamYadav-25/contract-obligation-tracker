@@ -3,6 +3,10 @@ import { PermanentContractProcessingError } from "./contract-processing.errors.j
 
 export type ContractProcessingPipelineResult =
   | {
+      readonly outcome: "TEXT_SEGMENTED";
+      readonly summary?: Record<string, unknown>;
+    }
+  | {
       readonly outcome: "COMPLETED";
       readonly summary?: Record<string, unknown>;
     }
@@ -21,8 +25,7 @@ export class PipelineNotConfigured implements ContractProcessingPipeline {
     throw new PermanentContractProcessingError({
       code: "PIPELINE_NOT_CONFIGURED",
       stage: "PIPELINE",
-      message:
-        "Contract parsing, OCR, extraction, and persistence pipeline is not configured yet",
+      message: "Contract parsing, OCR, extraction, and persistence pipeline is not configured yet",
     });
   }
 }

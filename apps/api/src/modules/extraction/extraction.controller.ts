@@ -1,0 +1,109 @@
+import type { Request, Response } from "express";
+import { PgPoolClient } from "../../infrastructure/database/postgres-client.js";
+import { createDatabaseConfig } from "../../config/database.js";
+import { loadEnv } from "../../config/env.js";
+import { PgTransactionManager } from "../../infrastructure/database/transaction-manager.js";
+import { PostgresExtractionCandidateRepository } from "./postgres-extraction.repository.js";
+
+export class ExtractionController {
+  private readonly database = new PgPoolClient(createDatabaseConfig(loadEnv()));
+  private readonly transactions = new PgTransactionManager(this.database.pool);
+  private readonly candidates = new PostgresExtractionCandidateRepository(this.transactions);
+
+  async listByContract(request: Request, response: Response): Promise<void> {
+    const contractId = Array.isArray(request.params.contractId)
+      ? request.params.contractId[0]
+      : request.params.contractId;
+    const rows = await this.candidates.listByContract(contractId ?? "");
+    response.json({ count: rows.length, items: rows });
+  }
+
+  async listAll(request: Request, response: Response): Promise<void> {
+    const rows = await this.candidates.listAll();
+
+    // Map internal extraction candidate format to frontend ReviewCandidate schema
+    const mapped = rows.map((row) => {
+      const extracted = row.extractedJson as any;
+      const anchors: any[] = [];
+
+      // collect anchors from structured extraction
+      if (extracted && typeof extracted === "object") {
+        if (Array.isArray(extracted.obligations)) {
+          for (const o of extracted.obligations) {
+            if (o && o.anchor) {
+              anchors.push({
+                pageNumber: o.anchor.page_number,
+                startLine: o.anchor.line_offset,
+                endLine: o.anchor.line_offset,
+                quotedText: o.anchor.quoted_text,
+              });
+            }
+          }
+        }
+        // other fields
+        for (const fname of ["parties", "contractValue", "term", "renewal", "noticePeriod"]) {
+          const f = extracted[fname];
+          if (f && f.anchor) {
+            anchors.push({
+              pageNumber: f.anchor.page_number,
+              startLine: f.anchor.line_offset,
+              endLine: f.anchor.line_offset,
+              quotedText: f.anchor.quoted_text,
+            });
+          }
+        }
+      }
+
+      const title = (extracted && extracted.parties && extracted.parties.text) || (extracted && extracted.obligations && extracted.obligations[0]?.text) || "Extraction candidate";
+
+      return {
+        id: row.id,
+        contractId: row.contractId,
+        title,
+        description: JSON.stringify(extracted),
+        confidence: Math.round((Number(row.confidence) || 0) * 100),
+        reviewReasons: row.validationIssues ?? [],
+        sourceAnchors: anchors,
+      };
+    });
+
+    response.json(mapped);
+  }
+
+  async approveCandidate(request: Request, response: Response): Promise<void> {
+    const candidateId = Array.isArray(request.params.candidateId)
+      ? request.params.candidateId[0]
+      : request.params.candidateId;
+    const candidate = await this.candidates.findPendingById(candidateId ?? "");
+    if (!candidate) {
+      response.status(404).json({ error: "not_found" });
+      return;
+    }
+
+    // promote to obligations in a transaction: mark candidate approved and create obligation
+    await this.transactions.inTransaction(async ({ client }) => {
+      await client.query(`UPDATE extraction_candidates SET status = 'APPROVED', reviewed_at = NOW() WHERE id = $1`, [candidateId]);
+
+      const extracted = candidate.extractedJson as any;
+      // build anchors array from extracted fields anchors if present
+      const anchors: any[] = [];
+      if (extracted && typeof extracted === 'object') {
+        for (const key of Object.keys(extracted)) {
+          const value = extracted[key];
+          if (value && value.anchor) {
+            anchors.push(value.anchor);
+          }
+        }
+      }
+
+      const title = (extracted && extracted.parties && extracted.parties.text) ? extracted.parties.text : (extracted && extracted.obligation_text) || 'Extracted obligation';
+
+      await client.query(
+        `INSERT INTO obligations (contract_id, title, description, anchors) VALUES ($1, $2, $3, $4::jsonb)`,
+        [candidate.contractId, title, JSON.stringify(extracted), JSON.stringify(anchors)],
+      );
+    });
+
+    response.status(200).json({ ok: true });
+  }
+}

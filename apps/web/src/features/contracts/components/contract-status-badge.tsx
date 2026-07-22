@@ -5,11 +5,15 @@ const toneByStatus: Record<
   ContractProcessingStatus,
   "neutral" | "success" | "warning" | "danger" | "info"
 > = {
-  UPLOADED: "neutral",
-  QUEUED: "info",
+  RECEIVED: "neutral",
+  STORED: "success",
+  QUEUED: "warning",
   PROCESSING: "info",
+  PARSING: "info",
+  OCR_PROCESSING: "info",
+  TEXT_SEGMENTED: "success",
+  COMPLETED: "success",
   REVIEW_REQUIRED: "warning",
-  ACTIVE: "success",
   FAILED: "danger",
 };
 
