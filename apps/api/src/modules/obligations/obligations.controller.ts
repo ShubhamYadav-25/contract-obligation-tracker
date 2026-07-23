@@ -1,14 +1,32 @@
 import type { Request, Response } from "express";
 import { z } from "zod";
 import { ApplicationError } from "../../shared/errors/application-error.js";
-import { transitionObligationSchema } from "./obligations.schemas.js";
+import { obligationStatusSchema, transitionObligationSchema } from "./obligations.schemas.js";
 import type { ObligationService } from "./obligations.service.js";
-import type { ObligationRepository } from "./obligations.repository.js";
+import type {
+  ObligationDueDateRangeFilter,
+  ObligationReminderFilter,
+  ObligationRepository,
+} from "./obligations.repository.js";
 import type { ObligationDetailRecord, ObligationRecord } from "./obligations.types.js";
 
 const listQuerySchema = z.object({
   contractId: z.uuid().optional(),
   search: z.string().trim().max(120).optional(),
+  status: obligationStatusSchema.optional(),
+  reminderStatus: z
+    .enum([
+      "PENDING",
+      "ENQUEUED",
+      "PROCESSING",
+      "DELIVERED",
+      "RETRY_PENDING",
+      "FAILED",
+      "CANCELLED",
+      "NONE",
+    ])
+    .optional(),
+  dueDateRange: z.enum(["OVERDUE", "NEXT_7_DAYS", "NEXT_30_DAYS"]).optional(),
   limit: z.coerce.number().int().min(1).max(100).default(50),
   offset: z.coerce.number().int().min(0).default(0),
 });
@@ -65,21 +83,35 @@ export class ObligationController {
     }
 
     const query = listQuerySchema.parse(request.query);
-    const obligations = await this.repository.listByOrganization({
+    const result = await this.repository.listByOrganization({
       organizationId: request.authContext.organizationId,
       ...(query.contractId ? { contractId: query.contractId } : {}),
       ...(query.search ? { search: query.search } : {}),
+      ...(query.status ? { status: query.status } : {}),
+      ...(query.reminderStatus
+        ? { reminderStatus: query.reminderStatus as ObligationReminderFilter }
+        : {}),
+      ...(query.dueDateRange
+        ? { dueDateRange: query.dueDateRange as ObligationDueDateRangeFilter }
+        : {}),
       limit: query.limit,
       offset: query.offset,
     });
 
     response.json({
       success: true,
-      data: obligations.map(serializeObligation),
+      data: {
+        items: result.items.map(serializeObligation),
+        total: result.total,
+        statusCounts: result.statusCounts,
+      },
       meta: {
         requestId: String(response.locals.correlationId ?? "unknown"),
         limit: query.limit,
         offset: query.offset,
+        status: query.status ?? null,
+        reminderStatus: query.reminderStatus ?? null,
+        dueDateRange: query.dueDateRange ?? null,
       },
     });
   }

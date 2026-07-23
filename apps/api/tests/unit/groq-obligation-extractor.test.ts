@@ -458,4 +458,33 @@ describe("GroqObligationExtractionProvider", () => {
       }),
     );
   });
+
+  it("compacts large contracts to obligation candidate lines before calling Groq", async () => {
+    const { extractor, llm } = setup({ parsedJson: { obligations: [] } });
+    const filler = Array.from(
+      { length: 400 },
+      (_, index) => `Definition ${index}: this paragraph describes background terms only.`,
+    ).join("\n");
+
+    await extractor.extract({
+      context,
+      pages: [
+        {
+          pageNumber: 1,
+          rawText: `${filler}\nVendor shall deliver quarterly compliance reports within 10 days.`,
+        },
+      ],
+    });
+
+    expect(llm.generateStructured).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompt: expect.stringContaining(
+          "Vendor shall deliver quarterly compliance reports within 10 days.",
+        ),
+      }),
+    );
+    const request = vi.mocked(llm.generateStructured).mock.calls[0]?.[0];
+    expect(request?.prompt.length).toBeLessThan(10_000);
+    expect(request?.prompt).not.toContain("Definition 200");
+  });
 });

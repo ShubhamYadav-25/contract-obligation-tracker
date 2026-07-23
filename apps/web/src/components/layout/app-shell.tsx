@@ -1,6 +1,15 @@
-import { Bell, ChevronRight, FileText, LayoutDashboard, ListChecks, Menu, X } from "lucide-react";
+import {
+  Bell,
+  ChevronRight,
+  FileText,
+  Inbox,
+  LayoutDashboard,
+  ListChecks,
+  Menu,
+  X,
+} from "lucide-react";
 import { useState } from "react";
-import { NavLink, Outlet } from "react-router-dom";
+import { Link, NavLink, Outlet } from "react-router-dom";
 
 import { routePaths } from "../../app/route-paths.js";
 import { useAuthSession } from "../../features/auth/index.js";
@@ -10,6 +19,7 @@ const navigation = [
   { label: "Dashboard", to: routePaths.dashboard, icon: LayoutDashboard },
   { label: "Contracts", to: routePaths.contracts, icon: FileText },
   { label: "Obligations", to: routePaths.obligations, icon: ListChecks },
+  { label: "Messages", to: routePaths.messages, icon: Inbox },
 ];
 
 function Sidebar({ onNavigate }: { readonly onNavigate?: () => void }) {
@@ -17,19 +27,22 @@ function Sidebar({ onNavigate }: { readonly onNavigate?: () => void }) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="mb-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">
+      <div className="mb-8 px-2">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
           Lexbridge Legal
         </p>
-        <div className="mt-1 text-xl font-semibold">Contract Tracker</div>
+        <div className="mt-1 text-xl font-bold text-slate-950">Contract Tracker</div>
       </div>
       <nav aria-label="Primary navigation" className="space-y-1">
         {navigation.map((item) => (
           <NavLink
             className={({ isActive }) =>
               cx(
-                "group flex h-10 items-center gap-3 rounded-md px-3 text-sm font-medium transition focus-visible:shadow-focus",
-                isActive ? "bg-teal-50 text-teal-800" : "text-slate-700 hover:bg-surface",
+                "group relative flex h-11 items-center gap-3 rounded-md px-4 text-sm transition duration-150 ease-out focus-visible:shadow-focus",
+                "before:absolute before:left-0 before:h-6 before:w-1 before:rounded-r before:bg-transparent before:transition-colors",
+                isActive
+                  ? "bg-[#E6FFFA] font-bold text-teal-800 before:h-7 before:bg-teal-600"
+                  : "font-medium text-slate-600 hover:bg-[#E0F2F1] hover:text-teal-700 hover:before:bg-teal-500",
               )
             }
             key={item.to}
@@ -41,28 +54,30 @@ function Sidebar({ onNavigate }: { readonly onNavigate?: () => void }) {
           </NavLink>
         ))}
       </nav>
-      <div className="mt-6 rounded-lg border border-border bg-surface p-3">
+      <div className="mt-7 rounded-lg border border-slate-200 bg-slate-50 p-3 shadow-card">
         <div className="flex items-start gap-2 text-sm">
           <Bell aria-hidden className="mt-0.5 text-amber-700" size={16} />
           <div>
-            <p className="font-medium">Processing visibility</p>
-            <p className="mt-1 text-xs text-muted">Upload a PDF and monitor backend status.</p>
+            <p className="font-semibold text-slate-900">Processing visibility</p>
+            <p className="mt-1 text-xs leading-5 text-slate-500">
+              Upload a PDF and monitor backend status.
+            </p>
           </div>
         </div>
       </div>
-      <div className="mt-auto border-t border-border pt-4">
-        <div className="flex items-center gap-3 rounded-md p-2">
+      <div className="mt-auto border-t border-slate-200 pt-4">
+        <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-card">
           <div
             aria-hidden
-            className="grid size-9 place-items-center rounded-full bg-teal-700 text-sm font-semibold text-white"
+            className="grid size-10 place-items-center rounded-full bg-teal-700 text-sm font-bold text-white"
           >
             AR
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">
+            <p className="truncate text-sm font-bold text-slate-900">
               {session ? "Development Reviewer" : "No active session"}
             </p>
-            <p className="truncate text-xs text-muted">
+            <p className="truncate text-xs text-slate-500">
               {import.meta.env.VITE_DEV_ORGANIZATION_ID
                 ? "Development organization"
                 : "Set auth env headers"}
@@ -79,21 +94,21 @@ export function AppShell() {
 
   return (
     <div className="min-h-screen bg-surface text-ink">
-      <aside className="fixed inset-y-0 left-0 hidden w-72 border-r border-border bg-white px-4 py-5 lg:block">
+      <aside className="fixed inset-y-0 left-0 hidden w-72 border-r border-slate-200 bg-white px-4 py-6 lg:block">
         <Sidebar />
       </aside>
       {mobileOpen ? (
         <div className="fixed inset-0 z-50 lg:hidden">
           <button
             aria-label="Close navigation overlay"
-            className="absolute inset-0 bg-slate-950/35"
+            className="absolute inset-0 bg-slate-950/40"
             onClick={() => setMobileOpen(false)}
             type="button"
           />
-          <aside className="relative h-full w-80 max-w-[86vw] border-r border-border bg-white px-4 py-5 shadow-xl">
+          <aside className="relative h-full w-80 max-w-[86vw] border-r border-slate-200 bg-white px-4 py-6 shadow-xl transition duration-200 ease-out">
             <button
               aria-label="Close navigation"
-              className="absolute right-3 top-3 rounded-md p-2 hover:bg-surface focus-visible:shadow-focus"
+              className="absolute right-3 top-3 rounded-md p-2 transition hover:bg-slate-100 focus-visible:shadow-focus"
               onClick={() => setMobileOpen(false)}
               type="button"
             >
@@ -104,32 +119,32 @@ export function AppShell() {
         </div>
       ) : null}
       <div className="lg:pl-72">
-        <header className="sticky top-0 z-30 border-b border-border bg-white/95 px-4 py-3 backdrop-blur">
+        <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 px-4 py-3 backdrop-blur">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <button
                 aria-label="Open navigation"
-                className="rounded-md p-2 hover:bg-surface focus-visible:shadow-focus lg:hidden"
+                className="rounded-md p-2 transition hover:bg-slate-100 focus-visible:shadow-focus lg:hidden"
                 onClick={() => setMobileOpen(true)}
                 type="button"
               >
                 <Menu aria-hidden size={20} />
               </button>
-              <div className="hidden items-center gap-2 text-sm text-muted sm:flex">
+              <div className="hidden items-center gap-2 text-sm text-slate-500 sm:flex">
                 <span>Workspace</span>
                 <ChevronRight aria-hidden size={14} />
-                <span className="font-medium text-ink">Contract Operations</span>
+                <span className="font-semibold text-slate-900">Contract Operations</span>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <button
+              <Link
                 aria-label="Notifications"
-                className="relative rounded-md border border-border bg-white p-2 hover:bg-surface focus-visible:shadow-focus"
-                type="button"
+                className="relative rounded-md border border-slate-200 bg-white p-2 shadow-card transition hover:bg-slate-50 focus-visible:shadow-focus"
+                to={routePaths.messages}
               >
                 <Bell aria-hidden size={17} />
                 <span className="absolute right-1 top-1 size-2 rounded-full bg-red-600" />
-              </button>
+              </Link>
             </div>
           </div>
         </header>

@@ -29,6 +29,11 @@ export class PgPoolClient implements PostgreSqlClient {
       idleTimeoutMillis: config.idleTimeoutMilliseconds,
       ssl: config.ssl ? { rejectUnauthorized: false } : false,
     });
+
+    this.pool.on("error", () => {
+      // Idle PostgreSQL clients can emit connection reset events outside query control flow.
+      // Handling the pool event prevents transient network drops from crashing the API process.
+    });
   }
 
   async query<Row = unknown>(

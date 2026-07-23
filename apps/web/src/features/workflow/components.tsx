@@ -1,6 +1,18 @@
 import type { PropsWithChildren, ReactNode } from "react";
 import { useEffect } from "react";
-import { AlertCircle, CheckCircle2, FileText, Loader2, Search, Upload, X } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowUpDown,
+  CalendarClock,
+  CheckCircle2,
+  CircleX,
+  Clock3,
+  FileText,
+  Loader2,
+  Search,
+  Upload,
+  X,
+} from "lucide-react";
 
 import { Button } from "../../components/ui/button.js";
 import { Input } from "../../components/ui/input.js";
@@ -11,20 +23,27 @@ import { cx } from "../../utils/cx.js";
 type Tone = "neutral" | "success" | "warning" | "danger" | "info";
 
 const toneClasses: Record<Tone, string> = {
-  neutral: "bg-slate-100 text-slate-800 ring-slate-200",
-  success: "bg-emerald-50 text-emerald-800 ring-emerald-200",
-  warning: "bg-amber-50 text-amber-900 ring-amber-200",
-  danger: "bg-red-50 text-red-800 ring-red-200",
-  info: "bg-cyan-50 text-cyan-800 ring-cyan-200",
+  neutral: "border-slate-200 bg-slate-100 text-slate-800 ring-slate-200",
+  success: "border-emerald-200 bg-emerald-50 text-emerald-800 ring-emerald-200",
+  warning: "border-amber-200 bg-amber-50 text-amber-900 ring-amber-200",
+  danger: "border-rose-200 bg-rose-50 text-rose-800 ring-rose-200",
+  info: "border-sky-200 bg-sky-50 text-sky-800 ring-sky-200",
 };
 
 const dotClasses: Record<Tone, string> = {
   neutral: "bg-slate-500",
   success: "bg-emerald-600",
   warning: "bg-amber-600",
-  danger: "bg-red-600",
-  info: "bg-cyan-700",
+  danger: "bg-rose-600",
+  info: "bg-sky-700",
 };
+
+const statusIconByLabel = {
+  Upcoming: CalendarClock,
+  Due: Clock3,
+  Met: CheckCircle2,
+  Missed: CircleX,
+} as const;
 
 export function SectionCard({
   action,
@@ -39,11 +58,18 @@ export function SectionCard({
   readonly className?: string;
 }>) {
   return (
-    <section className={cx("min-w-0 rounded-lg border border-border bg-white p-5", className)}>
+    <section
+      className={cx(
+        "min-w-0 rounded-lg border border-slate-200 bg-white p-5 shadow-card",
+        className,
+      )}
+    >
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-base font-semibold">{title}</h2>
-          {description ? <p className="mt-1 text-sm text-muted">{description}</p> : null}
+          <h2 className="text-lg font-semibold leading-7 text-slate-900">{title}</h2>
+          {description ? (
+            <p className="mt-1 text-sm leading-5 text-slate-500">{description}</p>
+          ) : null}
         </div>
         {action ? <div className="flex shrink-0 items-center gap-2">{action}</div> : null}
       </div>
@@ -64,9 +90,9 @@ export function KpiCard({
   readonly tone?: Tone;
 }) {
   return (
-    <section className="rounded-lg border border-border bg-white p-4">
-      <p className="text-sm font-medium text-muted">{label}</p>
-      <p className="mt-2 text-2xl font-semibold">{value}</p>
+    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-card transition duration-200 ease-out hover:-translate-y-0.5 hover:shadow-card-hover">
+      <p className="text-sm font-semibold text-slate-500">{label}</p>
+      <p className="mt-2 text-2xl font-bold text-slate-950">{value}</p>
       <p className={cx("mt-3 inline-flex rounded px-2 py-1 text-xs ring-1", toneClasses[tone])}>
         {helper}
       </p>
@@ -81,14 +107,19 @@ export function StatusBadge({
   readonly label: string;
   readonly tone?: Tone;
 }) {
+  const Icon = statusIconByLabel[label as keyof typeof statusIconByLabel];
   return (
     <span
       className={cx(
-        "inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-xs font-semibold ring-1",
+        "inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-bold ring-1",
         toneClasses[tone],
       )}
     >
-      <span aria-hidden className={cx("size-1.5 rounded-full", dotClasses[tone])} />
+      {Icon ? (
+        <Icon aria-hidden className="size-3.5" />
+      ) : (
+        <span aria-hidden className={cx("size-1.5 rounded-full", dotClasses[tone])} />
+      )}
       {label}
     </span>
   );
@@ -108,7 +139,7 @@ export function DataTable({
   minWidth = "min-w-[720px]",
 }: PropsWithChildren<{ readonly minWidth?: string }>) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-border bg-white">
+    <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-card">
       <table className={cx("w-full divide-y divide-border text-left text-sm", minWidth)}>
         {children}
       </table>
@@ -118,11 +149,25 @@ export function DataTable({
 
 export function TableHead({ columns }: { readonly columns: readonly string[] }) {
   return (
-    <thead className="bg-slate-50 text-xs uppercase text-muted">
+    <thead className="bg-slate-50 text-xs uppercase text-slate-600">
       <tr>
-        {columns.map((column) => (
-          <th className="whitespace-nowrap px-4 py-3 font-semibold" key={column} scope="col">
-            {column}
+        {columns.map((column, index) => (
+          <th
+            className="group whitespace-nowrap px-5 py-3 font-bold tracking-normal"
+            key={`${column}-${index}`}
+            scope="col"
+          >
+            {column ? (
+              <span className="inline-flex items-center gap-1.5">
+                {column}
+                <ArrowUpDown
+                  aria-hidden
+                  className="size-3.5 text-slate-400 opacity-0 transition-opacity group-hover:opacity-100"
+                />
+              </span>
+            ) : (
+              <span className="sr-only">Select</span>
+            )}
           </th>
         ))}
       </tr>
@@ -164,7 +209,7 @@ export function PaginationControls({
 
 export function FilterBar({ children }: PropsWithChildren) {
   return (
-    <div className="mb-4 flex flex-col gap-3 rounded-lg border border-border bg-white p-3 sm:flex-row sm:flex-wrap sm:items-center">
+    <div className="mb-5 flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-card md:flex-row md:flex-wrap md:items-center">
       {children}
     </div>
   );
@@ -184,11 +229,11 @@ export function SearchInput({
       <span className="sr-only">Search</span>
       <Search
         aria-hidden
-        className="absolute left-3 top-1/2 -translate-y-1/2 text-muted"
+        className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
         size={16}
       />
       <Input
-        className="w-full pl-9"
+        className="w-full pl-10"
         onChange={(event) => onChange?.(event.target.value)}
         placeholder={placeholder}
         type="search"
@@ -407,24 +452,37 @@ export function Drawer({
 }
 
 export function FileDropzone({
+  disabled = false,
   file,
   onFile,
 }: {
+  readonly disabled?: boolean;
   readonly file: File | null;
   readonly onFile: (file: File | null) => void;
 }) {
   return (
-    <div className="rounded-lg border-2 border-dashed border-border bg-white p-5 text-center">
+    <div
+      className={cx(
+        "rounded-lg border-2 border-dashed border-border bg-white p-5 text-center transition",
+        disabled ? "bg-slate-50 opacity-75" : "hover:border-teal-300 hover:bg-teal-50/30",
+      )}
+    >
       <Upload aria-hidden className="mx-auto text-muted" size={28} />
       <p className="mt-3 text-sm font-semibold">Drop a contract PDF here or browse files</p>
       <p className="mt-1 text-sm text-muted">
         PDF only. Maximum file size is controlled by the backend.
       </p>
-      <label className="mt-4 inline-flex h-10 cursor-pointer items-center justify-center rounded-md border border-border bg-white px-4 text-sm font-medium hover:bg-surface focus-within:shadow-focus">
+      <label
+        className={cx(
+          "mt-4 inline-flex h-10 items-center justify-center rounded-md border border-border bg-white px-4 text-sm font-medium transition focus-within:shadow-focus",
+          disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:bg-surface",
+        )}
+      >
         Browse Files
         <input
           accept="application/pdf"
           className="sr-only"
+          disabled={disabled}
           onChange={(event) => onFile(event.target.files?.item(0) ?? null)}
           type="file"
         />
@@ -437,6 +495,7 @@ export function FileDropzone({
           </p>
           <button
             className="mt-2 text-sm font-medium text-teal-800 hover:underline"
+            disabled={disabled}
             onClick={() => onFile(null)}
             type="button"
           >

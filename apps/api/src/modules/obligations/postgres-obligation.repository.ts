@@ -10,7 +10,14 @@ import type {
   ObligationStatus,
   ObligationTransitionHistoryRecord,
 } from "./obligations.types.js";
-import type { ExtractedObligationInput, ObligationRepository } from "./obligations.repository.js";
+import type {
+  ExtractedObligationInput,
+  ObligationDueDateRangeFilter,
+  ObligationReminderFilter,
+  ListObligationsResult,
+  ObligationRepository,
+  ObligationStatusCounts,
+} from "./obligations.repository.js";
 import { NotFoundError } from "../../shared/errors/not-found-error.js";
 
 interface ObligationRow {
@@ -33,6 +40,18 @@ interface ObligationTransitionHistoryRow {
   readonly actor_id: string;
   readonly occurred_at: Date | string;
 }
+
+interface ObligationCountRow {
+  readonly status: ObligationStatus;
+  readonly count: number | string;
+}
+
+const emptyStatusCounts: ObligationStatusCounts = {
+  UPCOMING: 0,
+  DUE: 0,
+  MET: 0,
+  MISSED: 0,
+};
 
 function toDate(value: Date | string): Date {
   return value instanceof Date ? value : new Date(value);
@@ -90,51 +109,51 @@ function sourceAnchorsFromAnchors(anchors: unknown): readonly ObligationSourceAn
 
   const mapped: ObligationSourceAnchor[] = [];
   for (const anchor of anchors) {
-      if (!anchor || typeof anchor !== "object") continue;
-      const raw = anchor as {
-        readonly pageNumber?: unknown;
-        readonly page_number?: unknown;
-        readonly lineOffset?: unknown;
-        readonly line_offset?: unknown;
-        readonly quotedText?: unknown;
-        readonly quoted_text?: unknown;
-        readonly boxes?: unknown;
-      };
-      const pageNumber =
-        typeof raw.pageNumber === "number"
-          ? raw.pageNumber
-          : typeof raw.page_number === "number"
-            ? raw.page_number
-            : null;
-      if (!pageNumber || pageNumber < 1) continue;
+    if (!anchor || typeof anchor !== "object") continue;
+    const raw = anchor as {
+      readonly pageNumber?: unknown;
+      readonly page_number?: unknown;
+      readonly lineOffset?: unknown;
+      readonly line_offset?: unknown;
+      readonly quotedText?: unknown;
+      readonly quoted_text?: unknown;
+      readonly boxes?: unknown;
+    };
+    const pageNumber =
+      typeof raw.pageNumber === "number"
+        ? raw.pageNumber
+        : typeof raw.page_number === "number"
+          ? raw.page_number
+          : null;
+    if (!pageNumber || pageNumber < 1) continue;
 
-      const explicitBoxes = Array.isArray(raw.boxes)
-        ? raw.boxes.map(boxFromUnknown).filter((box): box is ObligationSourceBox => Boolean(box))
-        : [];
-      const lineOffset =
-        typeof raw.lineOffset === "number"
-          ? raw.lineOffset
-          : typeof raw.line_offset === "number"
-            ? raw.line_offset
-            : null;
-      const boxes =
-        explicitBoxes.length > 0
-          ? explicitBoxes
-          : lineOffset !== null
-            ? [fallbackBoxFromLineOffset(lineOffset)]
-            : [];
-      const quotedText =
-        typeof raw.quotedText === "string"
-          ? raw.quotedText
-          : typeof raw.quoted_text === "string"
-            ? raw.quoted_text
-            : undefined;
+    const explicitBoxes = Array.isArray(raw.boxes)
+      ? raw.boxes.map(boxFromUnknown).filter((box): box is ObligationSourceBox => Boolean(box))
+      : [];
+    const lineOffset =
+      typeof raw.lineOffset === "number"
+        ? raw.lineOffset
+        : typeof raw.line_offset === "number"
+          ? raw.line_offset
+          : null;
+    const boxes =
+      explicitBoxes.length > 0
+        ? explicitBoxes
+        : lineOffset !== null
+          ? [fallbackBoxFromLineOffset(lineOffset)]
+          : [];
+    const quotedText =
+      typeof raw.quotedText === "string"
+        ? raw.quotedText
+        : typeof raw.quoted_text === "string"
+          ? raw.quoted_text
+          : undefined;
 
-      mapped.push({
-        pageNumber,
-        ...(quotedText ? { quotedText } : {}),
-        boxes,
-      });
+    mapped.push({
+      pageNumber,
+      ...(quotedText ? { quotedText } : {}),
+      boxes,
+    });
   }
   return mapped;
 }
@@ -166,6 +185,14 @@ function mapTransitionHistory(
   }));
 }
 
+function mapStatusCounts(rows: readonly ObligationCountRow[]): ObligationStatusCounts {
+  const counts = { ...emptyStatusCounts };
+  for (const row of rows) {
+    counts[row.status] = Number(row.count);
+  }
+  return counts;
+}
+
 export class PostgresObligationRepository implements ObligationRepository {
   constructor(private readonly transactions: TransactionManager) {}
 
@@ -173,9 +200,12 @@ export class PostgresObligationRepository implements ObligationRepository {
     readonly organizationId: string;
     readonly contractId?: string;
     readonly search?: string;
+    readonly status?: ObligationStatus;
+    readonly reminderStatus?: ObligationReminderFilter;
+    readonly dueDateRange?: ObligationDueDateRangeFilter;
     readonly limit: number;
     readonly offset: number;
-  }): Promise<readonly ObligationRecord[]> {
+  }): Promise<ListObligationsResult> {
     return this.transactions.inTransaction(async ({ client }) => {
       const result = await client.query<ObligationRow>(
         `
@@ -195,7 +225,7 @@ export class PostgresObligationRepository implements ObligationRepository {
         INNER JOIN contracts AS contract
           ON contract.id = obligation.contract_id
         LEFT JOIN LATERAL (
-          SELECT status, scheduled_for
+          SELECT id, status, scheduled_for
           FROM reminders
           WHERE obligation_id = obligation.id
           ORDER BY scheduled_for ASC, created_at ASC
@@ -209,6 +239,26 @@ export class PostgresObligationRepository implements ObligationRepository {
             OR obligation.description ILIKE '%' || $5 || '%'
             OR contract.display_name ILIKE '%' || $5 || '%'
           )
+          AND ($6::obligation_status IS NULL OR obligation.status = $6::obligation_status)
+          AND (
+            $7::text IS NULL
+            OR ($7::text = 'NONE' AND reminder.id IS NULL)
+            OR reminder.status::text = $7::text
+          )
+          AND (
+            $8::text IS NULL
+            OR ($8::text = 'OVERDUE' AND obligation.due_at < NOW())
+            OR (
+              $8::text = 'NEXT_7_DAYS'
+              AND obligation.due_at >= NOW()
+              AND obligation.due_at < NOW() + INTERVAL '7 days'
+            )
+            OR (
+              $8::text = 'NEXT_30_DAYS'
+              AND obligation.due_at >= NOW()
+              AND obligation.due_at < NOW() + INTERVAL '30 days'
+            )
+          )
         ORDER BY
           obligation.due_at ASC NULLS LAST,
           obligation.created_at DESC
@@ -220,10 +270,72 @@ export class PostgresObligationRepository implements ObligationRepository {
           input.limit,
           input.offset,
           input.search ?? null,
+          input.status ?? null,
+          input.reminderStatus ?? null,
+          input.dueDateRange ?? null,
         ],
       );
 
-      return result.rows.map(mapObligation);
+      const countResult = await client.query<ObligationCountRow>(
+        `
+          SELECT obligation.status, COUNT(*)::int AS count
+          FROM obligations AS obligation
+          INNER JOIN contracts AS contract
+            ON contract.id = obligation.contract_id
+          LEFT JOIN LATERAL (
+            SELECT id, status, scheduled_for
+            FROM reminders
+            WHERE obligation_id = obligation.id
+            ORDER BY scheduled_for ASC, created_at ASC
+            LIMIT 1
+          ) AS reminder ON TRUE
+          WHERE contract.organization_id = $1
+            AND ($2::uuid IS NULL OR obligation.contract_id = $2::uuid)
+            AND (
+              $3::text IS NULL
+              OR obligation.title ILIKE '%' || $3 || '%'
+              OR obligation.description ILIKE '%' || $3 || '%'
+              OR contract.display_name ILIKE '%' || $3 || '%'
+            )
+            AND (
+              $4::text IS NULL
+              OR ($4::text = 'NONE' AND reminder.id IS NULL)
+              OR reminder.status::text = $4::text
+            )
+            AND (
+              $5::text IS NULL
+              OR ($5::text = 'OVERDUE' AND obligation.due_at < NOW())
+              OR (
+                $5::text = 'NEXT_7_DAYS'
+                AND obligation.due_at >= NOW()
+                AND obligation.due_at < NOW() + INTERVAL '7 days'
+              )
+              OR (
+                $5::text = 'NEXT_30_DAYS'
+                AND obligation.due_at >= NOW()
+                AND obligation.due_at < NOW() + INTERVAL '30 days'
+              )
+            )
+          GROUP BY obligation.status
+        `,
+        [
+          input.organizationId,
+          input.contractId ?? null,
+          input.search ?? null,
+          input.reminderStatus ?? null,
+          input.dueDateRange ?? null,
+        ],
+      );
+      const statusCounts = mapStatusCounts(countResult.rows);
+      const total = input.status
+        ? statusCounts[input.status]
+        : Object.values(statusCounts).reduce((sum, count) => sum + count, 0);
+
+      return {
+        items: result.rows.map(mapObligation),
+        total,
+        statusCounts,
+      };
     });
   }
 

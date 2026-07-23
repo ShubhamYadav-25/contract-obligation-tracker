@@ -22,10 +22,10 @@ export class PostgresReminderSchedulerRepository implements ReminderSchedulerRep
             SELECT id, occurrence_key
             FROM reminders
             WHERE status IN ('PENDING', 'RETRY_PENDING')
-              AND scheduled_for <= $2
+              AND scheduled_for <= $1
             ORDER BY scheduled_for, created_at
             FOR UPDATE SKIP LOCKED
-            LIMIT $3
+            LIMIT $2
           )
           UPDATE reminders AS reminder
           SET status = 'ENQUEUED',
@@ -34,7 +34,7 @@ export class PostgresReminderSchedulerRepository implements ReminderSchedulerRep
           WHERE reminder.id = due_reminders.id
           RETURNING reminder.id, reminder.occurrence_key
         `,
-        [input.now, input.lookaheadUntil, input.limit],
+        [input.lookaheadUntil, input.limit],
       );
 
       let jobsCreated = 0;

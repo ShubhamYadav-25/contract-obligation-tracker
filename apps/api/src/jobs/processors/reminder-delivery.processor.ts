@@ -27,7 +27,10 @@ function parsePayload(payload: unknown): ReminderDeliveryPayload {
 }
 
 export class ReminderDeliveryProcessor {
-  constructor(private readonly database: PostgreSqlClient, private readonly transactions: TransactionManager) {}
+  constructor(
+    private readonly database: PostgreSqlClient,
+    private readonly transactions: TransactionManager,
+  ) {}
 
   async process(job: BackgroundJob): Promise<void> {
     const payload = parsePayload(job.payload);
@@ -64,7 +67,8 @@ export class ReminderDeliveryProcessor {
         // insert an inbox entry so reviewers can inspect it instead of sending real emails
         await client.query(
           `INSERT INTO inbox_entries (reminder_id, obligation_id, payload, created_at)
-           VALUES ($1, $2, $3::jsonb, NOW())`,
+           VALUES ($1, $2, $3::jsonb, NOW())
+           ON CONFLICT (reminder_id) DO NOTHING`,
           [payload.reminderId, rem.obligation_id, job.payload ?? {}],
         );
 
@@ -83,7 +87,11 @@ export class ReminderDeliveryProcessor {
         // mark attempt failed
         await client.query(
           `UPDATE reminder_delivery_attempts SET status = 'FAILED', error_message = $3, completed_at = NOW() WHERE reminder_id = $1 AND attempt_number = $2`,
-          [payload.reminderId, attemptNumber, (error instanceof Error) ? error.message : String(error)],
+          [
+            payload.reminderId,
+            attemptNumber,
+            error instanceof Error ? error.message : String(error),
+          ],
         );
 
         // set reminder to retry pending and increment retry_count

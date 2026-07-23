@@ -16,11 +16,23 @@ export const queryKeys = {
     list: (input: {
       readonly contractId?: string;
       readonly search?: string;
+      readonly status?: string;
+      readonly reminderStatus?: string;
+      readonly dueDateRange?: string;
       readonly limit: number;
       readonly offset: number;
     }) => ["obligations", "list", input] as const,
     byContract: (contractId: string) => ["obligations", "contract", contractId] as const,
     detail: (id: string) => ["obligations", id] as const,
+  },
+  messages: {
+    all: ["messages"] as const,
+    list: (input: {
+      readonly obligationId?: string;
+      readonly reminderId?: string;
+      readonly limit: number;
+      readonly offset: number;
+    }) => ["messages", "list", input] as const,
   },
   kpis: {
     latest: ["kpis", "latest"] as const,

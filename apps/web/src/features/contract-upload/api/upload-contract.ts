@@ -12,7 +12,7 @@ export const uploadContractResultSchema = z.object({
   duplicate: z.boolean(),
   originalFilename: z.string(),
   mimeType: z.literal("application/pdf"),
-  sizeBytes: z.number(),
+  sizeBytes: z.coerce.number(),
   checksumSha256: z.string().regex(/^[a-f0-9]{64}$/),
   createdAt: z.string(),
 });

@@ -20,7 +20,7 @@ const currentDocumentSchema = z.object({
   id: z.string(),
   originalFilename: z.string(),
   mimeType: z.literal("application/pdf"),
-  sizeBytes: z.number(),
+  sizeBytes: z.coerce.number(),
   checksumSha256: z.string().regex(/^[a-f0-9]{64}$/),
   uploadStatus: z.enum(["PENDING_UPLOAD", "STORED", "UPLOAD_FAILED"]),
   uploadedAt: z.string(),

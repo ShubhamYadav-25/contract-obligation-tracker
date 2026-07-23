@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { registerWorkers, type WorkerRuntime } from "../../src/bootstrap/register-workers.js";
+import {
+  registerSchedulers,
+  type SchedulerRuntime,
+} from "../../src/bootstrap/register-schedulers.js";
 import type { Logger } from "../../src/config/logger.js";
 
 const logger: Logger = {
@@ -9,23 +12,23 @@ const logger: Logger = {
   error: vi.fn(),
 };
 
-describe("registerWorkers", () => {
-  it("returns and starts the background worker runtime", async () => {
+describe("registerSchedulers", () => {
+  it("returns and starts the reminder scheduler runtime", async () => {
     const start = vi.fn();
     const close = vi.fn();
-    const runtime: WorkerRuntime = {
-      names: ["PROCESS_CONTRACT", "DELIVER_REMINDER"],
+    const runtime: SchedulerRuntime = {
+      names: ["REMINDER_SCHEDULER"],
       start,
       runOnce: vi.fn(async () => 0),
       close,
     };
 
-    const registry = registerWorkers({
+    const registry = registerSchedulers({
       logger,
       createRuntime: vi.fn(() => runtime),
     });
 
-    expect(registry.names).toEqual(["PROCESS_CONTRACT", "DELIVER_REMINDER"]);
+    expect(registry.names).toEqual(["REMINDER_SCHEDULER"]);
     expect(start).toHaveBeenCalledOnce();
 
     await registry.close();

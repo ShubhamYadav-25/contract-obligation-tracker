@@ -15,6 +15,7 @@
     "test": "corepack pnpm -r --if-present run test",
     "test:kpi": "corepack pnpm --filter @contract-obligation-tracker/test-kit run test:kpi",
     "import:cuad-subset": "corepack pnpm --filter @contract-obligation-tracker/api run import:cuad-subset",
+    "reset:dev-data": "corepack pnpm --filter @contract-obligation-tracker/api run reset:dev-data",
     "lint": "corepack pnpm -r --if-present run lint",
     "format": "prettier --write .",
     "format:check": "prettier --check ."

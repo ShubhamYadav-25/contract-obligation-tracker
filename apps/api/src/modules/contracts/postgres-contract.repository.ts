@@ -53,7 +53,7 @@ interface ContractDocumentRow {
   readonly storage_bucket: string;
   readonly storage_key: string;
   readonly mime_type: "application/pdf";
-  readonly file_size_bytes: number;
+  readonly file_size_bytes: PgNumeric;
   readonly file_hash_sha256: string;
   readonly upload_status: ContractDocumentUploadStatus;
   readonly upload_error_code: string | null;
@@ -172,7 +172,7 @@ function mapDocument(row: ContractDocumentRow): ContractDocumentRecord {
     storageBucket: row.storage_bucket,
     storageKey: row.storage_key,
     mimeType: row.mime_type,
-    fileSizeBytes: row.file_size_bytes,
+    fileSizeBytes: toNumber(row.file_size_bytes),
     fileHashSha256: row.file_hash_sha256,
     uploadStatus: row.upload_status,
     ...(row.upload_error_code ? { uploadErrorCode: row.upload_error_code } : {}),

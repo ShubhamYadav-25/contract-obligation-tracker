@@ -7,6 +7,8 @@ import {
   DashboardPage,
   ObligationsPage,
 } from "../features/workflow/pages.js";
+import { MessagesPage } from "../features/messages/index.js";
+import { ObligationDetailPage } from "../features/obligations/pages/obligation-detail-page.js";
 import { routePaths } from "./route-paths.js";
 
 export const router = createBrowserRouter([
@@ -18,7 +20,8 @@ export const router = createBrowserRouter([
       { path: routePaths.contracts, element: <ContractsPage /> },
       { path: "/contracts/:contractId", element: <ContractWorkspacePage /> },
       { path: routePaths.obligations, element: <ObligationsPage /> },
-      { path: "/obligations/:obligationId", element: <ObligationsPage /> },
+      { path: "/obligations/:obligationId", element: <ObligationDetailPage /> },
+      { path: routePaths.messages, element: <MessagesPage /> },
       { path: routePaths.contractUpload, element: <Navigate to={routePaths.contracts} replace /> },
       { path: routePaths.reviews, element: <Navigate to={routePaths.dashboard} replace /> },
       { path: "/reviews/:candidateId", element: <Navigate to={routePaths.dashboard} replace /> },

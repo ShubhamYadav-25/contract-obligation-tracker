@@ -12,14 +12,35 @@ export interface ExtractedObligationInput {
   readonly anchors: readonly Record<string, unknown>[];
 }
 
+export type ObligationStatusCounts = Record<ObligationStatus, number>;
+export type ObligationReminderFilter =
+  | "PENDING"
+  | "ENQUEUED"
+  | "PROCESSING"
+  | "DELIVERED"
+  | "RETRY_PENDING"
+  | "FAILED"
+  | "CANCELLED"
+  | "NONE";
+export type ObligationDueDateRangeFilter = "OVERDUE" | "NEXT_7_DAYS" | "NEXT_30_DAYS";
+
+export interface ListObligationsResult {
+  readonly items: readonly ObligationRecord[];
+  readonly total: number;
+  readonly statusCounts: ObligationStatusCounts;
+}
+
 export interface ObligationRepository {
   listByOrganization(input: {
     readonly organizationId: string;
     readonly contractId?: string;
     readonly search?: string;
+    readonly status?: ObligationStatus;
+    readonly reminderStatus?: ObligationReminderFilter;
+    readonly dueDateRange?: ObligationDueDateRangeFilter;
     readonly limit: number;
     readonly offset: number;
-  }): Promise<readonly ObligationRecord[]>;
+  }): Promise<ListObligationsResult>;
   findById(id: string): Promise<ObligationRecord | null>;
   findDetailByOrganizationAndId(input: {
     readonly organizationId: string;

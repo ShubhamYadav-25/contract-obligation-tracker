@@ -131,6 +131,17 @@ type NumberedPage = {
   }[];
 };
 
+type NumberedLine = NumberedPage["lines"][number] & {
+  readonly pageNumber: number;
+};
+
+const maxGroqSourceCharacters = 6_500;
+const maxGroqSourceLines = 90;
+const obligationCandidatePattern =
+  /\b(shall|must|will|is required to|are required to|agrees? to|covenants?|obligat(?:e|ed|ion|ions)|responsible for|pay(?:ment)?|invoice|deliver(?:y)?|provide|maintain|submit|report|notice|notify|renew(?:al)?|terminat(?:e|ion)|expir(?:e|ation)|comply|compliance|confidential|insurance|indemnif|audit|service level|sla)\b/i;
+const timingOrMoneyPattern =
+  /\b(\d+\s*(?:day|days|month|months|year|years)|within\s+\d+|by\s+\d{1,2}\/\d{1,2}\/\d{2,4}|[$£€]\s*\d)/i;
+
 function normalizeWhitespace(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
@@ -168,6 +179,113 @@ function toNumberedPages(pages: readonly Page[]): readonly NumberedPage[] {
   });
 }
 
+function scoreLine(line: NumberedLine): number {
+  let score = 0;
+  if (obligationCandidatePattern.test(line.text)) {
+    score += 10;
+  }
+  if (timingOrMoneyPattern.test(line.text)) {
+    score += 3;
+  }
+  if (/\b(section|article|clause|schedule)\b/i.test(line.text)) {
+    score += 1;
+  }
+  if (line.text.length > 350) {
+    score -= 2;
+  }
+  return score;
+}
+
+function linePromptCost(line: NumberedLine): number {
+  return line.text.length + 72;
+}
+
+function selectGroqPromptPages(pages: readonly NumberedPage[]): readonly NumberedPage[] {
+  const allLines = pages.flatMap((page) =>
+    page.lines.map((line) => ({
+      ...line,
+      pageNumber: page.pageNumber,
+    })),
+  );
+  const scoredLines = allLines
+    .map((line) => ({ line, score: scoreLine(line) }))
+    .filter((candidate) => candidate.score > 0)
+    .sort((left, right) => {
+      if (right.score !== left.score) return right.score - left.score;
+      if (left.line.pageNumber !== right.line.pageNumber) {
+        return left.line.pageNumber - right.line.pageNumber;
+      }
+      return left.line.number - right.line.number;
+    });
+
+  const selected = new Map<string, NumberedLine>();
+  let sourceCharacters = 0;
+
+  function trySelect(line: NumberedLine | undefined): void {
+    if (!line || selected.size >= maxGroqSourceLines) {
+      return;
+    }
+    const key = `${line.pageNumber}:${line.number}`;
+    if (selected.has(key)) {
+      return;
+    }
+    const cost = linePromptCost(line);
+    if (sourceCharacters + cost > maxGroqSourceCharacters) {
+      return;
+    }
+    selected.set(key, line);
+    sourceCharacters += cost;
+  }
+
+  for (const candidate of scoredLines) {
+    const page = pages.find((item) => item.pageNumber === candidate.line.pageNumber);
+    const previousLine = page?.lines[candidate.line.number - 2];
+    const nextLine = page?.lines[candidate.line.number];
+    trySelect(
+      previousLine
+        ? {
+            ...previousLine,
+            pageNumber: candidate.line.pageNumber,
+          }
+        : undefined,
+    );
+    trySelect(candidate.line);
+    trySelect(
+      nextLine
+        ? {
+            ...nextLine,
+            pageNumber: candidate.line.pageNumber,
+          }
+        : undefined,
+    );
+  }
+
+  if (selected.size === 0) {
+    for (const line of allLines) {
+      trySelect(line);
+    }
+  }
+
+  const linesByPage = new Map<number, NumberedLine[]>();
+  for (const line of [...selected.values()].sort((left, right) => {
+    if (left.pageNumber !== right.pageNumber) {
+      return left.pageNumber - right.pageNumber;
+    }
+    return left.number - right.number;
+  })) {
+    const lines = linesByPage.get(line.pageNumber) ?? [];
+    lines.push(line);
+    linesByPage.set(line.pageNumber, lines);
+  }
+
+  return pages
+    .map((page) => ({
+      ...page,
+      lines: linesByPage.get(page.pageNumber) ?? [],
+    }))
+    .filter((page) => page.lines.length > 0);
+}
+
 function buildPrompt(pages: readonly NumberedPage[]): string {
   const pageText = pages
     .map((page) => {
@@ -182,23 +300,12 @@ function buildPrompt(pages: readonly NumberedPage[]): string {
     .join("\n\n");
 
   return [
-    "You are an expert Legal Technology and Information Extraction System. Analyze legal contract text and extract every actionable obligation into structured JSON.",
+    "Extract actionable contract obligations from the supplied candidate lines.",
     "",
-    "OBJECTIVE",
-    "Identify all binding obligations: commitments, duties, requirements, prohibitions, or rights with active conditions. Extract only obligations supported by the supplied source text.",
-    "",
-    "STRICT OUTPUT",
-    "Return JSON only. The top-level value must be an array of obligation objects. Do not include markdown.",
-    "",
-    "Each obligation must match this schema exactly:",
-    '{ "title": string, "description": string, "obligationType": string, "obligatedParty": string|null, "beneficiaryParty": string|null, "action": string, "deliverable": string|null, "timing": { "explicitDueDate": string|null, "triggerEvent": string|null, "triggerDate": string|null, "offsetValue": number|null, "offsetUnit": "HOURS"|"CALENDAR_DAYS"|"BUSINESS_DAYS"|"WEEKS"|"MONTHS"|null, "offsetDirection": "BEFORE"|"AFTER"|null, "recurrenceFrequency": "ONCE"|"DAILY"|"WEEKLY"|"MONTHLY"|"QUARTERLY"|"ANNUALLY"|null, "recurrenceInterval": number|null, "gracePeriodDays": number|null }, "conditions": string[], "exceptions": string[], "financialTerms": { "amount": string|null, "currency": string|null, "percentage": string|null, "calculationBasis": string|null }, "consequence": string|null, "penalty": string|null, "sourceAnchors": [{ "pageNumber": number, "lineStart": number, "lineEnd": number, "startOffset": number, "endOffset": number, "sourceText": string }], "confidence": { "overall": number, "obligatedParty": number, "action": number, "timing": number, "sourceAnchor": number }, "warnings": string[], "missingFields": string[] }',
-    "",
-    "SOURCE ANCHOR RULES",
-    "sourceText must be an exact verbatim substring from the provided contract text.",
-    "pageNumber is the supplied 1-based page number.",
-    "lineStart and lineEnd are the supplied L numbers.",
-    "startOffset and endOffset are 0-based character offsets from the start of that page text. Use the supplied line offset metadata.",
-    "If an obligation spans multiple lines, sourceText should include the exact text range and lineStart/lineEnd should cover the range.",
+    "Return JSON only: an array of objects with title, description, obligationType, obligatedParty, beneficiaryParty, action, deliverable, timing, conditions, exceptions, financialTerms, consequence, penalty, sourceAnchors, confidence, warnings, missingFields.",
+    "Required nested keys: timing has explicitDueDate, triggerEvent, triggerDate, offsetValue, offsetUnit, offsetDirection, recurrenceFrequency, recurrenceInterval, gracePeriodDays. financialTerms has amount, currency, percentage, calculationBasis. confidence has overall, obligatedParty, action, timing, sourceAnchor.",
+    "Use null for unknown scalar values and [] for empty arrays.",
+    "sourceAnchors must include pageNumber, lineStart, lineEnd, startOffset, endOffset, sourceText. sourceText must be an exact verbatim substring from the supplied lines.",
     "If there are no obligations, return [].",
     "",
     pageText,
@@ -310,7 +417,19 @@ export class GroqObligationExtractionProvider implements ObligationExtractionPro
 
   async extract(input: ObligationExtractionInput): Promise<ObligationExtractionResult> {
     const numberedPages = toNumberedPages(input.pages);
+    const promptPages = selectGroqPromptPages(numberedPages);
     const pagesByNumber = new Map(numberedPages.map((page) => [page.pageNumber, page]));
+    const prompt = buildPrompt(promptPages);
+
+    this.dependencies.logger.info("groq_obligation_prompt_compacted", {
+      contractId: input.context.contractId,
+      documentId: input.context.documentId,
+      processingRunId: input.context.processingRunId,
+      sourcePageCount: numberedPages.length,
+      promptPageCount: promptPages.length,
+      promptLineCount: promptPages.reduce((count, page) => count + page.lines.length, 0),
+      promptCharacterCount: prompt.length,
+    });
 
     for (
       let attemptIndex = 0;
@@ -320,7 +439,7 @@ export class GroqObligationExtractionProvider implements ObligationExtractionPro
       try {
         const response = await this.dependencies.llm.generateStructured({
           model: this.dependencies.config.model,
-          prompt: buildPrompt(numberedPages),
+          prompt,
           responseSchemaName: "contract_obligation_extraction",
           systemInstruction:
             "You extract contract obligations as strict JSON. Every extracted obligation must be grounded in the supplied page lines.",

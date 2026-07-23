@@ -125,7 +125,7 @@ export function createWorkerRuntime({ logger }: { readonly logger: Logger }): Wo
     jobConfig.pollIntervalMilliseconds,
     logger,
   );
-  const names = ["PROCESS_CONTRACT"] as const;
+  const names = ["PROCESS_CONTRACT", "DELIVER_REMINDER"] as const;
 
   return {
     names,

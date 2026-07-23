@@ -1,6 +1,16 @@
 import type { ObligationStatus } from "@contract-obligation-tracker/shared";
 
 export type { ObligationStatus };
+export type ObligationReminderFilter =
+  | "PENDING"
+  | "ENQUEUED"
+  | "PROCESSING"
+  | "DELIVERED"
+  | "RETRY_PENDING"
+  | "FAILED"
+  | "CANCELLED"
+  | "NONE";
+export type ObligationDueDateRangeFilter = "OVERDUE" | "NEXT_7_DAYS" | "NEXT_30_DAYS";
 
 export interface ObligationSummary {
   readonly id: string;
@@ -14,6 +24,14 @@ export interface ObligationSummary {
   readonly nextReminderAt?: string | null | undefined;
   readonly sourceAnchors: readonly ObligationSourceAnchor[];
   readonly version: number;
+}
+
+export type ObligationStatusCounts = Record<ObligationStatus, number>;
+
+export interface ObligationListResult {
+  readonly items: readonly ObligationSummary[];
+  readonly total: number;
+  readonly statusCounts: ObligationStatusCounts;
 }
 
 export interface ObligationSourceBox {

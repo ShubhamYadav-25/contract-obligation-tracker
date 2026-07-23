@@ -32,7 +32,7 @@ export const envSchema = z
     GROQ_API_KEY: z.string().optional(),
     GROQ_EXTRACTION_MODEL: z.string().min(1).default("llama-3.1-8b-instant"),
     GROQ_EXTRACTION_TEMPERATURE: z.coerce.number().min(0).max(2).default(0.1),
-    GROQ_EXTRACTION_MAX_TOKENS: integerFromEnv.default(4_096),
+    GROQ_EXTRACTION_MAX_TOKENS: integerFromEnv.default(2_048),
     GROQ_EXTRACTION_TIMEOUT_MS: integerFromEnv.default(45_000),
     GROQ_EXTRACTION_MAX_ATTEMPTS: integerFromEnv.default(3),
     GROQ_EXTRACTION_RETRY_BASE_DELAY_MS: integerFromEnv.default(1_000),

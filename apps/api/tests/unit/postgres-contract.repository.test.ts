@@ -30,7 +30,7 @@ describe("PostgresContractDocumentRepository", () => {
               storage_bucket: "contracts",
               storage_key: "organizations/org/contracts/contract/documents/document/original.pdf",
               mime_type: "application/pdf",
-              file_size_bytes: 128,
+              file_size_bytes: "128",
               file_hash_sha256: "a".repeat(64),
               upload_status: "STORED",
               upload_error_code: null,
@@ -72,6 +72,7 @@ describe("PostgresContractDocumentRepository", () => {
 
     expect(duplicate?.document.uploadedAt).toBeInstanceOf(Date);
     expect(duplicate?.document.uploadedAt.toISOString()).toBe(uploadedAt);
+    expect(duplicate?.document.fileSizeBytes).toBe(128);
     expect(duplicate?.contract.createdAt).toBeInstanceOf(Date);
     expect(duplicate?.processingRun?.createdAt).toBeInstanceOf(Date);
   });

@@ -1,11 +1,14 @@
 import { Badge } from "../../../components/ui/badge.js";
 
-export type ReminderStatus = "SCHEDULED" | "CLAIMED" | "DELIVERED" | "FAILED" | "CANCELLED";
+export type ReminderStatus =
+  "PENDING" | "ENQUEUED" | "PROCESSING" | "DELIVERED" | "RETRY_PENDING" | "FAILED" | "CANCELLED";
 
 const tones: Record<ReminderStatus, "neutral" | "success" | "warning" | "danger" | "info"> = {
-  SCHEDULED: "info",
-  CLAIMED: "warning",
+  PENDING: "info",
+  ENQUEUED: "warning",
+  PROCESSING: "warning",
   DELIVERED: "success",
+  RETRY_PENDING: "warning",
   FAILED: "danger",
   CANCELLED: "neutral",
 };

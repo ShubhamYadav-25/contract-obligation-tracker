@@ -5,6 +5,7 @@ export const routePaths = {
   contracts: "/contracts",
   contractUpload: "/contracts/upload",
   contractDetail: (contractId: string) => `/contracts/${contractId}`,
+  messages: "/messages",
   reviews: "/reviews",
   reviewDetail: (candidateId: string) => `/reviews/${candidateId}`,
   obligations: "/obligations",

@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 :root {
-  color: #172033;
-  background: #f7f8fb;
+  color: #0f172a;
+  background: #fafafa;
   font-family:
     Inter,
     ui-sans-serif,
@@ -25,7 +25,7 @@ input,
 select,
 textarea,
 a {
-  outline-color: #0f766e;
+  outline-color: #14b8a6;
 }
 
 #root {
