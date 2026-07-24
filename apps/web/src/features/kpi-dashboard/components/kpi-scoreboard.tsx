@@ -1,5 +1,5 @@
-import { Table } from "../../../components/ui/table.js";
-import { formatDateTime } from "../../../utils/format-date.js";
+import { Table } from "@/components/ui/table.js";
+import { formatDateTime } from "@/utils/format-date.js";
 import { KpiStatusBadge } from "./kpi-status-badge.js";
 import type { KpiMetric } from "../types/kpi.js";
 

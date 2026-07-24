@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { uploadMultipart } from "../../../services/api-client.js";
+import { uploadMultipart } from "@/services/api-client.js";
 
 export const uploadContractResultSchema = z.object({
   contractId: z.string(),

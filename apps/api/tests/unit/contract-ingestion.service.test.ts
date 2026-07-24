@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { Readable } from "node:stream";
 
 import { describe, expect, it, vi } from "vitest";
 
@@ -11,6 +12,7 @@ import type {
   ContractDocumentRepository,
   ContractProcessingRepository,
   ContractRepository,
+  ContractWorkspaceRepository,
   ExistingContractDocument,
 } from "../../src/modules/contracts/contracts.repository.js";
 import { FileHashService } from "../../src/modules/contracts/file-hash.service.js";
@@ -79,6 +81,7 @@ function createDependencies(
     pendingTransactionFails: boolean;
     pendingUniqueViolation: boolean;
     finalizationTransactionFails: boolean;
+    workspace: ReturnType<typeof createExistingDocument> | null;
   }> = {},
 ) {
   const calls = {
@@ -207,6 +210,31 @@ function createDependencies(
       return "contract-processing:document";
     }),
   };
+  const workspaceDocument = overrides.workspace ?? null;
+  const contractReads: ContractWorkspaceRepository = {
+    listByOrganization: vi.fn(async () => []),
+    findByOrganizationAndId: vi.fn(async () =>
+      workspaceDocument
+        ? {
+            contract: workspaceDocument.contract,
+            currentDocument: workspaceDocument.document,
+            ...(workspaceDocument.processingRun
+              ? { latestProcessingRun: workspaceDocument.processingRun }
+              : {}),
+            text: {
+              pageCount: 0,
+              segmentCount: 0,
+              ocrPageCount: 0,
+            },
+            extraction: {
+              confirmedCount: 0,
+              reviewRequiredCount: 0,
+              rejectedCount: 0,
+            },
+          }
+        : null,
+    ),
+  };
   const storage: StorageProvider = {
     upload: vi.fn(async (input) => {
       calls.storageUploads += 1;
@@ -220,7 +248,13 @@ function createDependencies(
       };
     }),
     download: vi.fn(),
-    downloadStream: vi.fn(),
+    downloadStream: vi.fn(async () => ({
+      statusCode: 206 as const,
+      contentLength: 4,
+      contentRange: "bytes 0-3/128",
+      acceptRanges: "bytes",
+      body: Readable.from(Buffer.from("%PDF")),
+    })),
     remove: vi.fn(),
     delete: vi.fn(async () => {
       calls.storageDeletes += 1;
@@ -249,8 +283,10 @@ function createDependencies(
 
   return {
     calls,
+    storage,
     service: new ContractIngestionService({
       contracts,
+      contractReads,
       documents,
       processingRuns,
       processingQueue,
@@ -362,5 +398,24 @@ describe("ContractIngestionService", () => {
     expect(result.contractId).toBe(survivingDocument.contract.id);
     expect(calls.storageUploads).toBe(0);
     expect(calls.jobsQueued).toBe(0);
+  });
+
+  it("returns a 416 stream descriptor for unsatisfiable PDF ranges without storage download", async () => {
+    const workspace = createExistingDocument();
+    const { service, storage } = createDependencies({ workspace });
+
+    const result = await service.streamCurrentDocument({
+      organizationId,
+      contractId: workspace.contract.id,
+      range: "bytes=999-1000",
+    });
+
+    expect(result?.stream).toMatchObject({
+      statusCode: 416,
+      contentRange: `bytes */${validPdf.byteLength}`,
+      contentLength: 0,
+      acceptRanges: "bytes",
+    });
+    expect(storage.downloadStream).not.toHaveBeenCalled();
   });
 });

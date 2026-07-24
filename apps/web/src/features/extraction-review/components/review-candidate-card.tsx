@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 
-import { routePaths } from "../../../app/route-paths.js";
-import { Card } from "../../../components/ui/card.js";
+import { routePaths } from "@/app/route-paths.js";
+import { Card } from "@/components/ui/card.js";
 import { ConfidenceIndicator } from "./confidence-indicator.js";
 import type { ReviewCandidate } from "../types/review-candidate.js";
 

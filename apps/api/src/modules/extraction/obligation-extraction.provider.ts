@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import type { Logger } from "../../config/logger.js";
 import type { LlmProvider } from "../../infrastructure/llm/llm-provider.js";
+import type { SegmentedDocumentPage } from "../document-processing/document-processing.types.js";
 import { ApplicationError } from "../../shared/errors/application-error.js";
 import {
   extractFieldsFromPages,
@@ -19,13 +20,47 @@ export type ObligationExtractionContext = {
 
 export type ObligationExtractionInput = {
   readonly pages: readonly Page[];
+  readonly segmentedPages?: readonly SegmentedDocumentPage[];
   readonly context: ObligationExtractionContext;
+};
+
+export type ObligationExtractionMetrics = {
+  readonly candidateWindows: number;
+  readonly rawCandidates: number;
+  readonly confirmed: number;
+  readonly reviewRequired: number;
+  readonly rejected: number;
+  readonly duplicateRemovals: number;
+  readonly consolidations: number;
+  readonly llmRequestCount: number;
+  readonly retryCount: number;
+  readonly extractionDurationMilliseconds: number;
+};
+
+export type ObligationExtractionReviewCandidate = {
+  readonly stableCandidateKey: string;
+  readonly summary: string;
+  readonly reviewReasons: readonly string[];
+  readonly sourceReferences?: readonly {
+    readonly pageNumber: number;
+    readonly startLine: number;
+    readonly endLine: number;
+    readonly globalStartLine?: number;
+    readonly globalEndLine?: number;
+  }[];
+};
+
+export type ObligationExtractionMetadata = {
+  readonly metrics?: ObligationExtractionMetrics;
+  readonly reviewRequiredCandidates?: readonly ObligationExtractionReviewCandidate[];
+  readonly rejectedCandidates?: readonly ObligationExtractionReviewCandidate[];
 };
 
 export type ObligationExtractionResult = {
   readonly extraction: StructuredExtraction;
   readonly confidence: number;
-  readonly provider: "HEURISTIC" | "GROQ";
+  readonly provider: "HEURISTIC" | "GROQ" | "REFERENCE_AWARE_GEMINI";
+  readonly metadata?: ObligationExtractionMetadata;
 };
 
 export interface ObligationExtractionProvider {

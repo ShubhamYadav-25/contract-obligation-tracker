@@ -18,6 +18,7 @@
     "summarize:obligation-reprocess": "tsx src/scripts/summarize-obligation-reprocess.ts",
     "import:cuad-subset": "tsx src/scripts/import-cuad-subset.ts",
     "reset:dev-data": "tsx src/scripts/reset-dev-data.ts",
+    "gemini:doctor": "tsx src/scripts/gemini-doctor.ts",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --passWithNoTests",
@@ -26,6 +27,7 @@
     "test:kpi": "vitest run tests/kpi --passWithNoTests"
   },
   "dependencies": {
+    "@google/genai": "^2.13.0",
     "@napi-rs/canvas": "^1.0.2",
     "@supabase/supabase-js": "^2.110.7",
     "cors": "^2.8.6",

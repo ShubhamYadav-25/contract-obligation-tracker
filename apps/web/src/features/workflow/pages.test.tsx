@@ -26,7 +26,7 @@ vi.mock("../contract-upload/hooks/use-upload-contract.js", () => ({
   useUploadContract: () => useUploadContractMock(),
 }));
 
-vi.mock("../../components/pdf-viewer/pdf-viewer-container.js", () => ({
+vi.mock("@/components/features/pdf-reader/pdf-viewer-container.js", () => ({
   PdfViewerContainer: () => <div data-testid="pdf-viewer" />,
 }));
 

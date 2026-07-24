@@ -60,7 +60,38 @@ export interface ContractIngestionDependencies {
 
 export interface ContractDocumentStreamResult {
   readonly document: ContractDocumentRecord;
-  readonly stream: DownloadObjectStreamResult;
+  readonly stream?:
+    | DownloadObjectStreamResult
+    | {
+        readonly statusCode: 416;
+        readonly contentRange: string;
+        readonly contentLength: 0;
+        readonly acceptRanges: "bytes";
+      };
+}
+
+function isUnsatisfiableRange(range: string, fileSizeBytes: number): boolean {
+  const match = range.match(/^bytes=(\d*)-(\d*)$/);
+  if (!match) {
+    return true;
+  }
+  const [, rawStart, rawEnd] = match;
+  if (!rawStart && !rawEnd) {
+    return true;
+  }
+  if (!rawStart) {
+    const suffixLength = Number(rawEnd);
+    return !Number.isInteger(suffixLength) || suffixLength <= 0;
+  }
+  const start = Number(rawStart);
+  const end = rawEnd ? Number(rawEnd) : fileSizeBytes - 1;
+  return (
+    !Number.isInteger(start) ||
+    !Number.isInteger(end) ||
+    start < 0 ||
+    end < start ||
+    start >= fileSizeBytes
+  );
 }
 
 function duplicateResult(existing: ExistingContractDocument): ContractTrackingResult {
@@ -276,6 +307,18 @@ export class ContractIngestionService {
     const contract = await this.findContract(input);
     if (!contract?.currentDocument || contract.currentDocument.uploadStatus !== "STORED") {
       return null;
+    }
+
+    if (input.range && isUnsatisfiableRange(input.range, contract.currentDocument.fileSizeBytes)) {
+      return {
+        document: contract.currentDocument,
+        stream: {
+          statusCode: 416,
+          contentRange: `bytes */${contract.currentDocument.fileSizeBytes}`,
+          contentLength: 0,
+          acceptRanges: "bytes",
+        },
+      };
     }
 
     return {

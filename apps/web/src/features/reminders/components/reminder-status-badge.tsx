@@ -1,4 +1,4 @@
-import { Badge } from "../../../components/ui/badge.js";
+import { Badge } from "@/components/ui/badge.js";
 
 export type ReminderStatus =
   "PENDING" | "ENQUEUED" | "PROCESSING" | "DELIVERED" | "RETRY_PENDING" | "FAILED" | "CANCELLED";

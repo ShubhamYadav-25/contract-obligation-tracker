@@ -10,6 +10,17 @@ export interface ObligationRecord {
   readonly dueAt?: Date;
   readonly reminderStatus?: string;
   readonly nextReminderAt?: Date;
+  readonly responsibleParty?: string;
+  readonly counterparty?: string;
+  readonly category?: string;
+  readonly timingType?: string;
+  readonly frequency?: string;
+  readonly triggerEvent?: string;
+  readonly offsetValue?: number;
+  readonly offsetUnit?: string;
+  readonly offsetDirection?: string;
+  readonly confidence?: number;
+  readonly reviewStatus?: string;
   readonly sourceAnchors: readonly ObligationSourceAnchor[];
   readonly version: number;
 }
@@ -22,8 +33,15 @@ export interface ObligationSourceBox {
 }
 
 export interface ObligationSourceAnchor {
+  readonly documentId?: string;
   readonly pageNumber: number;
+  readonly startLine?: number;
+  readonly endLine?: number;
+  readonly globalStartLine?: number;
+  readonly globalEndLine?: number;
   readonly quotedText?: string;
+  readonly source?: string;
+  readonly evidenceRole?: string;
   readonly boxes: readonly ObligationSourceBox[];
 }
 
@@ -45,4 +63,20 @@ export interface ObligationTransitionInput {
   readonly toStatus: ObligationStatus;
   readonly expectedVersion: number;
   readonly actorId: string;
+}
+
+export interface ObligationEditableFields {
+  readonly title?: string;
+  readonly description?: string;
+  readonly dueAt?: Date | null;
+  readonly responsibleParty?: string | null;
+  readonly counterparty?: string | null;
+  readonly category?: string | null;
+  readonly timingType?: string | null;
+  readonly frequency?: string | null;
+  readonly triggerEvent?: string | null;
+  readonly offsetValue?: number | null;
+  readonly offsetUnit?: string | null;
+  readonly offsetDirection?: string | null;
+  readonly reviewStatus?: string | null;
 }

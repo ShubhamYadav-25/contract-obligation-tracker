@@ -1,10 +1,18 @@
-import React from 'react';
+import React from "react";
 
-export function TextPagesViewer({ pages }: { readonly pages: { pageNumber: number; normalizedText: string }[] }) {
+export function TextPagesViewer({
+  pages,
+}: {
+  readonly pages: { pageNumber: number; normalizedText: string }[];
+}) {
   return (
     <div className="mt-6 space-y-6">
       {pages.map((p) => (
-        <section key={p.pageNumber} aria-label={`page-${p.pageNumber}`} className="rounded border border-border p-3">
+        <section
+          key={p.pageNumber}
+          aria-label={`page-${p.pageNumber}`}
+          className="rounded border border-border p-3"
+        >
           <h4 className="mb-2 text-sm font-semibold">Page {p.pageNumber}</h4>
           <div className="text-sm">
             {p.normalizedText.split(/\r?\n/).map((line, i) => (

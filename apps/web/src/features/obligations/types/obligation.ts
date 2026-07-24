@@ -22,6 +22,17 @@ export interface ObligationSummary {
   readonly dueAt?: string | undefined;
   readonly reminderStatus?: string | null | undefined;
   readonly nextReminderAt?: string | null | undefined;
+  readonly responsibleParty?: string | null | undefined;
+  readonly counterparty?: string | null | undefined;
+  readonly category?: string | null | undefined;
+  readonly timingType?: string | null | undefined;
+  readonly frequency?: string | null | undefined;
+  readonly triggerEvent?: string | null | undefined;
+  readonly offsetValue?: number | null | undefined;
+  readonly offsetUnit?: string | null | undefined;
+  readonly offsetDirection?: string | null | undefined;
+  readonly confidence?: number | null | undefined;
+  readonly reviewStatus?: string | null | undefined;
   readonly sourceAnchors: readonly ObligationSourceAnchor[];
   readonly version: number;
 }
@@ -42,8 +53,15 @@ export interface ObligationSourceBox {
 }
 
 export interface ObligationSourceAnchor {
+  readonly documentId?: string | undefined;
   readonly pageNumber: number;
+  readonly startLine?: number | undefined;
+  readonly endLine?: number | undefined;
+  readonly globalStartLine?: number | undefined;
+  readonly globalEndLine?: number | undefined;
   readonly quotedText?: string | undefined;
+  readonly source?: string | undefined;
+  readonly evidenceRole?: string | undefined;
   readonly boxes: readonly ObligationSourceBox[];
 }
 

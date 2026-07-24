@@ -1,4 +1,4 @@
-import { apiRequest } from "../../../services/api-client.js";
+import { apiRequest } from "@/services/api-client.js";
 import type { ReviewFormValues } from "../schemas/review-form.schema.js";
 
 export function approveReviewCandidate(candidateId: string, input: ReviewFormValues) {

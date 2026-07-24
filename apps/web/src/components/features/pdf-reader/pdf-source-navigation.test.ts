@@ -13,6 +13,9 @@ describe("pdf source navigation", () => {
         type: "PDF_NAVIGATE_TO_SOURCE",
         payload: {
           pageNumber: 24,
+          startLine: 638,
+          endLine: 639,
+          quotedText: "The Affiliate Transactional Share shall be payable quarterly.",
           boxes: [{ x: 0.11, y: 0.47, width: 0.76, height: 0.024 }],
         },
       }),
@@ -24,6 +27,23 @@ describe("pdf source navigation", () => {
         payload: { pageNumber: 0, boxes: [] },
       }),
     ).toBe(false);
+  });
+
+  it("keeps page navigation separate from page-local line numbers", () => {
+    const command = {
+      type: "PDF_NAVIGATE_TO_SOURCE",
+      payload: {
+        pageNumber: 23,
+        startLine: 638,
+        endLine: 639,
+        quotedText: "The Affiliate Transactional Share shall be payable quarterly.",
+        boxes: [{ x: 0.08, y: 0.12, width: 0.84, height: 0.026 }],
+      },
+    };
+
+    expect(isPdfSourceNavigationCommand(command)).toBe(true);
+    expect(command.payload.pageNumber).toBe(23);
+    expect(command.payload.startLine).toBe(638);
   });
 
   it("converts normalized source boxes to overlay rectangles", () => {

@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { queryKeys } from "../../../services/query-keys.js";
+import { queryKeys } from "@/services/query-keys.js";
 import { getProcessingStatus } from "../api/get-processing-status.js";
 
 const activeStatuses = new Set([

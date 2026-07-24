@@ -11,6 +11,7 @@ import { NativePdfTextExtractorAdapter } from "../infrastructure/pdf/native-pdf-
 import { PdfJsPageRendererAdapter } from "../infrastructure/pdf/pdfjs-page-renderer.adapter.js";
 import { GeminiVisionOcrAdapter } from "../infrastructure/ocr/gemini-vision.adapter.js";
 import { TesseractOcrAdapter } from "../infrastructure/ocr/tesseract.adapter.js";
+import { GeminiStructuredLlmClient } from "../infrastructure/llm/gemini-structured-llm.client.js";
 import { GroqLlmAdapter } from "../infrastructure/llm/groq.adapter.js";
 import { SupabaseStorageProvider } from "../infrastructure/storage/supabase-storage.provider.js";
 import { ContractProcessingOrchestrator } from "../modules/contracts/contract-processing-orchestrator.service.js";
@@ -18,7 +19,9 @@ import { DocumentTextProcessingPipeline } from "../modules/contracts/document-te
 import {
   GroqObligationExtractionProvider,
   HeuristicObligationExtractionProvider,
+  type ObligationExtractionProvider,
 } from "../modules/extraction/obligation-extraction.provider.js";
+import { ReferenceAwareObligationExtractor } from "../modules/extraction/reference-aware/index.js";
 import { PostgresAuditRepository } from "../modules/audit/postgres-audit.repository.js";
 import {
   PostgresContractDocumentRepository,
@@ -44,6 +47,76 @@ export interface WorkerRuntime extends CloseableResource {
   runOnce(): Promise<number>;
 }
 
+export function createObligationExtractor({
+  env,
+  logger,
+}: {
+  readonly env: ReturnType<typeof loadEnv>;
+  readonly logger: Logger;
+}): ObligationExtractionProvider {
+  const heuristicObligationExtractor = new HeuristicObligationExtractionProvider();
+
+  if (env.OBLIGATION_EXTRACTOR_MODE === "auto") {
+    return env.GROQ_API_KEY
+      ? createGroqObligationExtractor({ env, logger, fallback: heuristicObligationExtractor })
+      : heuristicObligationExtractor;
+  }
+
+  if (env.OBLIGATION_EXTRACTOR_MODE === "heuristic") {
+    return heuristicObligationExtractor;
+  }
+
+  if (env.OBLIGATION_EXTRACTOR_MODE === "groq") {
+    return createGroqObligationExtractor({ env, logger, fallback: heuristicObligationExtractor });
+  }
+
+  if (env.OBLIGATION_EXTRACTOR_MODE === "reference-aware-gemini") {
+    return new ReferenceAwareObligationExtractor({
+      llm: new GeminiStructuredLlmClient({ env, logger }),
+      logger,
+      config: {
+        maxWindowsPerBatch: env.GEMINI_MAX_WINDOWS_PER_BATCH,
+        maxBatchInputCharacters: env.GEMINI_MAX_BATCH_INPUT_CHARACTERS,
+        maxBatchOutputTokens: env.GEMINI_MAX_BATCH_OUTPUT_TOKENS,
+      },
+    });
+  }
+
+  return heuristicObligationExtractor;
+}
+
+function createGroqObligationExtractor({
+  env,
+  logger,
+  fallback,
+}: {
+  readonly env: ReturnType<typeof loadEnv>;
+  readonly logger: Logger;
+  readonly fallback: ObligationExtractionProvider;
+}): ObligationExtractionProvider {
+  if (!env.GROQ_API_KEY) {
+    throw new Error("GROQ_API_KEY is required when OBLIGATION_EXTRACTOR_MODE=groq");
+  }
+
+  return new GroqObligationExtractionProvider({
+    llm: new GroqLlmAdapter({
+      apiKey: env.GROQ_API_KEY,
+      defaultModel: env.GROQ_EXTRACTION_MODEL,
+      temperature: env.GROQ_EXTRACTION_TEMPERATURE,
+      maxTokens: env.GROQ_EXTRACTION_MAX_TOKENS,
+    }),
+    fallback,
+    logger,
+    config: {
+      model: env.GROQ_EXTRACTION_MODEL,
+      timeoutMilliseconds: env.GROQ_EXTRACTION_TIMEOUT_MS,
+      maxAttempts: env.GROQ_EXTRACTION_MAX_ATTEMPTS,
+      retryBaseDelayMilliseconds: env.GROQ_EXTRACTION_RETRY_BASE_DELAY_MS,
+      retryMaxDelayMilliseconds: env.GROQ_EXTRACTION_RETRY_MAX_DELAY_MS,
+    },
+  });
+}
+
 export function createWorkerRuntime({ logger }: { readonly logger: Logger }): WorkerRuntime {
   const env = loadEnv();
   const jobConfig = createJobConfig(env);
@@ -54,26 +127,7 @@ export function createWorkerRuntime({ logger }: { readonly logger: Logger }): Wo
   const processingRuns = new PostgresContractProcessingRepository(database);
   const obligations = new PostgresObligationRepository(transactions);
   const jobs: JobRepository = new PostgresJobRepository(database, transactions);
-  const heuristicObligationExtractor = new HeuristicObligationExtractionProvider();
-  const obligationExtractor = env.GROQ_API_KEY
-    ? new GroqObligationExtractionProvider({
-        llm: new GroqLlmAdapter({
-          apiKey: env.GROQ_API_KEY,
-          defaultModel: env.GROQ_EXTRACTION_MODEL,
-          temperature: env.GROQ_EXTRACTION_TEMPERATURE,
-          maxTokens: env.GROQ_EXTRACTION_MAX_TOKENS,
-        }),
-        fallback: heuristicObligationExtractor,
-        logger,
-        config: {
-          model: env.GROQ_EXTRACTION_MODEL,
-          timeoutMilliseconds: env.GROQ_EXTRACTION_TIMEOUT_MS,
-          maxAttempts: env.GROQ_EXTRACTION_MAX_ATTEMPTS,
-          retryBaseDelayMilliseconds: env.GROQ_EXTRACTION_RETRY_BASE_DELAY_MS,
-          retryMaxDelayMilliseconds: env.GROQ_EXTRACTION_RETRY_MAX_DELAY_MS,
-        },
-      })
-    : heuristicObligationExtractor;
+  const obligationExtractor = createObligationExtractor({ env, logger });
   const orchestrator = new ContractProcessingOrchestrator({
     processingRuns,
     audit,

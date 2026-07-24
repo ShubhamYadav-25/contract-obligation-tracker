@@ -2,10 +2,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, UploadCloud } from "lucide-react";
 import { useForm } from "react-hook-form";
 
-import { InlineError } from "../../../components/feedback/inline-error.js";
-import { Button } from "../../../components/ui/button.js";
-import { Input } from "../../../components/ui/input.js";
-import { ApiError, isConflictError } from "../../../services/api-error.js";
+import { InlineError } from "@/components/feedback/inline-error.js";
+import { Button } from "@/components/ui/button.js";
+import { Input } from "@/components/ui/input.js";
+import { ApiError, isConflictError } from "@/services/api-error.js";
 import { uploadContractSchema } from "../schemas/upload-contract.schema.js";
 import type { UploadContractFormValues } from "../schemas/upload-contract.schema.js";
 

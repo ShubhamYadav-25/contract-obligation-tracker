@@ -1,4 +1,4 @@
-import { Table } from "../../../components/ui/table.js";
+import { Table } from "@/components/ui/table.js";
 
 export function ContractKeyFields({
   fields,

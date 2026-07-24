@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { apiRequest } from "../../../services/api-client.js";
+import { apiRequest } from "@/services/api-client.js";
 
 const kpiMetricSchema = z.object({
   kpi: z.string(),

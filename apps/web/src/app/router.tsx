@@ -1,6 +1,6 @@
 import { Navigate, createBrowserRouter } from "react-router-dom";
 
-import { AppShell } from "../components/layout/app-shell.js";
+import { AppShell } from "@/components/layout/app-shell.js";
 import {
   ContractWorkspacePage,
   ContractsPage,

@@ -10,6 +10,7 @@
     "dev": "corepack pnpm --parallel --stream -r --filter \"./apps/*\" run dev",
     "dev:web": "corepack pnpm --filter @contract-obligation-tracker/web run dev",
     "dev:api": "corepack pnpm --filter @contract-obligation-tracker/api run dev",
+    "dev:worker": "corepack pnpm --filter @contract-obligation-tracker/api run worker",
     "build": "corepack pnpm -r --if-present --filter \"./apps/*\" run build",
     "typecheck": "corepack pnpm -r --if-present run typecheck",
     "test": "corepack pnpm -r --if-present run test",

@@ -30,12 +30,12 @@ export function CandidatesForContract({ contractId }: { readonly contractId: str
                     const a = c.sourceAnchors[0];
                     const id = `page-${a.pageNumber}-line-${a.startLine}`;
                     const el = document.getElementById(id);
-                    if (el && typeof (el as any).scrollIntoView === 'function') {
-                      (el as any).scrollIntoView({ behavior: 'smooth', block: 'center' });
-                      (el as any).style.outline = '3px solid rgba(14,165,233,0.6)';
-                      setTimeout(() => ((el as any).style.outline = ''), 3000);
+                    if (el && typeof (el as any).scrollIntoView === "function") {
+                      (el as any).scrollIntoView({ behavior: "smooth", block: "center" });
+                      (el as any).style.outline = "3px solid rgba(14,165,233,0.6)";
+                      setTimeout(() => ((el as any).style.outline = ""), 3000);
                     } else {
-                      alert('Target text not found in document viewer');
+                      alert("Target text not found in document viewer");
                     }
                   }}
                 >
@@ -53,7 +53,7 @@ export function CandidatesForContract({ contractId }: { readonly contractId: str
                     // swallow for now
                     // eslint-disable-next-line no-console
                     console.error(e);
-                    alert('Failed to approve candidate');
+                    alert("Failed to approve candidate");
                   }
                 }}
               >

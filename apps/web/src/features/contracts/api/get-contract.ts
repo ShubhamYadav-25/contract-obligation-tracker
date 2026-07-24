@@ -1,4 +1,4 @@
-import { apiRequest } from "../../../services/api-client.js";
+import { apiRequest } from "@/services/api-client.js";
 import { contractSummarySchema } from "./list-contracts.js";
 import type { ContractDetail } from "../types/contracts.js";
 

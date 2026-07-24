@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { queryKeys } from "../../../services/query-keys.js";
+import { queryKeys } from "@/services/query-keys.js";
 import { listMessages, type ListMessagesInput } from "../api/list-messages.js";
 
 export function useMessages(input: ListMessagesInput = {}) {

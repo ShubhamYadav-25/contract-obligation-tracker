@@ -1,14 +1,26 @@
 import type { Request, Response } from "express";
 import { z } from "zod";
 import { ApplicationError } from "../../shared/errors/application-error.js";
-import { obligationStatusSchema, transitionObligationSchema } from "./obligations.schemas.js";
+import {
+  obligationStatusSchema,
+  transitionObligationSchema,
+  updateObligationSchema,
+} from "./obligations.schemas.js";
 import type { ObligationService } from "./obligations.service.js";
 import type {
   ObligationDueDateRangeFilter,
   ObligationReminderFilter,
   ObligationRepository,
 } from "./obligations.repository.js";
-import type { ObligationDetailRecord, ObligationRecord } from "./obligations.types.js";
+import type {
+  ObligationDetailRecord,
+  ObligationEditableFields,
+  ObligationRecord,
+} from "./obligations.types.js";
+
+type MutableEditableFields = {
+  -readonly [Key in keyof ObligationEditableFields]?: ObligationEditableFields[Key];
+};
 
 const listQuerySchema = z.object({
   contractId: z.uuid().optional(),
@@ -42,6 +54,17 @@ function serializeObligation(record: ObligationRecord) {
     dueAt: record.dueAt?.toISOString(),
     reminderStatus: record.reminderStatus ?? null,
     nextReminderAt: record.nextReminderAt?.toISOString() ?? null,
+    responsibleParty: record.responsibleParty ?? null,
+    counterparty: record.counterparty ?? null,
+    category: record.category ?? null,
+    timingType: record.timingType ?? null,
+    frequency: record.frequency ?? null,
+    triggerEvent: record.triggerEvent ?? null,
+    offsetValue: record.offsetValue ?? null,
+    offsetUnit: record.offsetUnit ?? null,
+    offsetDirection: record.offsetDirection ?? null,
+    confidence: record.confidence ?? null,
+    reviewStatus: record.reviewStatus ?? null,
     sourceAnchors: record.sourceAnchors,
     version: record.version,
   };
@@ -162,6 +185,118 @@ export class ObligationController {
       // Bubble up error middleware to translate into API response
       throw error;
     }
+  }
+
+  async update(request: Request, response: Response): Promise<void> {
+    if (!this.repository) {
+      throw new ApplicationError({
+        code: "NOT_CONFIGURED",
+        message: "Obligation repository is not configured",
+        statusCode: 500,
+      });
+    }
+    if (!request.authContext) {
+      throw new ApplicationError({
+        code: "AUTHENTICATION_REQUIRED",
+        message: "Authenticated user and organization context is required",
+        statusCode: 401,
+      });
+    }
+
+    const parseResult = updateObligationSchema.safeParse(request.body);
+    if (!parseResult.success) {
+      throw new ApplicationError({
+        code: "INVALID_REQUEST",
+        message: "Invalid obligation update payload",
+        statusCode: 400,
+        details: parseResult.error.format(),
+      });
+    }
+
+    const payload = parseResult.data;
+    const fields: MutableEditableFields = {};
+    if (Object.prototype.hasOwnProperty.call(payload, "title") && payload.title !== undefined) {
+      fields.title = payload.title;
+    }
+    if (
+      Object.prototype.hasOwnProperty.call(payload, "description") &&
+      payload.description !== undefined
+    ) {
+      fields.description = payload.description;
+    }
+    if (Object.prototype.hasOwnProperty.call(payload, "dueAt") && payload.dueAt !== undefined) {
+      fields.dueAt = payload.dueAt === null ? null : new Date(payload.dueAt);
+    }
+    if (
+      Object.prototype.hasOwnProperty.call(payload, "responsibleParty") &&
+      payload.responsibleParty !== undefined
+    ) {
+      fields.responsibleParty = payload.responsibleParty;
+    }
+    if (
+      Object.prototype.hasOwnProperty.call(payload, "counterparty") &&
+      payload.counterparty !== undefined
+    ) {
+      fields.counterparty = payload.counterparty;
+    }
+    if (
+      Object.prototype.hasOwnProperty.call(payload, "category") &&
+      payload.category !== undefined
+    ) {
+      fields.category = payload.category;
+    }
+    if (
+      Object.prototype.hasOwnProperty.call(payload, "timingType") &&
+      payload.timingType !== undefined
+    ) {
+      fields.timingType = payload.timingType;
+    }
+    if (
+      Object.prototype.hasOwnProperty.call(payload, "frequency") &&
+      payload.frequency !== undefined
+    ) {
+      fields.frequency = payload.frequency;
+    }
+    if (
+      Object.prototype.hasOwnProperty.call(payload, "triggerEvent") &&
+      payload.triggerEvent !== undefined
+    ) {
+      fields.triggerEvent = payload.triggerEvent;
+    }
+    if (
+      Object.prototype.hasOwnProperty.call(payload, "offsetValue") &&
+      payload.offsetValue !== undefined
+    ) {
+      fields.offsetValue = payload.offsetValue;
+    }
+    if (
+      Object.prototype.hasOwnProperty.call(payload, "offsetUnit") &&
+      payload.offsetUnit !== undefined
+    ) {
+      fields.offsetUnit = payload.offsetUnit;
+    }
+    if (
+      Object.prototype.hasOwnProperty.call(payload, "offsetDirection") &&
+      payload.offsetDirection !== undefined
+    ) {
+      fields.offsetDirection = payload.offsetDirection;
+    }
+    if (
+      Object.prototype.hasOwnProperty.call(payload, "reviewStatus") &&
+      payload.reviewStatus !== undefined
+    ) {
+      fields.reviewStatus = payload.reviewStatus;
+    }
+
+    const obligationId = String(request.params.obligationId ?? "");
+    const updated = await this.repository.updateEditableFields({
+      organizationId: request.authContext.organizationId,
+      obligationId,
+      expectedVersion: payload.expectedVersion,
+      fields,
+    });
+
+    response.status(200).json({ success: true, data: serializeObligation(updated) });
   }
 
   async detail(request: Request, response: Response): Promise<void> {

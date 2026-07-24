@@ -21,10 +21,7 @@ declare module "pdfjs-dist/web/pdf_viewer.mjs" {
   }
 
   export class PDFFindController {
-    constructor(options: {
-      readonly eventBus: EventBus;
-      readonly linkService: PDFLinkService;
-    });
+    constructor(options: { readonly eventBus: EventBus; readonly linkService: PDFLinkService });
     setDocument(document: unknown): void;
   }
 

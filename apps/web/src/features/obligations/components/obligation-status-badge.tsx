@@ -1,6 +1,6 @@
 import type { ObligationStatus } from "@contract-obligation-tracker/shared";
 
-import { Badge } from "../../../components/ui/badge.js";
+import { Badge } from "@/components/ui/badge.js";
 
 const toneByStatus: Record<
   ObligationStatus,

@@ -1,4 +1,4 @@
-import { Badge } from "../../../components/ui/badge.js";
+import { Badge } from "@/components/ui/badge.js";
 
 export function ConfidenceIndicator({ confidence }: { readonly confidence: number }) {
   const percent = Math.round(confidence * 100);

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { apiRequest } from "../../../services/api-client.js";
+import { apiRequest } from "@/services/api-client.js";
 import type {
   ObligationDueDateRangeFilter,
   ObligationListResult,
@@ -16,8 +16,15 @@ const sourceBoxSchema = z.object({
   height: z.number(),
 });
 const sourceAnchorSchema = z.object({
+  documentId: z.string().optional(),
   pageNumber: z.number(),
+  startLine: z.number().optional(),
+  endLine: z.number().optional(),
+  globalStartLine: z.number().optional(),
+  globalEndLine: z.number().optional(),
   quotedText: z.string().optional(),
+  source: z.string().optional(),
+  evidenceRole: z.string().optional(),
   boxes: z.array(sourceBoxSchema),
 });
 
@@ -31,6 +38,17 @@ export const obligationSummarySchema = z.object({
   dueAt: z.string().optional(),
   reminderStatus: z.string().nullable().optional(),
   nextReminderAt: z.string().nullable().optional(),
+  responsibleParty: z.string().nullable().optional(),
+  counterparty: z.string().nullable().optional(),
+  category: z.string().nullable().optional(),
+  timingType: z.string().nullable().optional(),
+  frequency: z.string().nullable().optional(),
+  triggerEvent: z.string().nullable().optional(),
+  offsetValue: z.number().nullable().optional(),
+  offsetUnit: z.string().nullable().optional(),
+  offsetDirection: z.string().nullable().optional(),
+  confidence: z.number().nullable().optional(),
+  reviewStatus: z.string().nullable().optional(),
   sourceAnchors: z.array(sourceAnchorSchema).default([]),
   version: z.number(),
 });

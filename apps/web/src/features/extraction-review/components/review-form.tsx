@@ -2,9 +2,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Check, X } from "lucide-react";
 import { useForm } from "react-hook-form";
 
-import { Button } from "../../../components/ui/button.js";
-import { Input } from "../../../components/ui/input.js";
-import { Textarea } from "../../../components/ui/textarea.js";
+import { Button } from "@/components/ui/button.js";
+import { Input } from "@/components/ui/input.js";
+import { Textarea } from "@/components/ui/textarea.js";
 import { reviewFormSchema } from "../schemas/review-form.schema.js";
 import type { ReviewFormValues } from "../schemas/review-form.schema.js";
 

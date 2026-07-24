@@ -11,9 +11,9 @@ import {
 import { useState } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
 
-import { routePaths } from "../../app/route-paths.js";
+import { routePaths } from "@/app/route-paths.js";
 import { useAuthSession } from "../../features/auth/index.js";
-import { cx } from "../../utils/cx.js";
+import { cx } from "@/utils/cx.js";
 
 const navigation = [
   { label: "Dashboard", to: routePaths.dashboard, icon: LayoutDashboard },

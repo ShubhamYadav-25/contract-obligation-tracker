@@ -97,6 +97,17 @@ function createWorkspaceRecord(): ContractWorkspaceRecord {
       segmentCount: 5,
       ocrPageCount: 1,
     },
+    extraction: {
+      provider: "REFERENCE_AWARE_GEMINI",
+      confidence: 0.95,
+      confirmedCount: 12,
+      reviewRequiredCount: 10,
+      rejectedCount: 3,
+      rawCandidateCount: 25,
+      verifiedCandidateCount: 22,
+      llmRequestCount: 6,
+      retryCount: 0,
+    },
   };
 }
 
@@ -218,6 +229,12 @@ describe("contract upload route", () => {
         segmentCount: 5,
         ocrPageCount: 1,
       },
+      extraction: {
+        provider: "REFERENCE_AWARE_GEMINI",
+        confirmedCount: 12,
+        reviewRequiredCount: 10,
+        rejectedCount: 3,
+      },
     });
     expect(service.listContracts).toHaveBeenCalledWith({
       organizationId,
@@ -289,5 +306,89 @@ describe("contract upload route", () => {
       contractId: "00000000-0000-4000-8000-000000000003",
       range: "bytes=0-3",
     });
+  });
+
+  it("streams authenticated contract PDFs without a range header", async () => {
+    const workspace = createWorkspaceRecord();
+    const service = {
+      streamCurrentDocument: vi.fn(async () => ({
+        document: workspace.currentDocument,
+        stream: {
+          statusCode: 200,
+          contentType: "application/pdf",
+          contentLength: 4,
+          acceptRanges: "bytes",
+          body: Readable.from(Buffer.from("%PDF")),
+        },
+      })),
+    };
+
+    const response = await request(createTestApp(service))
+      .get("/api/v1/contracts/00000000-0000-4000-8000-000000000003/document.pdf")
+      .set("x-user-id", userId)
+      .set("x-organization-id", organizationId)
+      .expect(200);
+
+    expect(response.headers["accept-ranges"]).toBe("bytes");
+    expect(response.headers["content-length"]).toBe("4");
+    expect(response.headers["content-type"]).toContain("application/pdf");
+    expect(Buffer.from(response.body).toString("utf8")).toBe("%PDF");
+    expect(service.streamCurrentDocument).toHaveBeenCalledWith({
+      organizationId,
+      contractId: "00000000-0000-4000-8000-000000000003",
+    });
+  });
+
+  it("returns 416 for unsatisfiable PDF byte ranges", async () => {
+    const workspace = createWorkspaceRecord();
+    const service = {
+      streamCurrentDocument: vi.fn(async () => ({
+        document: workspace.currentDocument,
+        stream: {
+          statusCode: 416,
+          contentRange: "bytes */128",
+          contentLength: 0,
+          acceptRanges: "bytes",
+        },
+      })),
+    };
+
+    const response = await request(createTestApp(service))
+      .get("/api/v1/contracts/00000000-0000-4000-8000-000000000003/document.pdf")
+      .set("x-user-id", userId)
+      .set("x-organization-id", organizationId)
+      .set("range", "bytes=999-1000")
+      .expect(416);
+
+    expect(response.headers["accept-ranges"]).toBe("bytes");
+    expect(response.headers["content-range"]).toBe("bytes */128");
+    expect(response.headers["content-length"]).toBe("0");
+  });
+
+  it("requires auth before streaming PDFs", async () => {
+    const service = {
+      streamCurrentDocument: vi.fn(),
+    };
+
+    const response = await request(createTestApp(service))
+      .get("/api/v1/contracts/00000000-0000-4000-8000-000000000003/document.pdf")
+      .expect(401);
+
+    expect(response.body.error.code).toBe("AUTHENTICATION_REQUIRED");
+    expect(service.streamCurrentDocument).not.toHaveBeenCalled();
+  });
+
+  it("returns 404 when the current stored PDF is missing", async () => {
+    const service = {
+      streamCurrentDocument: vi.fn(async () => null),
+    };
+
+    const response = await request(createTestApp(service))
+      .get("/api/v1/contracts/00000000-0000-4000-8000-000000000003/document.pdf")
+      .set("x-user-id", userId)
+      .set("x-organization-id", organizationId)
+      .expect(404);
+
+    expect(response.body.error.code).toBe("CONTRACT_DOCUMENT_NOT_FOUND");
   });
 });

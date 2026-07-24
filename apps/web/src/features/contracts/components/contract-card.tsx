@@ -1,9 +1,9 @@
 import { FileText } from "lucide-react";
 import { Link } from "react-router-dom";
 
-import { routePaths } from "../../../app/route-paths.js";
-import { Card } from "../../../components/ui/card.js";
-import { formatDateTime } from "../../../utils/format-date.js";
+import { routePaths } from "@/app/route-paths.js";
+import { Card } from "@/components/ui/card.js";
+import { formatDateTime } from "@/utils/format-date.js";
 import { ContractStatusBadge } from "./contract-status-badge.js";
 import type { ContractSummary } from "../types/contracts.js";
 

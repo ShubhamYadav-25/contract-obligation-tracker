@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { queryKeys } from "../../../services/query-keys.js";
+import { queryKeys } from "@/services/query-keys.js";
 import { getReviewCandidate } from "../api/get-review-candidate.js";
 
 export function useReviewCandidate(candidateId: string) {

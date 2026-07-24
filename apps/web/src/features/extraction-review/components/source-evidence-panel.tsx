@@ -1,4 +1,4 @@
-import { Card } from "../../../components/ui/card.js";
+import { Card } from "@/components/ui/card.js";
 import type { ReviewSourceAnchor } from "../types/review-candidate.js";
 
 export function SourceEvidencePanel({

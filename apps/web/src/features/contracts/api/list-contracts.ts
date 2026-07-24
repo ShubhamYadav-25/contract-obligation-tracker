@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { apiRequest } from "../../../services/api-client.js";
+import { apiRequest } from "@/services/api-client.js";
 import type { ContractSummary } from "../types/contracts.js";
 
 export const contractProcessingStatusSchema = z.enum([
@@ -55,6 +55,19 @@ export const contractSummarySchema = z.object({
     pageCount: z.number(),
     segmentCount: z.number(),
     ocrPageCount: z.number(),
+  }),
+  extraction: z.object({
+    provider: z.string().optional(),
+    confidence: z.number().optional(),
+    confirmedCount: z.number(),
+    reviewRequiredCount: z.number(),
+    rejectedCount: z.number(),
+    rawCandidateCount: z.number().optional(),
+    verifiedCandidateCount: z.number().optional(),
+    duplicateRemovalCount: z.number().optional(),
+    consolidationCount: z.number().optional(),
+    llmRequestCount: z.number().optional(),
+    retryCount: z.number().optional(),
   }),
 });
 

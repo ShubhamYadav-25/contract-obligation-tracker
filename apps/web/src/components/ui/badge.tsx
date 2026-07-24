@@ -1,6 +1,6 @@
 import type { PropsWithChildren } from "react";
 
-import { cx } from "../../utils/cx.js";
+import { cx } from "@/utils/cx.js";
 
 type BadgeTone = "neutral" | "success" | "warning" | "danger" | "info";
 

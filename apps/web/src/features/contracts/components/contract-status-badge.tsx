@@ -1,4 +1,4 @@
-import { Badge } from "../../../components/ui/badge.js";
+import { Badge } from "@/components/ui/badge.js";
 import type { ContractProcessingStatus } from "../types/contracts.js";
 
 const toneByStatus: Record<

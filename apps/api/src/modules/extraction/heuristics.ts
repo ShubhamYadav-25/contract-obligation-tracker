@@ -23,6 +23,8 @@ export type Anchor = {
   confidence?: Record<string, unknown>;
   warnings?: readonly string[];
   missing_fields?: readonly string[];
+  source_evidence?: readonly Record<string, unknown>[];
+  source_candidate_keys?: readonly string[];
 };
 
 export type FieldAnchor = { text: string; anchor: Anchor };

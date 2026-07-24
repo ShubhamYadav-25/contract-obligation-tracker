@@ -9,6 +9,9 @@ export interface PdfSourceNavigationCommand {
   readonly type: "PDF_NAVIGATE_TO_SOURCE";
   readonly payload: {
     readonly pageNumber: number;
+    readonly startLine?: number;
+    readonly endLine?: number;
+    readonly quotedText?: string;
     readonly boxes: readonly PdfSourceBox[];
   };
 }
@@ -43,9 +46,7 @@ export function toHighlightRect(box: PdfSourceBox): HighlightRect {
   };
 }
 
-export function isPdfSourceNavigationCommand(
-  value: unknown,
-): value is PdfSourceNavigationCommand {
+export function isPdfSourceNavigationCommand(value: unknown): value is PdfSourceNavigationCommand {
   if (!value || typeof value !== "object") return false;
   const command = value as Partial<PdfSourceNavigationCommand>;
   const payload = command.payload as Partial<PdfSourceNavigationCommand["payload"]> | undefined;
@@ -53,6 +54,9 @@ export function isPdfSourceNavigationCommand(
     command.type === "PDF_NAVIGATE_TO_SOURCE" &&
     typeof payload?.pageNumber === "number" &&
     payload.pageNumber > 0 &&
+    (payload.startLine === undefined || typeof payload.startLine === "number") &&
+    (payload.endLine === undefined || typeof payload.endLine === "number") &&
+    (payload.quotedText === undefined || typeof payload.quotedText === "string") &&
     Array.isArray(payload.boxes)
   );
 }

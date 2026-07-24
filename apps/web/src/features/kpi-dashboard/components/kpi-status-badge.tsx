@@ -1,4 +1,4 @@
-import { Badge } from "../../../components/ui/badge.js";
+import { Badge } from "@/components/ui/badge.js";
 import type { KpiStatus } from "../types/kpi.js";
 
 const tones: Record<KpiStatus, "neutral" | "success" | "warning" | "danger" | "info"> = {

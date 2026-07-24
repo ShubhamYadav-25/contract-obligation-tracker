@@ -4,6 +4,7 @@ import type {
 } from "../../infrastructure/database/transaction-manager.js";
 import type {
   ObligationDetailRecord,
+  ObligationEditableFields,
   ObligationRecord,
   ObligationSourceAnchor,
   ObligationSourceBox,
@@ -18,11 +19,13 @@ import type {
   ObligationRepository,
   ObligationStatusCounts,
 } from "./obligations.repository.js";
+import { ConflictError } from "../../shared/errors/conflict-error.js";
 import { NotFoundError } from "../../shared/errors/not-found-error.js";
 
 interface ObligationRow {
   readonly id: string;
   readonly contract_id: string;
+  readonly document_id?: string | null;
   readonly contract_display_name?: string | null;
   readonly title: string;
   readonly description: string | null;
@@ -58,6 +61,10 @@ function toDate(value: Date | string): Date {
 }
 
 function mapObligation(row: ObligationRow): ObligationRecord {
+  const primaryAnchor = primaryAnchorFromAnchors(row.anchors);
+  const timing = recordFromUnknown(primaryAnchor?.timing);
+  const confidence = recordFromUnknown(primaryAnchor?.confidence);
+
   return {
     id: row.id,
     contractId: row.contract_id,
@@ -68,9 +75,69 @@ function mapObligation(row: ObligationRow): ObligationRecord {
     ...(row.due_at ? { dueAt: toDate(row.due_at) } : {}),
     ...(row.reminder_status ? { reminderStatus: row.reminder_status } : {}),
     ...(row.next_reminder_at ? { nextReminderAt: toDate(row.next_reminder_at) } : {}),
-    sourceAnchors: sourceAnchorsFromAnchors(row.anchors),
+    ...(stringFromUnknown(primaryAnchor?.obligatedParty ?? primaryAnchor?.obligated_party)
+      ? {
+          responsibleParty:
+            stringFromUnknown(primaryAnchor?.obligatedParty ?? primaryAnchor?.obligated_party) ??
+            "",
+        }
+      : {}),
+    ...(stringFromUnknown(primaryAnchor?.beneficiaryParty ?? primaryAnchor?.beneficiary_party)
+      ? {
+          counterparty:
+            stringFromUnknown(
+              primaryAnchor?.beneficiaryParty ?? primaryAnchor?.beneficiary_party,
+            ) ?? "",
+        }
+      : {}),
+    ...(stringFromUnknown(primaryAnchor?.obligationType ?? primaryAnchor?.obligation_type)
+      ? {
+          category:
+            stringFromUnknown(primaryAnchor?.obligationType ?? primaryAnchor?.obligation_type) ??
+            "",
+        }
+      : {}),
+    ...(stringFromUnknown(timing?.timingType)
+      ? { timingType: stringFromUnknown(timing?.timingType) ?? "" }
+      : {}),
+    ...(stringFromUnknown(timing?.frequency)
+      ? { frequency: stringFromUnknown(timing?.frequency) ?? "" }
+      : {}),
+    ...(stringFromUnknown(timing?.triggerEvent)
+      ? { triggerEvent: stringFromUnknown(timing?.triggerEvent) ?? "" }
+      : {}),
+    ...(numberFromUnknown(timing?.offsetValue) !== undefined
+      ? { offsetValue: numberFromUnknown(timing?.offsetValue) ?? 0 }
+      : {}),
+    ...(stringFromUnknown(timing?.offsetUnit)
+      ? { offsetUnit: stringFromUnknown(timing?.offsetUnit) ?? "" }
+      : {}),
+    ...(stringFromUnknown(timing?.offsetDirection)
+      ? { offsetDirection: stringFromUnknown(timing?.offsetDirection) ?? "" }
+      : {}),
+    ...(numberFromUnknown(confidence?.overall) !== undefined
+      ? { confidence: numberFromUnknown(confidence?.overall) ?? 0 }
+      : {}),
+    ...(stringFromUnknown(confidence?.reviewStatus)
+      ? { reviewStatus: stringFromUnknown(confidence?.reviewStatus) ?? "" }
+      : {}),
+    sourceAnchors: sourceAnchorsFromAnchors(row.anchors, row.document_id ?? undefined),
     version: Number(row.version),
   };
+}
+
+function recordFromUnknown(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function stringFromUnknown(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim().length > 0 ? value : undefined;
+}
+
+function numberFromUnknown(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
 function normalizedNumber(value: unknown): number | null {
@@ -104,20 +171,36 @@ function fallbackBoxFromLineOffset(lineOffset: number): ObligationSourceBox {
   };
 }
 
-function sourceAnchorsFromAnchors(anchors: unknown): readonly ObligationSourceAnchor[] {
+function primaryAnchorFromAnchors(anchors: unknown): Record<string, unknown> | null {
+  return Array.isArray(anchors) ? (recordFromUnknown(anchors[0]) ?? null) : null;
+}
+
+function sourceAnchorsFromAnchors(
+  anchors: unknown,
+  documentId: string | undefined,
+): readonly ObligationSourceAnchor[] {
   if (!Array.isArray(anchors)) return [];
 
   const mapped: ObligationSourceAnchor[] = [];
   for (const anchor of anchors) {
     if (!anchor || typeof anchor !== "object") continue;
     const raw = anchor as {
+      readonly source?: unknown;
       readonly pageNumber?: unknown;
       readonly page_number?: unknown;
+      readonly startLine?: unknown;
+      readonly start_line?: unknown;
+      readonly endLine?: unknown;
+      readonly end_line?: unknown;
+      readonly globalStartLine?: unknown;
+      readonly globalEndLine?: unknown;
       readonly lineOffset?: unknown;
       readonly line_offset?: unknown;
       readonly quotedText?: unknown;
       readonly quoted_text?: unknown;
       readonly boxes?: unknown;
+      readonly source_evidence?: unknown;
+      readonly sourceEvidence?: unknown;
     };
     const pageNumber =
       typeof raw.pageNumber === "number"
@@ -148,14 +231,93 @@ function sourceAnchorsFromAnchors(anchors: unknown): readonly ObligationSourceAn
         : typeof raw.quoted_text === "string"
           ? raw.quoted_text
           : undefined;
+    const source = stringFromUnknown(raw.source);
+    const startLine =
+      typeof raw.startLine === "number"
+        ? raw.startLine
+        : typeof raw.start_line === "number"
+          ? raw.start_line
+          : undefined;
+    const endLine =
+      typeof raw.endLine === "number"
+        ? raw.endLine
+        : typeof raw.end_line === "number"
+          ? raw.end_line
+          : undefined;
 
     mapped.push({
+      ...(documentId ? { documentId } : {}),
       pageNumber,
+      ...(startLine !== undefined ? { startLine } : {}),
+      ...(endLine !== undefined ? { endLine } : {}),
       ...(quotedText ? { quotedText } : {}),
+      ...(source ? { source } : {}),
       boxes,
     });
+
+    const sourceEvidence = Array.isArray(raw.sourceEvidence)
+      ? raw.sourceEvidence
+      : Array.isArray(raw.source_evidence)
+        ? raw.source_evidence
+        : [];
+    if (sourceEvidence.length > 0) {
+      for (const evidence of sourceEvidence) {
+        const evidenceRecord = recordFromUnknown(evidence);
+        if (!evidenceRecord) continue;
+        const evidencePageNumber = numberFromUnknown(evidenceRecord.startPage);
+        if (!evidencePageNumber || evidencePageNumber < 1) continue;
+        const globalStartLine = numberFromUnknown(evidenceRecord.globalStartLine);
+        const globalEndLine = numberFromUnknown(evidenceRecord.globalEndLine);
+        const storedEvidenceStartLine = numberFromUnknown(evidenceRecord.startLine);
+        const storedEvidenceEndLine = numberFromUnknown(evidenceRecord.endLine);
+        const evidenceRole = stringFromUnknown(evidenceRecord.evidenceRole);
+        const evidenceQuote = stringFromUnknown(evidenceRecord.exactQuote);
+        const evidenceStartLine =
+          storedEvidenceStartLine ?? (evidencePageNumber === pageNumber ? startLine : undefined);
+        const evidenceEndLine =
+          storedEvidenceEndLine ?? (evidencePageNumber === pageNumber ? endLine : undefined);
+        mapped.push({
+          ...(documentId ? { documentId } : {}),
+          pageNumber: evidencePageNumber,
+          ...(evidenceStartLine !== undefined ? { startLine: evidenceStartLine } : {}),
+          ...(evidenceEndLine !== undefined ? { endLine: evidenceEndLine } : {}),
+          ...(globalStartLine !== undefined ? { globalStartLine } : {}),
+          ...(globalEndLine !== undefined ? { globalEndLine } : {}),
+          ...(evidenceQuote ? { quotedText: evidenceQuote } : {}),
+          ...(source ? { source } : {}),
+          ...(evidenceRole ? { evidenceRole } : {}),
+          boxes:
+            evidenceStartLine !== undefined
+              ? [fallbackBoxFromLineOffset(Math.max(0, evidenceStartLine - 1))]
+              : boxes,
+        });
+      }
+    }
   }
-  return mapped;
+  return dedupeSourceAnchors(mapped);
+}
+
+function dedupeSourceAnchors(
+  anchors: readonly ObligationSourceAnchor[],
+): readonly ObligationSourceAnchor[] {
+  const seen = new Set<string>();
+  const deduped: ObligationSourceAnchor[] = [];
+  for (const anchor of anchors) {
+    const key = [
+      anchor.documentId ?? "",
+      anchor.pageNumber,
+      anchor.startLine ?? "",
+      anchor.endLine ?? "",
+      anchor.globalStartLine ?? "",
+      anchor.globalEndLine ?? "",
+      anchor.evidenceRole ?? "",
+      anchor.quotedText ?? "",
+    ].join(":");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(anchor);
+  }
+  return deduped;
 }
 
 function sourceTextFromAnchors(anchors: unknown, fallback: string): string {
@@ -193,6 +355,82 @@ function mapStatusCounts(rows: readonly ObligationCountRow[]): ObligationStatusC
   return counts;
 }
 
+function hasEditableField<Key extends keyof ObligationEditableFields>(
+  fields: ObligationEditableFields,
+  key: Key,
+): fields is ObligationEditableFields & Required<Pick<ObligationEditableFields, Key>> {
+  return Object.prototype.hasOwnProperty.call(fields, key);
+}
+
+function cloneAnchorRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? { ...(value as Record<string, unknown>) }
+    : {};
+}
+
+function setNullableStringField(
+  anchor: Record<string, unknown>,
+  fields: ObligationEditableFields,
+  key: keyof ObligationEditableFields,
+  anchorKey: string,
+): void {
+  if (!hasEditableField(fields, key)) return;
+  const value = fields[key];
+  anchor[anchorKey] = typeof value === "string" ? value : null;
+}
+
+function updateTimingAnchorFields(
+  anchor: Record<string, unknown>,
+  fields: ObligationEditableFields,
+): void {
+  const timingKeys = [
+    "timingType",
+    "frequency",
+    "triggerEvent",
+    "offsetValue",
+    "offsetUnit",
+    "offsetDirection",
+  ] as const;
+  if (!timingKeys.some((key) => hasEditableField(fields, key))) return;
+
+  const timing = cloneAnchorRecord(anchor.timing);
+  for (const key of timingKeys) {
+    if (!hasEditableField(fields, key)) continue;
+    timing[key] = fields[key] ?? null;
+  }
+  anchor.timing = timing;
+}
+
+function updateConfidenceAnchorFields(
+  anchor: Record<string, unknown>,
+  fields: ObligationEditableFields,
+): void {
+  if (!hasEditableField(fields, "reviewStatus")) return;
+  const confidence = cloneAnchorRecord(anchor.confidence);
+  confidence.reviewStatus = fields.reviewStatus ?? null;
+  anchor.confidence = confidence;
+}
+
+function updateAnchorMetadata(
+  anchors: unknown,
+  fields: ObligationEditableFields,
+): readonly Record<string, unknown>[] {
+  const sourceAnchors = Array.isArray(anchors) ? anchors : [];
+  const updated = sourceAnchors.map((anchor) => cloneAnchorRecord(anchor));
+  const primaryAnchor = updated[0] ?? {};
+
+  setNullableStringField(primaryAnchor, fields, "responsibleParty", "obligatedParty");
+  setNullableStringField(primaryAnchor, fields, "counterparty", "beneficiaryParty");
+  setNullableStringField(primaryAnchor, fields, "category", "obligationType");
+  updateTimingAnchorFields(primaryAnchor, fields);
+  updateConfidenceAnchorFields(primaryAnchor, fields);
+
+  if (updated.length === 0 && Object.keys(primaryAnchor).length > 0) {
+    updated.push(primaryAnchor);
+  }
+  return updated;
+}
+
 export class PostgresObligationRepository implements ObligationRepository {
   constructor(private readonly transactions: TransactionManager) {}
 
@@ -212,6 +450,7 @@ export class PostgresObligationRepository implements ObligationRepository {
         SELECT
           obligation.id,
           obligation.contract_id,
+          contract.current_document_id AS document_id,
           contract.display_name AS contract_display_name,
           obligation.title,
           obligation.description,
@@ -367,6 +606,7 @@ export class PostgresObligationRepository implements ObligationRepository {
         SELECT
           obligation.id,
           obligation.contract_id,
+          contract.current_document_id AS document_id,
           contract.display_name AS contract_display_name,
           obligation.title,
           obligation.description,
@@ -403,6 +643,102 @@ export class PostgresObligationRepository implements ObligationRepository {
         sourceText: sourceTextFromAnchors(obligationRow.anchors, obligation.description),
         transitionHistory: mapTransitionHistory(historyResult.rows),
       };
+    });
+  }
+
+  async updateEditableFields(input: {
+    readonly organizationId: string;
+    readonly obligationId: string;
+    readonly expectedVersion: number;
+    readonly fields: ObligationEditableFields;
+  }): Promise<ObligationRecord> {
+    return this.transactions.inTransaction(async ({ client }) => {
+      const existingResult = await client.query<ObligationRow>(
+        `
+        SELECT
+          obligation.id,
+          obligation.contract_id,
+          contract.current_document_id AS document_id,
+          contract.display_name AS contract_display_name,
+          obligation.title,
+          obligation.description,
+          obligation.status,
+          obligation.due_at,
+          obligation.anchors,
+          obligation.version
+        FROM obligations AS obligation
+        INNER JOIN contracts AS contract
+          ON contract.id = obligation.contract_id
+        WHERE obligation.id = $1
+          AND contract.organization_id = $2
+        LIMIT 1
+      `,
+        [input.obligationId, input.organizationId],
+      );
+
+      const existing = existingResult.rows[0];
+      if (!existing) {
+        throw new NotFoundError("Obligation not found", { obligationId: input.obligationId });
+      }
+      if (Number(existing.version) !== input.expectedVersion) {
+        throw new ConflictError("Obligation was changed by another request", {
+          obligationId: input.obligationId,
+          expectedVersion: input.expectedVersion,
+          actualVersion: Number(existing.version),
+        });
+      }
+
+      const title = hasEditableField(input.fields, "title") ? input.fields.title : existing.title;
+      const description = hasEditableField(input.fields, "description")
+        ? input.fields.description
+        : (existing.description ?? "");
+      const dueAt = hasEditableField(input.fields, "dueAt")
+        ? input.fields.dueAt
+        : existing.due_at
+          ? toDate(existing.due_at)
+          : null;
+      const anchors = updateAnchorMetadata(existing.anchors, input.fields);
+
+      const updateResult = await client.query<ObligationRow>(
+        `
+        UPDATE obligations AS obligation
+        SET title = $3,
+            description = $4,
+            due_at = $5::timestamptz,
+            anchors = $6::jsonb,
+            version = version + 1,
+            updated_at = NOW()
+        FROM contracts AS contract
+        WHERE obligation.id = $1
+          AND obligation.contract_id = contract.id
+          AND contract.organization_id = $2
+        RETURNING
+          obligation.id,
+          obligation.contract_id,
+          contract.current_document_id AS document_id,
+          contract.display_name AS contract_display_name,
+          obligation.title,
+          obligation.description,
+          obligation.status,
+          obligation.due_at,
+          obligation.anchors,
+          obligation.version
+      `,
+        [
+          input.obligationId,
+          input.organizationId,
+          title,
+          description,
+          dueAt,
+          JSON.stringify(anchors),
+        ],
+      );
+
+      const updated = updateResult.rows[0];
+      if (!updated) {
+        throw new Error("Obligation update returned no row");
+      }
+      return mapObligation(updated);
     });
   }
 

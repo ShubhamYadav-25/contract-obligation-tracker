@@ -14,11 +14,11 @@ import {
   X,
 } from "lucide-react";
 
-import { Button } from "../../components/ui/button.js";
-import { Input } from "../../components/ui/input.js";
-import { Select } from "../../components/ui/select.js";
-import { Textarea } from "../../components/ui/textarea.js";
-import { cx } from "../../utils/cx.js";
+import { Button } from "@/components/ui/button.js";
+import { Input } from "@/components/ui/input.js";
+import { Select } from "@/components/ui/select.js";
+import { Textarea } from "@/components/ui/textarea.js";
+import { cx } from "@/utils/cx.js";
 
 type Tone = "neutral" | "success" | "warning" | "danger" | "info";
 

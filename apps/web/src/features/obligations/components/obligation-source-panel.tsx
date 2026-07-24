@@ -1,4 +1,4 @@
-import { Card } from "../../../components/ui/card.js";
+import { Card } from "@/components/ui/card.js";
 
 export function ObligationSourcePanel({ sourceText }: { readonly sourceText: string }) {
   return (

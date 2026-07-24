@@ -80,6 +80,7 @@ function serializeWorkspace(record: ContractWorkspaceRecord) {
     currentDocument: serializeDocument(record.currentDocument),
     processing: serializeProcessingRun(record.latestProcessingRun),
     text: record.text,
+    extraction: record.extraction,
   };
 }
 
@@ -316,6 +317,13 @@ export class ContractController {
     }
 
     const { document, stream } = result;
+    if (!stream) {
+      throw new ApplicationError({
+        code: "CONTRACT_DOCUMENT_NOT_FOUND",
+        message: "Stored PDF document was not found for this contract",
+        statusCode: 404,
+      });
+    }
     response.status(stream.statusCode);
     response.setHeader("accept-ranges", stream.acceptRanges ?? "bytes");
     response.setHeader("content-type", "application/pdf");
@@ -330,6 +338,11 @@ export class ContractController {
       response.setHeader("content-length", String(stream.contentLength));
     } else if (stream.statusCode === 200) {
       response.setHeader("content-length", String(document.fileSizeBytes));
+    }
+
+    if (stream.statusCode === 416) {
+      response.end();
+      return;
     }
 
     stream.body.on("error", (error) => {

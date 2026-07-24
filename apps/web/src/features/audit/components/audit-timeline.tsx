@@ -1,4 +1,4 @@
-import { formatDateTime } from "../../../utils/format-date.js";
+import { formatDateTime } from "@/utils/format-date.js";
 
 export interface AuditTimelineItem {
   readonly id: string;

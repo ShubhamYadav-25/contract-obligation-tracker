@@ -1,7 +1,7 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
 
-import { Button } from "../ui/button.js";
+import { Button } from "../../ui/button.js";
 
 export interface SourceLine {
   readonly pageNumber: number;

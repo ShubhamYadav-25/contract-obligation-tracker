@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { apiRequest } from "../../../services/api-client.js";
+import { apiRequest } from "@/services/api-client.js";
 import { obligationSummarySchema } from "./list-obligations.js";
 
 const obligationDetailSchema = obligationSummarySchema.extend({

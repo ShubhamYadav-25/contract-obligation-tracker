@@ -6,6 +6,31 @@ const integerFromEnv = z.coerce.number().int().positive();
 const booleanFromEnv = z
   .enum(["true", "false", "1", "0"])
   .transform((value) => value === "true" || value === "1");
+const placeholderValues = new Set(["your_api_key", "replace-me", "undefined", "change_me"]);
+
+function trimmedOptionalString(value: unknown): string | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function isPlaceholderValue(value: string | undefined): boolean {
+  if (!value) {
+    return false;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  return placeholderValues.has(normalized) || /^<[^>]+>$/.test(normalized);
+}
+
+const optionalTrimmedString = z.preprocess(trimmedOptionalString, z.string().optional());
+const optionalTrimmedNonEmptyString = z.preprocess(
+  trimmedOptionalString,
+  z.string().min(1).optional(),
+);
 
 export const envSchema = z
   .object({
@@ -29,7 +54,10 @@ export const envSchema = z
     SUPABASE_URL: z.string().optional(),
     SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
     SUPABASE_STORAGE_BUCKET: z.string().min(1).default("contracts"),
-    GROQ_API_KEY: z.string().optional(),
+    OBLIGATION_EXTRACTOR_MODE: z
+      .enum(["auto", "heuristic", "groq", "reference-aware-gemini"])
+      .default("auto"),
+    GROQ_API_KEY: optionalTrimmedString,
     GROQ_EXTRACTION_MODEL: z.string().min(1).default("llama-3.1-8b-instant"),
     GROQ_EXTRACTION_TEMPERATURE: z.coerce.number().min(0).max(2).default(0.1),
     GROQ_EXTRACTION_MAX_TOKENS: integerFromEnv.default(2_048),
@@ -37,6 +65,18 @@ export const envSchema = z
     GROQ_EXTRACTION_MAX_ATTEMPTS: integerFromEnv.default(3),
     GROQ_EXTRACTION_RETRY_BASE_DELAY_MS: integerFromEnv.default(1_000),
     GROQ_EXTRACTION_RETRY_MAX_DELAY_MS: integerFromEnv.default(10_000),
+    GEMINI_API_KEY: optionalTrimmedString,
+    GEMINI_MODEL: optionalTrimmedNonEmptyString,
+    GOOGLE_API_KEY: optionalTrimmedString,
+    GEMINI_REQUEST_TIMEOUT_MS: integerFromEnv.default(45_000),
+    GEMINI_MAX_ATTEMPTS: integerFromEnv.default(3),
+    GEMINI_MAX_REQUESTS_PER_CONTRACT: integerFromEnv.default(8),
+    GEMINI_MIN_REQUEST_INTERVAL_MS: z.coerce.number().int().min(0).default(15_000),
+    GEMINI_MAX_QUOTA_RETRIES: z.coerce.number().int().min(0).default(4),
+    GEMINI_MAX_RETRY_DELAY_MS: integerFromEnv.default(120_000),
+    GEMINI_MAX_WINDOWS_PER_BATCH: integerFromEnv.default(4),
+    GEMINI_MAX_BATCH_INPUT_CHARACTERS: integerFromEnv.default(18_000),
+    GEMINI_MAX_BATCH_OUTPUT_TOKENS: integerFromEnv.default(6_000),
     OCR_PROVIDER: z.enum(["tesseract", "gemini-vision"]).default("tesseract"),
     TESSERACT_WORKER_COUNT: integerFromEnv.default(1),
     DOCUMENT_TEXT_MIN_CHARACTERS: integerFromEnv.default(25),
@@ -50,12 +90,12 @@ export const envSchema = z
     OCR_RENDER_SCALE: z.coerce.number().positive().default(2),
     GEMINI_OCR_FALLBACK_ENABLED: booleanFromEnv.default(false),
     EMAIL_PROVIDER: z.enum(["console", "mailtrap", "resend", "smtp"]).default("console"),
-    EMAIL_FROM: z.string().optional(),
-    SMTP_HOST: z.string().optional(),
+    EMAIL_FROM: optionalTrimmedString,
+    SMTP_HOST: optionalTrimmedString,
     SMTP_PORT: integerFromEnv.default(587),
-    SMTP_USER: z.string().optional(),
-    SMTP_PASSWORD: z.string().optional(),
-    JWT_SECRET: z.string().optional(),
+    SMTP_USER: optionalTrimmedString,
+    SMTP_PASSWORD: optionalTrimmedString,
+    JWT_SECRET: optionalTrimmedString,
     JWT_ISSUER: z.string().min(1).default("contract-obligation-tracker"),
     JWT_AUDIENCE: z.string().min(1).default("contract-obligation-tracker"),
     JWT_ACCESS_TOKEN_TTL_SECONDS: integerFromEnv.default(900),
@@ -86,6 +126,37 @@ export const envSchema = z
         path: ["DATABASE_URL"],
         message: "DATABASE_URL is required in production",
       });
+    }
+    if (value.OBLIGATION_EXTRACTOR_MODE === "groq" && !value.GROQ_API_KEY) {
+      context.addIssue({
+        code: "custom",
+        path: ["GROQ_API_KEY"],
+        message: "GROQ_API_KEY is required when OBLIGATION_EXTRACTOR_MODE=groq",
+      });
+    }
+    if (value.OBLIGATION_EXTRACTOR_MODE === "reference-aware-gemini") {
+      if (isPlaceholderValue(value.GEMINI_API_KEY)) {
+        context.addIssue({
+          code: "custom",
+          path: ["GEMINI_API_KEY"],
+          message: "GEMINI_API_KEY must be a real local secret, not a placeholder",
+        });
+      }
+      if (isPlaceholderValue(value.GEMINI_MODEL)) {
+        context.addIssue({
+          code: "custom",
+          path: ["GEMINI_MODEL"],
+          message: "GEMINI_MODEL must be a real model name, not a placeholder",
+        });
+      }
+      if (!value.GEMINI_API_KEY) {
+        context.addIssue({
+          code: "custom",
+          path: ["GEMINI_API_KEY"],
+          message:
+            "GEMINI_API_KEY is required when OBLIGATION_EXTRACTOR_MODE=reference-aware-gemini",
+        });
+      }
     }
     if (value.STORAGE_PROVIDER === "supabase" && value.NODE_ENV === "production") {
       if (!value.SUPABASE_URL) {

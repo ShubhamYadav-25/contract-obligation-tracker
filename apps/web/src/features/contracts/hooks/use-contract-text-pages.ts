@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { queryKeys } from "../../../services/query-keys.js";
+import { queryKeys } from "@/services/query-keys.js";
 import { listContractTextPages } from "../api/list-contract-text-pages.js";
 
 export function useContractTextPages(contractId: string, enabled: boolean) {

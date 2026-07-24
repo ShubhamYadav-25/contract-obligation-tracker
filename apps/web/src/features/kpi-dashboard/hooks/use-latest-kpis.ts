@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { queryKeys } from "../../../services/query-keys.js";
+import { queryKeys } from "@/services/query-keys.js";
 import { getLatestKpiRun } from "../api/get-latest-kpi-run.js";
 
 export function useLatestKpis() {

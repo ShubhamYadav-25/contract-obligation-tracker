@@ -1,6 +1,6 @@
 import type { InputHTMLAttributes } from "react";
 
-import { cx } from "../../utils/cx.js";
+import { cx } from "@/utils/cx.js";
 
 export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
   return (

@@ -2,7 +2,7 @@ import type { ObligationStatus } from "@contract-obligation-tracker/shared";
 import { getAllowedObligationTransitions } from "@contract-obligation-tracker/shared";
 import { ArrowRight } from "lucide-react";
 
-import { Button } from "../../../components/ui/button.js";
+import { Button } from "@/components/ui/button.js";
 
 export function TransitionDialog({
   disabled = false,

@@ -1,7 +1,7 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import type { PropsWithChildren } from "react";
 
-import { ErrorBoundary } from "../components/feedback/error-boundary.js";
+import { ErrorBoundary } from "@/components/feedback/error-boundary.js";
 import { AuthProvider } from "../features/auth/auth-provider.js";
 import { queryClient } from "./query-client.js";
 

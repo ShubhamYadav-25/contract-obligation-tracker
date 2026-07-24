@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { apiRequest } from "../../../services/api-client.js";
+import { apiRequest } from "@/services/api-client.js";
 import type { DocumentTextPage } from "../types/contracts.js";
 
 const extractionMethodSchema = z.enum(["PDF_TEXT", "TESSERACT", "GEMINI_VISION"]);

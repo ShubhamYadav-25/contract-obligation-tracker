@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes, PropsWithChildren } from "react";
 
-import { cx } from "../../utils/cx.js";
+import { cx } from "@/utils/cx.js";
 
 type ButtonVariant = "primary" | "secondary" | "danger" | "ghost";
 

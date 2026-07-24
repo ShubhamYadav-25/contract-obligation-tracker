@@ -97,11 +97,26 @@ export interface ContractTextSummary {
   readonly ocrPageCount: number;
 }
 
+export interface ContractExtractionSummary {
+  readonly provider?: string;
+  readonly confidence?: number;
+  readonly confirmedCount: number;
+  readonly reviewRequiredCount: number;
+  readonly rejectedCount: number;
+  readonly rawCandidateCount?: number;
+  readonly verifiedCandidateCount?: number;
+  readonly duplicateRemovalCount?: number;
+  readonly consolidationCount?: number;
+  readonly llmRequestCount?: number;
+  readonly retryCount?: number;
+}
+
 export interface ContractWorkspaceRecord {
   readonly contract: ContractRecord;
   readonly currentDocument?: ContractDocumentRecord;
   readonly latestProcessingRun?: ContractProcessingRunRecord;
   readonly text: ContractTextSummary;
+  readonly extraction: ContractExtractionSummary;
 }
 
 export interface DocumentTextPageRecord {

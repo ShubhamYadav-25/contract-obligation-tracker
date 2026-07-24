@@ -2,8 +2,9 @@ import {
   ChevronLeft,
   ChevronRight,
   FileWarning,
-  Highlighter,
   Loader2,
+  Maximize2,
+  Minimize2,
   Search,
   ZoomIn,
   ZoomOut,
@@ -18,9 +19,8 @@ import {
 } from "pdfjs-dist/web/pdf_viewer.mjs";
 import "pdfjs-dist/web/pdf_viewer.css";
 
-import { getApiBaseUrl, getDevAuthHeaders } from "../../services/api-client.js";
-import { Button } from "../ui/button.js";
-import { Input } from "../ui/input.js";
+import { getApiBaseUrl, getDevAuthHeaders } from "@/services/api-client.js";
+import { cx } from "@/utils/cx.js";
 import {
   isPdfSourceNavigationCommand,
   toHighlightRect,
@@ -83,6 +83,19 @@ async function waitForPageElement(
   throw new Error(`Page ${pageNumber} was not rendered by PDF.js`);
 }
 
+async function fetchPdfBytes(pdfUrl: string, signal: AbortSignal): Promise<Uint8Array> {
+  const response = await fetch(pdfUrl, {
+    headers: getDevAuthHeaders(),
+    credentials: "include",
+    signal,
+  });
+  if (!response.ok) {
+    const message = await response.text().catch(() => response.statusText);
+    throw new Error(message || `PDF request failed with status ${response.status}`);
+  }
+  return new Uint8Array(await response.arrayBuffer());
+}
+
 function destroyPdfDocument(document: PdfDocumentProxy | null): void {
   if (typeof document?.destroy !== "function") return;
   Promise.resolve(document.destroy()).catch(() => undefined);
@@ -97,6 +110,7 @@ export function PdfViewerContainer({
   readonly initialPage?: number;
   readonly sourceCommand?: PdfSourceNavigationCommand | null | undefined;
 }) {
+  const shellRef = useRef<HTMLElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const viewerRef = useRef<HTMLDivElement | null>(null);
   const eventBusRef = useRef<EventBusInstance | null>(null);
@@ -107,6 +121,7 @@ export function PdfViewerContainer({
   const [pageCount, setPageCount] = useState(0);
   const [zoom, setZoom] = useState<(typeof zoomSteps)[number]>("page-width");
   const [query, setQuery] = useState("");
+  const [fullscreen, setFullscreen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
   const pdfUrl = useMemo(() => getPdfUrl(contractId), [contractId]);
@@ -114,7 +129,9 @@ export function PdfViewerContainer({
   const clearHighlights = useCallback(() => {
     const container = containerRef.current;
     if (!container) return;
-    container.querySelectorAll(".source-anchor-highlight").forEach((element) => element.remove());
+    container
+      .querySelectorAll(".source-anchor-highlight, .source-anchor-callout")
+      .forEach((element) => element.remove());
     if (highlightTimeoutRef.current !== null) {
       window.clearTimeout(highlightTimeoutRef.current);
       highlightTimeoutRef.current = null;
@@ -141,7 +158,7 @@ export function PdfViewerContainer({
       }
 
       clearHighlights();
-      for (const box of command.payload.boxes) {
+      for (const [index, box] of command.payload.boxes.entries()) {
         const rect = toHighlightRect(box);
         const highlight = document.createElement("div");
         highlight.className = "source-anchor-highlight";
@@ -152,6 +169,19 @@ export function PdfViewerContainer({
           height: rect.height,
         });
         page.appendChild(highlight);
+
+        if (index === 0 && command.payload.quotedText) {
+          const callout = document.createElement("div");
+          callout.className = "source-anchor-callout";
+          callout.textContent = `P${command.payload.pageNumber}:L${command.payload.startLine ?? "?"}-${
+            command.payload.endLine ?? command.payload.startLine ?? "?"
+          } ${command.payload.quotedText}`;
+          Object.assign(callout.style, {
+            left: `min(${Math.max(0, Math.min(0.72, box.x + box.width + 0.015)) * 100}%, calc(100% - 260px))`,
+            top: `${Math.max(0.02, box.y - 0.02) * 100}%`,
+          });
+          page.appendChild(callout);
+        }
       }
       highlightTimeoutRef.current = window.setTimeout(clearHighlights, 5_000);
     },
@@ -164,6 +194,7 @@ export function PdfViewerContainer({
     if (!container || !viewer) return;
 
     let disposed = false;
+    const abortController = new AbortController();
     const eventBus = new EventBus();
     const linkService = new PDFLinkService({ eventBus });
     const findController = new PDFFindController({ eventBus, linkService });
@@ -192,14 +223,8 @@ export function PdfViewerContainer({
       try {
         setLoading(true);
         setError(null);
-        const task = pdfjsLib.getDocument({
-          url: pdfUrl,
-          httpHeaders: getDevAuthHeaders(),
-          withCredentials: true,
-          rangeChunkSize: 65_536,
-          disableStream: false,
-          disableAutoFetch: false,
-        });
+        const data = await fetchPdfBytes(pdfUrl, abortController.signal);
+        const task = pdfjsLib.getDocument({ data });
         const document = (await task.promise) as PdfDocumentProxy;
         if (disposed) {
           destroyPdfDocument(document);
@@ -211,9 +236,9 @@ export function PdfViewerContainer({
         findController.setDocument(document);
         pdfViewer.setDocument(document);
       } catch (loadError) {
-        if (!disposed) setError(loadError);
+        if (!disposed && !abortController.signal.aborted) setError(loadError);
       } finally {
-        if (!disposed) setLoading(false);
+        if (!disposed && !abortController.signal.aborted) setLoading(false);
       }
     }
 
@@ -221,6 +246,7 @@ export function PdfViewerContainer({
 
     return () => {
       disposed = true;
+      abortController.abort();
       clearHighlights();
       pdfViewer.setDocument(null);
       destroyPdfDocument(pdfDocumentRef.current);
@@ -244,6 +270,12 @@ export function PdfViewerContainer({
     if (!sourceCommand || loading || error) return;
     void drawHighlights(sourceCommand);
   }, [drawHighlights, error, loading, sourceCommand]);
+
+  useEffect(() => {
+    const onFullscreenChange = () => setFullscreen(document.fullscreenElement === shellRef.current);
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
+  }, []);
 
   const goToPage = useCallback(
     (nextPage: number) => {
@@ -270,6 +302,13 @@ export function PdfViewerContainer({
     [zoom],
   );
 
+  const fitToWidth = useCallback(() => {
+    setZoom("page-width");
+    if (pdfViewerRef.current) {
+      pdfViewerRef.current.currentScaleValue = "page-width";
+    }
+  }, []);
+
   const runSearch = useCallback(
     (findPrevious = false) => {
       eventBusRef.current?.dispatch("find", {
@@ -287,44 +326,74 @@ export function PdfViewerContainer({
     [query],
   );
 
+  const toggleFullscreen = useCallback(() => {
+    const shell = shellRef.current;
+    if (!shell) return;
+    if (document.fullscreenElement === shell) {
+      void document.exitFullscreen();
+      return;
+    }
+    void shell.requestFullscreen();
+  }, []);
+
+  const readerButtonClassName =
+    "inline-flex size-9 items-center justify-center rounded-md text-slate-700 transition hover:bg-slate-100 focus-visible:shadow-focus disabled:cursor-not-allowed disabled:opacity-45";
+
   return (
-    <section className="pdf-source-shell" aria-label="Contract PDF viewer">
-      <div className="pdf-source-toolbar">
-        <div className="flex items-center gap-2">
-          <Button
+    <section
+      className={cx("pdf-source-shell", fullscreen ? "pdf-source-shell-fullscreen" : "")}
+      ref={shellRef}
+      aria-label="Contract PDF viewer"
+    >
+      <div className="pdf-reader-toolbar" aria-label="PDF reader controls">
+        <div className="pdf-reader-control-group">
+          <button
             aria-label="Previous page"
+            className={readerButtonClassName}
             disabled={pageNumber <= 1 || loading}
             onClick={() => goToPage(pageNumber - 1)}
             type="button"
-            variant="secondary"
           >
             <ChevronLeft aria-hidden size={16} />
-          </Button>
-          <Input
-            aria-label="PDF page number"
-            className="h-9 w-16"
-            min={1}
-            max={pageCount || 1}
-            onChange={(event) => goToPage(Number(event.target.value))}
-            type="number"
-            value={pageNumber}
-          />
-          <span className="text-sm text-muted">/ {pageCount || "..."}</span>
-          <Button
+          </button>
+          <label className="pdf-reader-page-jump">
+            <span>Page</span>
+            <input
+              aria-label="PDF page number"
+              disabled={loading || pageCount === 0}
+              inputMode="numeric"
+              max={pageCount || 1}
+              min={1}
+              onChange={(event) => goToPage(Number(event.target.value))}
+              onKeyDown={(event) => {
+                if (event.key === "ArrowUp") {
+                  event.preventDefault();
+                  goToPage(pageNumber + 1);
+                }
+                if (event.key === "ArrowDown") {
+                  event.preventDefault();
+                  goToPage(pageNumber - 1);
+                }
+              }}
+              type="number"
+              value={pageNumber}
+            />
+            <span>/ {pageCount || "..."}</span>
+          </label>
+          <button
             aria-label="Next page"
+            className={readerButtonClassName}
             disabled={pageCount === 0 || pageNumber >= pageCount || loading}
             onClick={() => goToPage(pageNumber + 1)}
             type="button"
-            variant="secondary"
           >
             <ChevronRight aria-hidden size={16} />
-          </Button>
+          </button>
         </div>
-        <div className="flex min-w-0 flex-1 items-center gap-2">
-          <Search aria-hidden className="shrink-0 text-muted" size={16} />
-          <Input
+        <div className="pdf-reader-search">
+          <Search aria-hidden className="shrink-0 text-slate-500" size={16} />
+          <input
             aria-label="Search PDF text"
-            className="h-9 min-w-32"
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === "Enter") runSearch(event.shiftKey);
@@ -332,49 +401,50 @@ export function PdfViewerContainer({
             placeholder="Search PDF"
             value={query}
           />
-          <Button disabled={!query} onClick={() => runSearch(false)} type="button" variant="secondary">
+          <button disabled={!query} onClick={() => runSearch(false)} type="button">
             Find
-          </Button>
+          </button>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
+        <div className="pdf-reader-control-group">
+          <button
             aria-label="Zoom out"
+            className={readerButtonClassName}
             disabled={loading}
             onClick={() => changeZoom(-1)}
             type="button"
-            variant="secondary"
           >
             <ZoomOut aria-hidden size={16} />
-          </Button>
-          <span className="w-20 text-center text-sm text-muted">
+          </button>
+          <button
+            aria-label="Fit to width"
+            className="inline-flex h-9 items-center justify-center rounded-md px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 focus-visible:shadow-focus disabled:cursor-not-allowed disabled:opacity-45"
+            disabled={loading}
+            onClick={fitToWidth}
+            type="button"
+          >
             {zoom === "page-width" ? "Width" : `${Math.round(Number(zoom) * 100)}%`}
-          </span>
-          <Button
+          </button>
+          <button
             aria-label="Zoom in"
+            className={readerButtonClassName}
             disabled={loading}
             onClick={() => changeZoom(1)}
             type="button"
-            variant="secondary"
           >
             <ZoomIn aria-hidden size={16} />
-          </Button>
+          </button>
+          <button
+            aria-label={fullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+            className={readerButtonClassName}
+            onClick={toggleFullscreen}
+            type="button"
+          >
+            {fullscreen ? <Minimize2 aria-hidden size={16} /> : <Maximize2 aria-hidden size={16} />}
+          </button>
         </div>
       </div>
 
       <div className="pdf-source-body">
-        <aside className="pdf-source-sidebar" aria-label="PDF page navigation">
-          {Array.from({ length: pageCount }, (_, index) => index + 1).map((item) => (
-            <button
-              className={item === pageNumber ? "pdf-source-page-link active" : "pdf-source-page-link"}
-              key={item}
-              onClick={() => goToPage(item)}
-              type="button"
-            >
-              <span>Page</span>
-              <strong>{item}</strong>
-            </button>
-          ))}
-        </aside>
         <div className="pdf-source-main">
           <div className="pdf-source-viewer" ref={containerRef}>
             {loading ? (
@@ -394,13 +464,10 @@ export function PdfViewerContainer({
                 </span>
               </div>
             ) : null}
-            {!loading && !error ? (
-              <div className="pdf-source-hint">
-                <Highlighter aria-hidden size={14} />
-                <span>Source highlights fade automatically after navigation.</span>
-              </div>
-            ) : null}
             <div className="pdfViewer" ref={viewerRef} />
+          </div>
+          <div className="pdf-reader-page-indicator" aria-live="polite">
+            {pageCount > 0 ? `${pageNumber} of ${pageCount}` : "Loading"}
           </div>
         </div>
       </div>

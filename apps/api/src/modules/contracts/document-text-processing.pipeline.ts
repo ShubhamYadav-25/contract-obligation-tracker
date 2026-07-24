@@ -1,4 +1,5 @@
 import type { Logger } from "../../config/logger.js";
+import { ApplicationError } from "../../shared/errors/application-error.js";
 import type { OcrProvider, OcrResult } from "../../infrastructure/ocr/ocr-provider.js";
 import type { StorageProvider } from "../../infrastructure/storage/storage-provider.js";
 import type { TransactionManager } from "../../infrastructure/database/transaction-manager.js";
@@ -71,6 +72,13 @@ export interface DocumentTextProcessingPipelineDependencies {
 
 function safeMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function isRetryableExtractionError(error: unknown): boolean {
+  if (error instanceof ApplicationError && typeof error.details.retryable === "boolean") {
+    return error.details.retryable;
+  }
+  return true;
 }
 
 function parseFailureCode(message: string): string {
@@ -182,6 +190,8 @@ function toAnchorRecord(anchor: Anchor): Record<string, unknown> {
     ...(anchor.confidence ? { confidence: anchor.confidence } : {}),
     ...(anchor.warnings ? { warnings: anchor.warnings } : {}),
     ...(anchor.missing_fields ? { missingFields: anchor.missing_fields } : {}),
+    ...(anchor.source_evidence ? { sourceEvidence: anchor.source_evidence } : {}),
+    ...(anchor.source_candidate_keys ? { sourceCandidateKeys: anchor.source_candidate_keys } : {}),
     boxes,
   };
 }
@@ -337,10 +347,33 @@ export class DocumentTextProcessingPipeline implements ContractProcessingPipelin
       extraction,
       confidence,
       provider: extractionProvider,
-    } = await extractor.extract({
-      pages: extractionPages,
-      context: input,
-    });
+      metadata: extractionMetadata,
+    } = await (async () => {
+      try {
+        return await extractor.extract({
+          pages: extractionPages,
+          segmentedPages,
+          context: input,
+        });
+      } catch (error) {
+        this.dependencies.logger.warn("contract_obligation_extraction_failed", {
+          contractId: input.contractId,
+          documentId: input.documentId,
+          processingRunId: input.processingRunId,
+          message: safeMessage(error),
+          retryable: isRetryableExtractionError(error),
+        });
+
+        const ErrorClass = isRetryableExtractionError(error)
+          ? RetryableContractProcessingError
+          : PermanentContractProcessingError;
+        throw new ErrorClass({
+          code: "OBLIGATION_EXTRACTION_FAILED",
+          stage: "EXTRACTION",
+          message: safeMessage(error),
+        });
+      }
+    })();
     const extractedObligations = toExtractedObligations(extraction.obligations);
     let obligationCount = 0;
     const pageCount = segmentedPages.length;
@@ -397,6 +430,7 @@ export class DocumentTextProcessingPipeline implements ContractProcessingPipelin
               obligationCount,
               extractionConfidence: confidence,
               extractionProvider,
+              ...(extractionMetadata ? { extractionMetadata } : {}),
             },
             correlationId: input.processingRunId,
             timestamp: new Date(),
@@ -412,15 +446,30 @@ export class DocumentTextProcessingPipeline implements ContractProcessingPipelin
       });
     }
 
+    const summary = {
+      pageCount,
+      segmentCount,
+      ocrPageCount,
+      obligationCount,
+      extractionConfidence: confidence,
+      ...(extractionMetadata ? { extractionMetadata } : {}),
+    };
+    const reviewItemCount =
+      extractionMetadata?.reviewRequiredCandidates?.length ??
+      extractionMetadata?.metrics?.reviewRequired ??
+      0;
+
+    if (reviewItemCount > 0) {
+      return {
+        outcome: "REVIEW_REQUIRED",
+        reviewItemCount,
+        summary,
+      };
+    }
+
     return {
       outcome: "COMPLETED",
-      summary: {
-        pageCount,
-        segmentCount,
-        ocrPageCount,
-        obligationCount,
-        extractionConfidence: confidence,
-      },
+      summary,
     };
   }
 

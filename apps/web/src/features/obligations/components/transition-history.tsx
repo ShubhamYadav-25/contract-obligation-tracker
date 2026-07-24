@@ -1,4 +1,4 @@
-import { formatDateTime } from "../../../utils/format-date.js";
+import { formatDateTime } from "@/utils/format-date.js";
 import type { ObligationTransition } from "../types/obligation.js";
 
 export function TransitionHistory({

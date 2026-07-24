@@ -1,14 +1,14 @@
 import { BellRing, Clock3, ExternalLink, FileText, Inbox } from "lucide-react";
 import { Link } from "react-router-dom";
 
-import { InlineError } from "../../../components/feedback/inline-error.js";
-import { LoadingState } from "../../../components/feedback/loading-state.js";
-import { RetryPanel } from "../../../components/feedback/retry-panel.js";
-import { ContentContainer } from "../../../components/layout/content-container.js";
-import { PageHeader } from "../../../components/layout/page-header.js";
-import { Badge } from "../../../components/ui/badge.js";
-import { routePaths } from "../../../app/route-paths.js";
-import { formatDateTime } from "../../../utils/format-date.js";
+import { InlineError } from "@/components/feedback/inline-error.js";
+import { LoadingState } from "@/components/feedback/loading-state.js";
+import { RetryPanel } from "@/components/feedback/retry-panel.js";
+import { ContentContainer } from "@/components/layout/content-container.js";
+import { PageHeader } from "@/components/layout/page-header.js";
+import { Badge } from "@/components/ui/badge.js";
+import { routePaths } from "@/app/route-paths.js";
+import { formatDateTime } from "@/utils/format-date.js";
 import { DataTable, TableHead } from "../../workflow/components.js";
 import { useMessages } from "../hooks/use-messages.js";
 import type { MessageSummary } from "../types/message.js";

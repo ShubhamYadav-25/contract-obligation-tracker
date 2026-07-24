@@ -44,6 +44,20 @@ export interface ContractTextSummary {
   readonly ocrPageCount: number;
 }
 
+export interface ContractExtractionSummary {
+  readonly provider?: string | undefined;
+  readonly confidence?: number | undefined;
+  readonly confirmedCount: number;
+  readonly reviewRequiredCount: number;
+  readonly rejectedCount: number;
+  readonly rawCandidateCount?: number | undefined;
+  readonly verifiedCandidateCount?: number | undefined;
+  readonly duplicateRemovalCount?: number | undefined;
+  readonly consolidationCount?: number | undefined;
+  readonly llmRequestCount?: number | undefined;
+  readonly retryCount?: number | undefined;
+}
+
 export interface ContractSummary {
   readonly id: string;
   readonly displayName: string;
@@ -54,6 +68,7 @@ export interface ContractSummary {
   readonly currentDocument: CurrentDocumentSummary | null;
   readonly processing: ContractProcessingSummary | null;
   readonly text: ContractTextSummary;
+  readonly extraction: ContractExtractionSummary;
 }
 
 export type ContractDetail = ContractSummary;

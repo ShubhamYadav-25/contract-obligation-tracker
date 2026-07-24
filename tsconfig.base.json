@@ -20,6 +20,7 @@
     "declarationMap": true,
     "baseUrl": ".",
     "paths": {
+      "@/*": ["apps/web/src/*"],
       "@contract-obligation-tracker/shared": ["packages/shared/src/index.ts"],
       "@contract-obligation-tracker/shared/*": ["packages/shared/src/*"],
       "@contract-obligation-tracker/test-kit": ["packages/test-kit/src/index.ts"],

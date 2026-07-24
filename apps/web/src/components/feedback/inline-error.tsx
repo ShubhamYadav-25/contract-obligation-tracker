@@ -1,4 +1,4 @@
-import { ApiError } from "../../services/api-error.js";
+import { ApiError } from "@/services/api-error.js";
 
 export function InlineError({ error }: { readonly error: unknown }) {
   const message = error instanceof Error ? error.message : "Something went wrong";

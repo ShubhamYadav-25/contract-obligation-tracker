@@ -92,6 +92,8 @@ interface ContractWorkspaceRow {
   readonly text_page_count: PgNumeric;
   readonly text_segment_count: PgNumeric;
   readonly ocr_page_count: PgNumeric;
+  readonly obligation_count: PgNumeric;
+  readonly extraction_audit_data: unknown;
 }
 
 interface DocumentTextPageRow {
@@ -128,6 +130,22 @@ function toNumber(value: PgNumeric): number {
 
 function toOptionalNumber(value: PgNumeric | null): number | undefined {
   return value === null ? undefined : toNumber(value);
+}
+
+function numberFromRecord(record: Record<string, unknown> | null, key: string): number | undefined {
+  const value = record?.[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function stringFromRecord(record: Record<string, unknown> | null, key: string): string | undefined {
+  const value = record?.[key];
+  return typeof value === "string" && value.trim().length > 0 ? value : undefined;
+}
+
+function recordFromUnknown(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
 }
 
 function toRecordArray(value: unknown): readonly Record<string, unknown>[] {
@@ -210,6 +228,12 @@ function mapProcessingRun(row: ContractProcessingRunRow): ContractProcessingRunR
 }
 
 function mapWorkspace(row: ContractWorkspaceRow): ContractWorkspaceRecord {
+  const auditData = recordFromUnknown(row.extraction_audit_data);
+  const metadata = recordFromUnknown(auditData?.extractionMetadata);
+  const metrics = recordFromUnknown(metadata?.metrics);
+  const provider = stringFromRecord(auditData, "extractionProvider");
+  const confidence = numberFromRecord(auditData, "extractionConfidence");
+
   return {
     contract: mapContract(row.contract),
     ...(row.document ? { currentDocument: mapDocument(row.document) } : {}),
@@ -218,6 +242,34 @@ function mapWorkspace(row: ContractWorkspaceRow): ContractWorkspaceRecord {
       pageCount: toNumber(row.text_page_count),
       segmentCount: toNumber(row.text_segment_count),
       ocrPageCount: toNumber(row.ocr_page_count),
+    },
+    extraction: {
+      ...(provider ? { provider } : {}),
+      ...(confidence !== undefined ? { confidence } : {}),
+      confirmedCount:
+        numberFromRecord(metrics, "confirmed") ??
+        numberFromRecord(auditData, "obligationCount") ??
+        toNumber(row.obligation_count),
+      reviewRequiredCount: numberFromRecord(metrics, "reviewRequired") ?? 0,
+      rejectedCount: numberFromRecord(metrics, "rejected") ?? 0,
+      ...(numberFromRecord(metrics, "rawCandidates") !== undefined
+        ? { rawCandidateCount: numberFromRecord(metrics, "rawCandidates") ?? 0 }
+        : {}),
+      ...(numberFromRecord(metrics, "verifiedCandidates") !== undefined
+        ? { verifiedCandidateCount: numberFromRecord(metrics, "verifiedCandidates") ?? 0 }
+        : {}),
+      ...(numberFromRecord(metrics, "duplicateRemovals") !== undefined
+        ? { duplicateRemovalCount: numberFromRecord(metrics, "duplicateRemovals") ?? 0 }
+        : {}),
+      ...(numberFromRecord(metrics, "consolidations") !== undefined
+        ? { consolidationCount: numberFromRecord(metrics, "consolidations") ?? 0 }
+        : {}),
+      ...(numberFromRecord(metrics, "llmRequestCount") !== undefined
+        ? { llmRequestCount: numberFromRecord(metrics, "llmRequestCount") ?? 0 }
+        : {}),
+      ...(numberFromRecord(metrics, "retryCount") !== undefined
+        ? { retryCount: numberFromRecord(metrics, "retryCount") ?? 0 }
+        : {}),
     },
   };
 }
@@ -265,7 +317,9 @@ export class PostgresContractRepository implements ContractRepository, ContractW
           to_jsonb(run.*) AS processing_run,
           COALESCE(text_stats.page_count, 0) AS text_page_count,
           COALESCE(text_stats.segment_count, 0) AS text_segment_count,
-          COALESCE(text_stats.ocr_page_count, 0) AS ocr_page_count
+          COALESCE(text_stats.ocr_page_count, 0) AS ocr_page_count,
+          COALESCE(obligation_stats.obligation_count, 0) AS obligation_count,
+          extraction_audit.new_data AS extraction_audit_data
         FROM contracts AS contract
         LEFT JOIN contract_documents AS document
           ON document.id = contract.current_document_id
@@ -293,6 +347,20 @@ export class PostgresContractRepository implements ContractRepository, ContractW
               OR page.document_id = contract.current_document_id
             )
         ) AS text_stats ON TRUE
+        LEFT JOIN LATERAL (
+          SELECT COUNT(*)::int AS obligation_count
+          FROM obligations AS obligation
+          WHERE obligation.contract_id = contract.id
+        ) AS obligation_stats ON TRUE
+        LEFT JOIN LATERAL (
+          SELECT audit.new_data
+          FROM audit_events AS audit
+          WHERE audit.entity_type = 'CONTRACT'
+            AND audit.entity_id = contract.id::text
+            AND audit.action = 'CONTRACT_OBLIGATIONS_EXTRACTED'
+          ORDER BY audit.created_at DESC
+          LIMIT 1
+        ) AS extraction_audit ON TRUE
         WHERE contract.organization_id = $1
           AND (
             $4::text IS NULL
@@ -322,7 +390,9 @@ export class PostgresContractRepository implements ContractRepository, ContractW
           to_jsonb(run.*) AS processing_run,
           COALESCE(text_stats.page_count, 0) AS text_page_count,
           COALESCE(text_stats.segment_count, 0) AS text_segment_count,
-          COALESCE(text_stats.ocr_page_count, 0) AS ocr_page_count
+          COALESCE(text_stats.ocr_page_count, 0) AS ocr_page_count,
+          COALESCE(obligation_stats.obligation_count, 0) AS obligation_count,
+          extraction_audit.new_data AS extraction_audit_data
         FROM contracts AS contract
         LEFT JOIN contract_documents AS document
           ON document.id = contract.current_document_id
@@ -350,6 +420,20 @@ export class PostgresContractRepository implements ContractRepository, ContractW
               OR page.document_id = contract.current_document_id
             )
         ) AS text_stats ON TRUE
+        LEFT JOIN LATERAL (
+          SELECT COUNT(*)::int AS obligation_count
+          FROM obligations AS obligation
+          WHERE obligation.contract_id = contract.id
+        ) AS obligation_stats ON TRUE
+        LEFT JOIN LATERAL (
+          SELECT audit.new_data
+          FROM audit_events AS audit
+          WHERE audit.entity_type = 'CONTRACT'
+            AND audit.entity_id = contract.id::text
+            AND audit.action = 'CONTRACT_OBLIGATIONS_EXTRACTED'
+          ORDER BY audit.created_at DESC
+          LIMIT 1
+        ) AS extraction_audit ON TRUE
         WHERE contract.organization_id = $1
           AND contract.id = $2
         LIMIT 1

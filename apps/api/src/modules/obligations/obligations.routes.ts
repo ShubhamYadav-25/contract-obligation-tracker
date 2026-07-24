@@ -23,6 +23,12 @@ export function createObligationRouter(): Router {
   );
 
   router.patch(
+    "/:obligationId",
+    requireAuthContext,
+    asyncRoute((request, response) => controller.update(request, response)),
+  );
+
+  router.patch(
     "/:obligationId/status",
     requireAuthContext,
     asyncRoute((request, response) => controller.transition(request, response)),

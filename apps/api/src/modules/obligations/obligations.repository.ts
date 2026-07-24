@@ -1,6 +1,7 @@
 import type { TransactionContext } from "../../infrastructure/database/transaction-manager.js";
 import type {
   ObligationDetailRecord,
+  ObligationEditableFields,
   ObligationRecord,
   ObligationStatus,
 } from "./obligations.types.js";
@@ -46,6 +47,12 @@ export interface ObligationRepository {
     readonly organizationId: string;
     readonly obligationId: string;
   }): Promise<ObligationDetailRecord | null>;
+  updateEditableFields(input: {
+    readonly organizationId: string;
+    readonly obligationId: string;
+    readonly expectedVersion: number;
+    readonly fields: ObligationEditableFields;
+  }): Promise<ObligationRecord>;
   updateStatus(input: {
     readonly id: string;
     readonly fromStatus: ObligationStatus;

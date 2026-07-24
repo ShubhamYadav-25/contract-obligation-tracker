@@ -1,4 +1,4 @@
-import { EmptyState } from "../../../components/feedback/empty-state.js";
+import { EmptyState } from "@/components/feedback/empty-state.js";
 import { ContractCard } from "./contract-card.js";
 import type { ContractSummary } from "../types/contracts.js";
 

@@ -32,6 +32,7 @@ function createTestApp(input: {
   );
 
   app.use(requestCorrelationMiddleware);
+  app.use(express.json());
   app.get(
     "/api/obligations",
     requireAuthContext,
@@ -46,6 +47,11 @@ function createTestApp(input: {
     "/api/messages",
     requireAuthContext,
     asyncRoute((request, response) => messageController.list(request, response)),
+  );
+  app.patch(
+    "/api/obligations/:obligationId",
+    requireAuthContext,
+    asyncRoute((request, response) => obligationController.update(request, response)),
   );
   app.use(errorMiddleware);
   return app;
@@ -66,7 +72,31 @@ describe("read API routes", () => {
             dueAt: new Date("2026-08-01T00:00:00.000Z"),
             reminderStatus: "PENDING",
             nextReminderAt: new Date("2026-07-30T00:00:00.000Z"),
-            sourceAnchors: [],
+            responsibleParty: "Network",
+            counterparty: "Affiliate",
+            category: "PAYMENT",
+            timingType: "RECURRING",
+            frequency: "Quarterly",
+            triggerEvent: "end of calendar quarter",
+            offsetValue: 45,
+            offsetUnit: "days",
+            offsetDirection: "after",
+            confidence: 0.95,
+            reviewStatus: "CONFIRMED",
+            sourceAnchors: [
+              {
+                documentId: "00000000-0000-4000-8000-000000000005",
+                pageNumber: 22,
+                startLine: 600,
+                endLine: 601,
+                globalStartLine: 600,
+                globalEndLine: 601,
+                quotedText: "Network shall pay to Affiliate the Affiliate Advertising Share.",
+                source: "reference_aware_obligation",
+                evidenceRole: "ACTION",
+                boxes: [],
+              },
+            ],
             version: 0,
           },
         ],
@@ -96,6 +126,23 @@ describe("read API routes", () => {
       contractDisplayName: "Vendor Agreement",
       title: "Monthly payment",
       reminderStatus: "PENDING",
+      responsibleParty: "Network",
+      counterparty: "Affiliate",
+      category: "PAYMENT",
+      frequency: "Quarterly",
+      triggerEvent: "end of calendar quarter",
+      confidence: 0.95,
+      reviewStatus: "CONFIRMED",
+      sourceAnchors: [
+        expect.objectContaining({
+          documentId: "00000000-0000-4000-8000-000000000005",
+          pageNumber: 22,
+          startLine: 600,
+          endLine: 601,
+          source: "reference_aware_obligation",
+          evidenceRole: "ACTION",
+        }),
+      ],
     });
     expect(response.body.data).toMatchObject({
       total: 1,
@@ -146,6 +193,87 @@ describe("read API routes", () => {
       dueDateRange: "NEXT_7_DAYS",
       limit: 50,
       offset: 0,
+    });
+  });
+
+  it("updates editable obligation fields for the authenticated organization", async () => {
+    const obligations = {
+      listByOrganization: vi.fn(),
+      findById: vi.fn(),
+      findDetailByOrganizationAndId: vi.fn(),
+      updateStatus: vi.fn(),
+      updateEditableFields: vi.fn(async () => ({
+        id: obligationId,
+        contractId,
+        contractDisplayName: "Vendor Agreement",
+        title: "Updated monthly payment",
+        description: "Pay updated monthly fees.",
+        status: "UPCOMING",
+        dueAt: new Date("2026-08-15T00:00:00.000Z"),
+        responsibleParty: "Network",
+        counterparty: "Affiliate",
+        category: "PAYMENT",
+        timingType: "FIXED_DATE",
+        frequency: "Monthly",
+        triggerEvent: "invoice receipt",
+        offsetValue: 10,
+        offsetUnit: "days",
+        offsetDirection: "after",
+        reviewStatus: "CONFIRMED",
+        sourceAnchors: [],
+        version: 4,
+      })),
+    } as unknown as ObligationRepository;
+    const reminders = { listByOrganization: vi.fn() } as unknown as ReminderReadRepository;
+
+    const response = await request(createTestApp({ obligations, reminders }))
+      .patch(`/api/obligations/${obligationId}`)
+      .set("x-user-id", userId)
+      .set("x-organization-id", organizationId)
+      .send({
+        expectedVersion: 3,
+        title: "Updated monthly payment",
+        description: "Pay updated monthly fees.",
+        dueAt: "2026-08-15T00:00:00.000Z",
+        responsibleParty: "Network",
+        counterparty: "Affiliate",
+        category: "PAYMENT",
+        timingType: "FIXED_DATE",
+        frequency: "Monthly",
+        triggerEvent: "invoice receipt",
+        offsetValue: 10,
+        offsetUnit: "days",
+        offsetDirection: "after",
+        reviewStatus: "CONFIRMED",
+      })
+      .expect(200);
+
+    expect(response.body.success).toBe(true);
+    expect(response.body.data).toMatchObject({
+      id: obligationId,
+      title: "Updated monthly payment",
+      responsibleParty: "Network",
+      version: 4,
+    });
+    expect(obligations.updateEditableFields).toHaveBeenCalledWith({
+      organizationId,
+      obligationId,
+      expectedVersion: 3,
+      fields: {
+        title: "Updated monthly payment",
+        description: "Pay updated monthly fees.",
+        dueAt: new Date("2026-08-15T00:00:00.000Z"),
+        responsibleParty: "Network",
+        counterparty: "Affiliate",
+        category: "PAYMENT",
+        timingType: "FIXED_DATE",
+        frequency: "Monthly",
+        triggerEvent: "invoice receipt",
+        offsetValue: 10,
+        offsetUnit: "days",
+        offsetDirection: "after",
+        reviewStatus: "CONFIRMED",
+      },
     });
   });
 

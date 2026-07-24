@@ -1,7 +1,7 @@
 import { RotateCcw } from "lucide-react";
 
-import { Button } from "../../../components/ui/button.js";
-import { formatDateTime } from "../../../utils/format-date.js";
+import { Button } from "@/components/ui/button.js";
+import { formatDateTime } from "@/utils/format-date.js";
 import { ReminderStatusBadge } from "./reminder-status-badge.js";
 import type { ReminderStatus } from "./reminder-status-badge.js";
 

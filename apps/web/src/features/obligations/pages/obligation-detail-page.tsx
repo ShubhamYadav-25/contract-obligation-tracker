@@ -1,13 +1,13 @@
 import { useParams } from "react-router-dom";
 
-import { InlineError } from "../../../components/feedback/inline-error.js";
-import { LoadingState } from "../../../components/feedback/loading-state.js";
-import { RetryPanel } from "../../../components/feedback/retry-panel.js";
-import { ContentContainer } from "../../../components/layout/content-container.js";
-import { PageHeader } from "../../../components/layout/page-header.js";
-import { Card } from "../../../components/ui/card.js";
-import { isConflictError } from "../../../services/api-error.js";
-import { formatDateTime } from "../../../utils/format-date.js";
+import { InlineError } from "@/components/feedback/inline-error.js";
+import { LoadingState } from "@/components/feedback/loading-state.js";
+import { RetryPanel } from "@/components/feedback/retry-panel.js";
+import { ContentContainer } from "@/components/layout/content-container.js";
+import { PageHeader } from "@/components/layout/page-header.js";
+import { Card } from "@/components/ui/card.js";
+import { isConflictError } from "@/services/api-error.js";
+import { formatDateTime } from "@/utils/format-date.js";
 import { ObligationSourcePanel } from "../components/obligation-source-panel.js";
 import { ObligationStatusBadge } from "../components/obligation-status-badge.js";
 import { TransitionDialog } from "../components/transition-dialog.js";

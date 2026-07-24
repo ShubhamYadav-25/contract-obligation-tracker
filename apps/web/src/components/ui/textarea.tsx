@@ -1,6 +1,6 @@
 import type { TextareaHTMLAttributes } from "react";
 
-import { cx } from "../../utils/cx.js";
+import { cx } from "@/utils/cx.js";
 
 export function Textarea({ className, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return (
