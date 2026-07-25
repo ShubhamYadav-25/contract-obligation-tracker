@@ -26,6 +26,34 @@ export default defineConfig({
       ),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes("node_modules")) {
+            return undefined;
+          }
+
+          if (id.includes("pdfjs-dist/build/pdf.worker")) return "vendor-pdf-worker";
+          if (id.includes("pdfjs-dist/build/pdf")) return "vendor-pdf-core";
+          if (id.includes("pdfjs-dist/web/pdf_viewer")) return "vendor-pdf-viewer";
+          if (id.includes("pdfjs-dist")) return "vendor-pdf";
+          if (id.includes("lucide-react")) return "vendor-icons";
+          if (id.includes("@tanstack/react-query")) return "vendor-query";
+          if (id.includes("react-router")) {
+            return "vendor-router";
+          }
+          if (id.includes("react-hook-form") || id.includes("@hookform/resolvers")) {
+            return "vendor-forms";
+          }
+          if (id.includes("zod")) return "vendor-validation";
+          if (id.includes("react")) return "vendor-react";
+
+          return "vendor";
+        },
+      },
+    },
+  },
   test: {
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],
