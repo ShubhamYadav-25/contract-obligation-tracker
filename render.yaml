@@ -2,7 +2,7 @@ services:
   - type: web
     runtime: node
     name: contract-obligation-tracker-api
-    plan: starter
+    plan: free
     buildCommand: corepack enable && corepack pnpm install --frozen-lockfile && corepack pnpm --filter @contract-obligation-tracker/api run build
     startCommand: corepack pnpm --filter @contract-obligation-tracker/api run start:render
     healthCheckPath: /health
@@ -50,6 +50,7 @@ services:
   - type: web
     runtime: static
     name: contract-obligation-tracker-web
+    plan: free
     buildCommand: corepack enable && corepack pnpm install --frozen-lockfile && corepack pnpm --filter @contract-obligation-tracker/web run build
     staticPublishPath: apps/web/dist
     autoDeployTrigger: commit
