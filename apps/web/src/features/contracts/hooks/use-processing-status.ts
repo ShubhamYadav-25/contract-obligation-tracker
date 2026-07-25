@@ -18,11 +18,12 @@ const activeStatuses = new Set([
 /**
  * @description Provides the use processing status hook for React data access or state coordination.
  * @param {string} contractId - Input value for contract id.
+ * @param {boolean} enabled - Input value for enabled.
  * @returns {unknown} Result of the use processing status operation.
  */
-export function useProcessingStatus(contractId: string) {
+export function useProcessingStatus(contractId: string, enabled = true) {
   return useQuery({
-    enabled: contractId.length > 0,
+    enabled: enabled && contractId.length > 0,
     queryKey: queryKeys.contracts.processingStatus(contractId),
     queryFn: ({ signal }) => getProcessingStatus(contractId, signal),
     refetchInterval: (query) => {

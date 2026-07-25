@@ -233,9 +233,13 @@ export function loadEnv(): ApiEnv {
 }
 
 /**
- * @description Executes the get cors origin operation used by the application workflow.
- * @returns {string} Result of the get cors origin operation.
+ * @description Executes the get cors origins operation used by the application workflow.
+ * @param {string | undefined} rawValue - Input value for raw value.
+ * @returns {string[]} Result of the get cors origins operation.
  */
-export function getCorsOrigin(): string {
-  return process.env.CORS_ORIGIN ?? "http://localhost:5173";
+export function getCorsOrigins(rawValue = process.env.CORS_ORIGIN): string[] {
+  return (rawValue ?? "http://localhost:5173")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter((origin) => origin.length > 0);
 }

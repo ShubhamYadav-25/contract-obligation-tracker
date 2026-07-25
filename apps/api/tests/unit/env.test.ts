@@ -3,7 +3,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { parseEnv } from "../../src/config/env.js";
+import { getCorsOrigins, parseEnv } from "../../src/config/env.js";
 
 describe("environment validation", () => {
   it("applies local defaults", () => {
@@ -42,6 +42,17 @@ describe("environment validation", () => {
     });
 
     expect(env.API_PORT).toBe(3001);
+  });
+
+  it("parses comma-separated CORS origins", () => {
+    expect(
+      getCorsOrigins(
+        "https://contract-obligation-tracker-1.onrender.com, https://contract-obligation-tracker.onrender.com",
+      ),
+    ).toEqual([
+      "https://contract-obligation-tracker-1.onrender.com",
+      "https://contract-obligation-tracker.onrender.com",
+    ]);
   });
 
   it("parses the obligation extractor mode feature flag", () => {

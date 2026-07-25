@@ -63,7 +63,7 @@ const terminalProcessingStatuses = new Set<ContractProcessingStatus>([
 function SummaryTab({ contractId }: { readonly contractId: string }) {
   const queryClient = useQueryClient();
   const contract = useContract(contractId);
-  const status = useProcessingStatus(contractId);
+  const status = useProcessingStatus(contractId, contract.isSuccess);
   const obligations = useObligations(contractId);
   const detail = contract.data;
   const obligationRows = obligations.data?.items ?? [];
@@ -196,6 +196,7 @@ function ReviewEvidenceTab({
   readonly selectedObligationId?: string;
   readonly sourceCommand?: PdfSourceNavigationCommand | null;
 }) {
+  const contract = useContract(contractId);
   const obligations = useObligations(contractId);
   const rows = obligations.data?.items ?? [];
   const [activeObligationId, setActiveObligationId] = useState(selectedObligationId ?? "");
@@ -273,11 +274,26 @@ function ReviewEvidenceTab({
         ) : null}
       </section>
       <div className="review-pdf-pane min-w-0">
-        <PdfViewerContainer
-          contractId={contractId}
-          initialPage={sourceCommand?.payload.pageNumber ?? 1}
-          sourceCommand={activeSourceCommand}
-        />
+        {contract.isLoading ? <LoadingSkeleton label="Loading contract PDF" /> : null}
+        {contract.isError ? (
+          <ErrorState
+            detail="This contract id is not available in the current production database. Return to the contracts list and open a stored contract."
+            title="Contract not found."
+          />
+        ) : null}
+        {contract.isSuccess && !contract.data.currentDocument ? (
+          <ErrorState
+            detail="The contract exists, but no stored PDF is attached to its current document."
+            title="PDF document is missing."
+          />
+        ) : null}
+        {contract.isSuccess && contract.data.currentDocument ? (
+          <PdfViewerContainer
+            contractId={contractId}
+            initialPage={sourceCommand?.payload.pageNumber ?? 1}
+            sourceCommand={activeSourceCommand}
+          />
+        ) : null}
       </div>
     </div>
   );
