@@ -3,8 +3,8 @@ services:
     runtime: node
     name: contract-obligation-tracker-api
     plan: free
-    buildCommand: corepack enable && corepack pnpm install --frozen-lockfile --prod=false && corepack pnpm --filter @contract-obligation-tracker/api run build
-    startCommand: corepack pnpm --filter @contract-obligation-tracker/api run start:render
+    buildCommand: npm install --global pnpm@10.14.0 && pnpm install --frozen-lockfile --prod=false && pnpm --filter @contract-obligation-tracker/api run build
+    startCommand: node apps/api/dist/src/scripts/apply-workflow-migrations.js && node apps/api/dist/src/server.js
     healthCheckPath: /health
     autoDeployTrigger: commit
     envVars:
@@ -51,7 +51,7 @@ services:
     runtime: static
     name: contract-obligation-tracker-web
     plan: free
-    buildCommand: corepack enable && corepack pnpm install --frozen-lockfile --prod=false && corepack pnpm --filter @contract-obligation-tracker/web run build
+    buildCommand: npm install --global pnpm@10.14.0 && pnpm install --frozen-lockfile --prod=false && pnpm --filter @contract-obligation-tracker/web run build
     staticPublishPath: apps/web/dist
     autoDeployTrigger: commit
     envVars:

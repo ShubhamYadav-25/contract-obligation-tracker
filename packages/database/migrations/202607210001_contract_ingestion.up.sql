@@ -34,6 +34,9 @@ CREATE TABLE IF NOT EXISTS contract_documents (
 );
 
 ALTER TABLE contracts
+DROP CONSTRAINT IF EXISTS fk_contracts_current_document;
+
+ALTER TABLE contracts
 ADD CONSTRAINT fk_contracts_current_document
 FOREIGN KEY (current_document_id)
 REFERENCES contract_documents(id)
