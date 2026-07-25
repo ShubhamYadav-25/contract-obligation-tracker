@@ -1,3 +1,6 @@
+/**
+ * @file Defines a backend operational script for local maintenance or diagnostics.
+ */
 import { createDatabaseConfig } from "../config/database.js";
 import { loadEnv } from "../config/env.js";
 import { createJobConfig } from "../config/jobs.js";
@@ -25,6 +28,11 @@ interface CountRow {
   readonly obligations_with_boxes: number;
 }
 
+/**
+ * @description Runs the read limit script step for local operations.
+ * @returns {number} Result of the read limit operation.
+ * @throws {Error} When validation, I/O, or downstream service operations fail.
+ */
 function readLimit(): number {
   const value = process.env.CONTRACT_OBLIGATION_REPROCESS_LIMIT;
   if (!value) return 25;
@@ -36,10 +44,23 @@ function readLimit(): number {
   return parsed;
 }
 
+/**
+ * @description Runs the queue key script step for local operations.
+ * @param {ProcessingRunRow} row - Input value for row.
+ * @param {string} batchId - Input value for batch id.
+ * @param {number} index - Input value for index.
+ * @returns {string} Result of the queue key operation.
+ */
 function queueKey(row: ProcessingRunRow, batchId: string, index: number): string {
   return `contract-processing:${row.document_id}:obligation-reprocess:${batchId}:${index + 1}`;
 }
 
+/**
+ * @description Runs the count rows script step for local operations.
+ * @param {PgPoolClient} database - Input value for database.
+ * @returns {Promise<CountRow>} Result of the count rows operation.
+ * @throws {Error} When validation, I/O, or downstream service operations fail.
+ */
 async function countRows(database: PgPoolClient): Promise<CountRow> {
   const result = await database.query<CountRow>(
     `
@@ -58,6 +79,12 @@ async function countRows(database: PgPoolClient): Promise<CountRow> {
   return row;
 }
 
+/**
+ * @description Executes the list latest stored runs operation used by the application workflow.
+ * @param {PgPoolClient} database - Input value for database.
+ * @param {number} limit - Input value for limit.
+ * @returns {Promise<readonly ProcessingRunRow[]>} Result of the list latest stored runs operation.
+ */
 async function listLatestStoredRuns(
   database: PgPoolClient,
   limit: number,
@@ -92,6 +119,11 @@ async function listLatestStoredRuns(
   return result.rows;
 }
 
+/**
+ * @description Runs the main script step for local operations.
+ * @returns {Promise<void>} Result of the main operation.
+ * @throws {Error} When validation, I/O, or downstream service operations fail.
+ */
 async function main(): Promise<void> {
   process.env.JOB_BATCH_SIZE = "1";
   const env = loadEnv();

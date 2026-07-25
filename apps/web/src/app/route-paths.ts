@@ -1,3 +1,6 @@
+/**
+ * @file Defines web app routing, providers, paths, or app composition.
+ */
 export const routePaths = {
   home: "/",
   login: "/login",

@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend contracts module contracts, services, routes, or persistence logic.
+ */
 import type { Request, Response } from "express";
 
 import { ApplicationError } from "../../shared/errors/application-error.js";
@@ -11,6 +14,12 @@ import type {
 
 export type ContractIngestionServiceFactory = () => ContractIngestionService;
 
+/**
+ * @description Performs the require context helper operation for this module.
+ * @param {Request} request - Input value for request.
+ * @returns {unknown} Result of the require context operation.
+ * @throws {Error} When validation, I/O, or downstream service operations fail.
+ */
 function requireContext(request: Request) {
   const context = request.authContext;
   if (!context) {
@@ -23,6 +32,11 @@ function requireContext(request: Request) {
   return context;
 }
 
+/**
+ * @description Performs the parse pagination helper operation for this module.
+ * @param {Request["query"]} query - Input value for query.
+ * @returns {unknown} Result of the parse pagination operation.
+ */
 function parsePagination(query: Request["query"]) {
   const rawLimit = typeof query.limit === "string" ? Number.parseInt(query.limit, 10) : 50;
   const rawOffset = typeof query.offset === "string" ? Number.parseInt(query.offset, 10) : 0;
@@ -35,6 +49,11 @@ function parsePagination(query: Request["query"]) {
   };
 }
 
+/**
+ * @description Performs the serialize document helper operation for this module.
+ * @param {ContractDocumentRecord | undefined} document - Input value for document.
+ * @returns {unknown} Result of the serialize document operation.
+ */
 function serializeDocument(document: ContractDocumentRecord | undefined) {
   if (!document) return null;
 
@@ -49,6 +68,11 @@ function serializeDocument(document: ContractDocumentRecord | undefined) {
   };
 }
 
+/**
+ * @description Performs the serialize processing run helper operation for this module.
+ * @param {ContractProcessingRunRecord | undefined} run - Input value for run.
+ * @returns {unknown} Result of the serialize processing run operation.
+ */
 function serializeProcessingRun(run: ContractProcessingRunRecord | undefined) {
   if (!run) return null;
 
@@ -69,6 +93,11 @@ function serializeProcessingRun(run: ContractProcessingRunRecord | undefined) {
   };
 }
 
+/**
+ * @description Performs the serialize workspace helper operation for this module.
+ * @param {ContractWorkspaceRecord} record - Input value for record.
+ * @returns {unknown} Result of the serialize workspace operation.
+ */
 function serializeWorkspace(record: ContractWorkspaceRecord) {
   return {
     id: record.contract.id,
@@ -84,6 +113,11 @@ function serializeWorkspace(record: ContractWorkspaceRecord) {
   };
 }
 
+/**
+ * @description Performs the serialize text page helper operation for this module.
+ * @param {DocumentTextPageRecord} page - Input value for page.
+ * @returns {unknown} Result of the serialize text page operation.
+ */
 function serializeTextPage(page: DocumentTextPageRecord) {
   return {
     documentId: page.documentId,
@@ -103,13 +137,29 @@ function serializeTextPage(page: DocumentTextPageRecord) {
   };
 }
 
+/**
+ * @description Performs the inline pdf filename helper operation for this module.
+ * @param {string} filename - Input value for filename.
+ * @returns {string} Result of the inline pdf filename operation.
+ */
 function inlinePdfFilename(filename: string): string {
   return filename.replace(/["\r\n\\]/g, "_");
 }
 
 export class ContractController {
+  /**
+   * @description Implements the constructor method for this service or adapter.
+   * @param {ContractIngestionServiceFactory} createService - Input value for create service.
+   * @returns {unknown} Result of the constructor operation.
+   */
   constructor(private readonly createService: ContractIngestionServiceFactory) {}
 
+  /**
+   * @description Implements the ingest method for this service or adapter.
+   * @param {Request} request - Input value for request.
+   * @param {Response} response - Input value for response.
+   * @returns {Promise<void>} Result of the ingest operation.
+   */
   async ingest(request: Request, response: Response): Promise<void> {
     const context = requireContext(request);
 
@@ -152,6 +202,12 @@ export class ContractController {
     });
   }
 
+  /**
+   * @description Executes the list operation used by the application workflow.
+   * @param {Request} request - Input value for request.
+   * @param {Response} response - Input value for response.
+   * @returns {Promise<void>} Result of the list operation.
+   */
   async list(request: Request, response: Response): Promise<void> {
     const context = requireContext(request);
     const pagination = parsePagination(request.query);
@@ -170,6 +226,13 @@ export class ContractController {
     });
   }
 
+  /**
+   * @description Implements the detail method for this service or adapter.
+   * @param {Request} request - Input value for request.
+   * @param {Response} response - Input value for response.
+   * @returns {Promise<void>} Result of the detail operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   async detail(request: Request, response: Response): Promise<void> {
     const context = requireContext(request);
     const contractId = request.params.contractId;
@@ -203,6 +266,13 @@ export class ContractController {
     });
   }
 
+  /**
+   * @description Implements the text pages method for this service or adapter.
+   * @param {Request} request - Input value for request.
+   * @param {Response} response - Input value for response.
+   * @returns {Promise<void>} Result of the text pages operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   async textPages(request: Request, response: Response): Promise<void> {
     const context = requireContext(request);
     const contractId = request.params.contractId;
@@ -244,6 +314,13 @@ export class ContractController {
     });
   }
 
+  /**
+   * @description Implements the processing status method for this service or adapter.
+   * @param {Request} request - Input value for request.
+   * @param {Response} response - Input value for response.
+   * @returns {Promise<void>} Result of the processing status operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   async processingStatus(request: Request, response: Response): Promise<void> {
     const context = requireContext(request);
 
@@ -290,6 +367,13 @@ export class ContractController {
     });
   }
 
+  /**
+   * @description Executes the stream document operation used by the application workflow.
+   * @param {Request} request - Input value for request.
+   * @param {Response} response - Input value for response.
+   * @returns {Promise<void>} Result of the stream document operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   async streamDocument(request: Request, response: Response): Promise<void> {
     const context = requireContext(request);
     const contractId = request.params.contractId;

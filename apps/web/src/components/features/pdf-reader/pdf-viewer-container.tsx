@@ -1,3 +1,6 @@
+/**
+ * @file Defines PDF reader UI, navigation, and source highlight behavior.
+ */
 import {
   ChevronLeft,
   ChevronRight,
@@ -42,25 +45,50 @@ type EventBusInstance = InstanceType<typeof EventBus>;
 
 const zoomSteps = ["page-width", "0.75", "1", "1.25", "1.5", "2"] as const;
 
+/**
+ * @description Executes the get pdf url operation used by the application workflow.
+ * @param {string} contractId - Input value for contract id.
+ * @returns {string} Result of the get pdf url operation.
+ */
 function getPdfUrl(contractId: string): string {
   return `${getApiBaseUrl()}/api/v1/contracts/${contractId}/document.pdf`;
 }
 
+/**
+ * @description Performs the is authorization error helper operation for this module.
+ * @param {unknown} error - Input value for error.
+ * @returns {boolean} Result of the is authorization error operation.
+ */
 function isAuthorizationError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
   return /\b(401|403|unauthorized|forbidden|AUTHENTICATION_REQUIRED)\b/i.test(message);
 }
 
+/**
+ * @description Performs the is missing document error helper operation for this module.
+ * @param {unknown} error - Input value for error.
+ * @returns {boolean} Result of the is missing document error operation.
+ */
 function isMissingDocumentError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
   return /\b(404|not found|CONTRACT_DOCUMENT_NOT_FOUND)\b/i.test(message);
 }
 
+/**
+ * @description Performs the is expired document link error helper operation for this module.
+ * @param {unknown} error - Input value for error.
+ * @returns {boolean} Result of the is expired document link error operation.
+ */
 function isExpiredDocumentLinkError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
   return /\b(expired|signed url|signed-url|token expired)\b/i.test(message);
 }
 
+/**
+ * @description Performs the error title helper operation for this module.
+ * @param {unknown} error - Input value for error.
+ * @returns {string} Result of the error title operation.
+ */
 function errorTitle(error: unknown): string {
   if (isAuthorizationError(error)) return "Authorization required";
   if (isExpiredDocumentLinkError(error)) return "Document link expired";
@@ -68,6 +96,13 @@ function errorTitle(error: unknown): string {
   return "PDF rendering failed";
 }
 
+/**
+ * @description Performs the wait for page element helper operation for this module.
+ * @param {HTMLDivElement} container - Input value for container.
+ * @param {number} pageNumber - Input value for page number.
+ * @returns {Promise<HTMLElement>} Result of the wait for page element operation.
+ * @throws {Error} When validation, I/O, or downstream service operations fail.
+ */
 async function waitForPageElement(
   container: HTMLDivElement,
   pageNumber: number,
@@ -83,6 +118,13 @@ async function waitForPageElement(
   throw new Error(`Page ${pageNumber} was not rendered by PDF.js`);
 }
 
+/**
+ * @description Executes the fetch pdf bytes operation used by the application workflow.
+ * @param {string} pdfUrl - Input value for pdf url.
+ * @param {AbortSignal} signal - Input value for signal.
+ * @returns {Promise<Uint8Array>} Result of the fetch pdf bytes operation.
+ * @throws {Error} When validation, I/O, or downstream service operations fail.
+ */
 async function fetchPdfBytes(pdfUrl: string, signal: AbortSignal): Promise<Uint8Array> {
   const response = await fetch(pdfUrl, {
     headers: getDevAuthHeaders(),
@@ -96,11 +138,21 @@ async function fetchPdfBytes(pdfUrl: string, signal: AbortSignal): Promise<Uint8
   return new Uint8Array(await response.arrayBuffer());
 }
 
+/**
+ * @description Performs the destroy pdf document helper operation for this module.
+ * @param {PdfDocumentProxy | null} document - Input value for document.
+ * @returns {void} Result of the destroy pdf document operation.
+ */
 function destroyPdfDocument(document: PdfDocumentProxy | null): void {
   if (typeof document?.destroy !== "function") return;
   Promise.resolve(document.destroy()).catch(() => undefined);
 }
 
+/**
+ * @description Renders the pdf viewer container component for the contract tracker UI.
+ * @param {{ readonly contractId: string; readonly initialPage?: number; readonly sourceCommand?: PdfSourceNavigationCommand | null | undefined; }} { contractId, initialPage = 1, sourceCommand, } - Input value for { contract id, initial page = 1, source command, }.
+ * @returns {JSX.Element} Result of the pdf viewer container operation.
+ */
 export function PdfViewerContainer({
   contractId,
   initialPage = 1,
@@ -219,6 +271,10 @@ export function PdfViewerContainer({
       pdfViewer.currentPageNumber = Math.max(1, initialPage);
     });
 
+    /**
+     * @description Performs the load document helper operation for this module.
+     * @returns {Promise<unknown>} Result of the load document operation.
+     */
     async function loadDocument() {
       try {
         setLoading(true);
@@ -257,6 +313,11 @@ export function PdfViewerContainer({
   }, [clearHighlights, initialPage, pdfUrl, zoom]);
 
   useEffect(() => {
+    /**
+     * @description Performs the handle message helper operation for this module.
+     * @param {MessageEvent} event - Input value for event.
+     * @returns {unknown} Result of the handle message operation.
+     */
     const handleMessage = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
       if (!isPdfSourceNavigationCommand(event.data)) return;
@@ -272,6 +333,10 @@ export function PdfViewerContainer({
   }, [drawHighlights, error, loading, sourceCommand]);
 
   useEffect(() => {
+    /**
+     * @description Performs the on fullscreen change helper operation for this module.
+     * @returns {unknown} Result of the on fullscreen change operation.
+     */
     const onFullscreenChange = () => setFullscreen(document.fullscreenElement === shellRef.current);
     document.addEventListener("fullscreenchange", onFullscreenChange);
     return () => document.removeEventListener("fullscreenchange", onFullscreenChange);

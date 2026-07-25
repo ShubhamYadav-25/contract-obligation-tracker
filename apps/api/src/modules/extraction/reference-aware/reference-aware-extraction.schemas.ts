@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend extraction module contracts, services, routes, or persistence logic.
+ */
 import { z } from "zod";
 
 export const obligationBusinessTypeSchema = z.enum([
@@ -59,18 +62,10 @@ export const referenceResolutionStatusSchema = z.enum([
 ]);
 export type ReferenceResolutionStatus = z.infer<typeof referenceResolutionStatusSchema>;
 
-export const extractionReviewStatusSchema = z.enum([
-  "CONFIRMED",
-  "REVIEW_REQUIRED",
-  "REJECTED",
-]);
+export const extractionReviewStatusSchema = z.enum(["CONFIRMED", "REVIEW_REQUIRED", "REJECTED"]);
 export type ExtractionReviewStatus = z.infer<typeof extractionReviewStatusSchema>;
 
-export const candidateWindowSourceMethodSchema = z.enum([
-  "PDF_TEXT",
-  "TESSERACT",
-  "GEMINI_VISION",
-]);
+export const candidateWindowSourceMethodSchema = z.enum(["PDF_TEXT", "TESSERACT", "GEMINI_VISION"]);
 export type CandidateWindowSourceMethod = z.infer<typeof candidateWindowSourceMethodSchema>;
 
 export const offsetUnitSchema = z
@@ -84,6 +79,12 @@ export type OffsetDirection = z.infer<typeof offsetDirectionSchema>;
 const trimmedStringSchema = z.string().trim().min(1);
 const confidenceSchema = z.number().min(0).max(1);
 
+/**
+ * @description Performs the validate single page range helper operation for this module.
+ * @param {{ readonly startLine: number; readonly endLine: number }} value - Input value for value.
+ * @param {z.RefinementCtx} context - Input value for context.
+ * @returns {void} Result of the validate single page range operation.
+ */
 function validateSinglePageRange(
   value: { readonly startLine: number; readonly endLine: number },
   context: z.RefinementCtx,
@@ -286,6 +287,4 @@ export const referenceAwareExtractionResultSchema = z
     rejected: z.array(verifiedObligationCandidateSchema).default([]),
   })
   .strict();
-export type ReferenceAwareExtractionResult = z.infer<
-  typeof referenceAwareExtractionResultSchema
->;
+export type ReferenceAwareExtractionResult = z.infer<typeof referenceAwareExtractionResultSchema>;

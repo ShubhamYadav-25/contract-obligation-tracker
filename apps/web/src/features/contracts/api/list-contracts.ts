@@ -1,3 +1,6 @@
+/**
+ * @file Defines frontend API client calls for a contract tracker feature.
+ */
 import { z } from "zod";
 
 import { apiRequest } from "@/services/api-client.js";
@@ -79,6 +82,12 @@ export interface ListContractsInput {
   readonly offset?: number;
 }
 
+/**
+ * @description Executes the list contracts operation used by the application workflow.
+ * @param {ListContractsInput} input - Input value for input.
+ * @param {AbortSignal} signal - Input value for signal.
+ * @returns {unknown} Result of the list contracts operation.
+ */
 export function listContracts(input: ListContractsInput = {}, signal?: AbortSignal) {
   const query = new URLSearchParams();
   if (input.search?.trim()) {

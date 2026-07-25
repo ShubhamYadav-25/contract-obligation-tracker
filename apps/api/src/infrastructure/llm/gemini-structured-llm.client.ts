@@ -1,3 +1,6 @@
+/**
+ * @file Defines LLM infrastructure clients and structured response helpers.
+ */
 import { z } from "zod";
 
 import type { ApiEnv } from "../../config/env.js";
@@ -68,11 +71,7 @@ export interface GeminiModelSummary {
 
 export interface ModelSelectionAttempt {
   readonly model: string;
-  readonly outcome:
-    | "SELECTED"
-    | "NOT_LISTED"
-    | "MODEL_NOT_FOUND"
-    | "STRUCTURED_OUTPUT_FAILED";
+  readonly outcome: "SELECTED" | "NOT_LISTED" | "MODEL_NOT_FOUND" | "STRUCTURED_OUTPUT_FAILED";
   readonly errorCategory?: GeminiErrorCategory;
 }
 
@@ -128,16 +127,30 @@ const preflightJsonSchema = {
 } satisfies Record<string, unknown>;
 const preflightValidator = z.object({ status: z.literal("OK") }).strict();
 
+/**
+ * @description Performs the default gemini sdk loader helper operation for this module.
+ * @returns {Promise<GeminiSdkModule>} Result of the default gemini sdk loader operation.
+ */
 async function defaultGeminiSdkLoader(): Promise<GeminiSdkModule> {
   return (await import(googleGenAiPackageName)) as GeminiSdkModule;
 }
 
+/**
+ * @description Performs the delay helper operation for this module.
+ * @param {number} milliseconds - Input value for milliseconds.
+ * @returns {Promise<void>} Result of the delay operation.
+ */
 function delay(milliseconds: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, milliseconds);
   });
 }
 
+/**
+ * @description Executes the get error status operation used by the application workflow.
+ * @param {unknown} error - Input value for error.
+ * @returns {number | undefined} Result of the get error status operation.
+ */
 function getErrorStatus(error: unknown): number | undefined {
   const candidates = [
     (error as { readonly status?: unknown }).status,
@@ -148,6 +161,11 @@ function getErrorStatus(error: unknown): number | undefined {
   return candidates.find((candidate): candidate is number => typeof candidate === "number");
 }
 
+/**
+ * @description Executes the get provider message operation used by the application workflow.
+ * @param {unknown} error - Input value for error.
+ * @returns {string | undefined} Result of the get provider message operation.
+ */
 function getProviderMessage(error: unknown): string | undefined {
   if (error instanceof Error) {
     return error.message;
@@ -162,6 +180,12 @@ function getProviderMessage(error: unknown): string | undefined {
   return undefined;
 }
 
+/**
+ * @description Performs the redact secret from message helper operation for this module.
+ * @param {string | undefined} message - Input value for message.
+ * @param {string} secret - Input value for secret.
+ * @returns {string | undefined} Result of the redact secret from message operation.
+ */
 function redactSecretFromMessage(message: string | undefined, secret: string): string | undefined {
   if (!message) {
     return undefined;
@@ -174,6 +198,11 @@ function redactSecretFromMessage(message: string | undefined, secret: string): s
   return redacted.replace(/AIza[0-9A-Za-z_-]{20,}/g, "[REDACTED]");
 }
 
+/**
+ * @description Performs the parse json object helper operation for this module.
+ * @param {string | undefined} value - Input value for value.
+ * @returns {Record<string, unknown> | null} Result of the parse json object operation.
+ */
 function parseJsonObject(value: string | undefined): Record<string, unknown> | null {
   if (!value) {
     return null;
@@ -186,6 +215,11 @@ function parseJsonObject(value: string | undefined): Record<string, unknown> | n
   }
 }
 
+/**
+ * @description Performs the nested error object helper operation for this module.
+ * @param {unknown} error - Input value for error.
+ * @returns {Record<string, unknown> | null} Result of the nested error object operation.
+ */
 function nestedErrorObject(error: unknown): Record<string, unknown> | null {
   const record = unknownRecord(error);
   const responseData = unknownRecord(unknownRecord(record?.response)?.data);
@@ -201,8 +235,14 @@ function nestedErrorObject(error: unknown): Record<string, unknown> | null {
   return messageError;
 }
 
+/**
+ * @description Executes the retry after header milliseconds operation used by the application workflow.
+ * @param {unknown} error - Input value for error.
+ * @returns {number | null} Result of the retry after header milliseconds operation.
+ */
 function retryAfterHeaderMilliseconds(error: unknown): number | null {
-  const headers = unknownRecord(unknownRecord(error)?.response)?.headers ?? unknownRecord(error)?.headers;
+  const headers =
+    unknownRecord(unknownRecord(error)?.response)?.headers ?? unknownRecord(error)?.headers;
   if (!headers) {
     return null;
   }
@@ -228,6 +268,11 @@ function retryAfterHeaderMilliseconds(error: unknown): number | null {
   return null;
 }
 
+/**
+ * @description Executes the retry info milliseconds operation used by the application workflow.
+ * @param {readonly unknown[]} details - Input value for details.
+ * @returns {number | null} Result of the retry info milliseconds operation.
+ */
 function retryInfoMilliseconds(details: readonly unknown[]): number | null {
   for (const detail of details) {
     const record = unknownRecord(detail);
@@ -253,6 +298,11 @@ function retryInfoMilliseconds(details: readonly unknown[]): number | null {
   return null;
 }
 
+/**
+ * @description Performs the first quota violation helper operation for this module.
+ * @param {readonly unknown[]} details - Input value for details.
+ * @returns {Record<string, unknown> | null} Result of the first quota violation operation.
+ */
 function firstQuotaViolation(details: readonly unknown[]): Record<string, unknown> | null {
   for (const detail of details) {
     const record = unknownRecord(detail);
@@ -270,18 +320,18 @@ function firstQuotaViolation(details: readonly unknown[]): Record<string, unknow
   return null;
 }
 
+/**
+ * @description Performs the quota category helper operation for this module.
+ * @param {{ readonly statusName: string | null; readonly message: string; readonly quotaMetric: string | null; readonly quotaId: string | null; }} input - Input value for input.
+ * @returns {GeminiQuotaCategory} Result of the quota category operation.
+ */
 function quotaCategory(input: {
   readonly statusName: string | null;
   readonly message: string;
   readonly quotaMetric: string | null;
   readonly quotaId: string | null;
 }): GeminiQuotaCategory {
-  const text = [
-    input.statusName,
-    input.message,
-    input.quotaMetric,
-    input.quotaId,
-  ]
+  const text = [input.statusName, input.message, input.quotaMetric, input.quotaId]
     .filter((value): value is string => Boolean(value))
     .join(" ")
     .toLowerCase();
@@ -303,6 +353,11 @@ function quotaCategory(input: {
   return "UNKNOWN_QUOTA";
 }
 
+/**
+ * @description Performs the string record helper operation for this module.
+ * @param {unknown} value - Input value for value.
+ * @returns {Record<string, string> | null} Result of the string record operation.
+ */
 function stringRecord(value: unknown): Record<string, string> | null {
   const record = unknownRecord(value);
   if (!record) {
@@ -314,6 +369,11 @@ function stringRecord(value: unknown): Record<string, string> | null {
   return entries.length > 0 ? Object.fromEntries(entries) : null;
 }
 
+/**
+ * @description Performs the parse gemini quota error helper operation for this module.
+ * @param {{ readonly error: unknown; readonly operation: string; readonly model: string; readonly sanitizedMessage?: string; }} input - Input value for input.
+ * @returns {GeminiQuotaError | null} Result of the parse gemini quota error operation.
+ */
 export function parseGeminiQuotaError(input: {
   readonly error: unknown;
   readonly operation: string;
@@ -327,12 +387,10 @@ export function parseGeminiQuotaError(input: {
   const errorObject = nestedErrorObject(input.error);
   const details = Array.isArray(errorObject?.details) ? errorObject.details : [];
   const violation = firstQuotaViolation(details);
-  const quotaMetric =
-    typeof violation?.quotaMetric === "string" ? violation.quotaMetric : null;
+  const quotaMetric = typeof violation?.quotaMetric === "string" ? violation.quotaMetric : null;
   const quotaId = typeof violation?.quotaId === "string" ? violation.quotaId : null;
   const message =
-    (typeof errorObject?.message === "string" ? errorObject.message : input.sanitizedMessage) ??
-    "";
+    (typeof errorObject?.message === "string" ? errorObject.message : input.sanitizedMessage) ?? "";
   const category = quotaCategory({
     statusName: typeof errorObject?.status === "string" ? errorObject.status : null,
     message,
@@ -352,11 +410,21 @@ export function parseGeminiQuotaError(input: {
   };
 }
 
+/**
+ * @description Performs the normalize gemini model name helper operation for this module.
+ * @param {string} name - Input value for name.
+ * @returns {string} Result of the normalize gemini model name operation.
+ */
 export function normalizeGeminiModelName(name: string): string {
   const trimmed = name.trim();
   return trimmed.startsWith("models/") ? trimmed.slice("models/".length) : trimmed;
 }
 
+/**
+ * @description Performs the unique model names helper operation for this module.
+ * @param {readonly string[]} names - Input value for names.
+ * @returns {readonly string[]} Result of the unique model names operation.
+ */
 function uniqueModelNames(names: readonly string[]): readonly string[] {
   const seen = new Set<string>();
   const output: string[] = [];
@@ -371,11 +439,25 @@ function uniqueModelNames(names: readonly string[]): readonly string[] {
   return output;
 }
 
+/**
+ * @description Performs the unknown record helper operation for this module.
+ * @param {unknown} value - Input value for value.
+ * @returns {Record<string, unknown> | null} Result of the unknown record operation.
+ */
 function unknownRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : null;
 }
 
-function stringArrayField(record: Record<string, unknown>, field: string): readonly string[] | null {
+/**
+ * @description Performs the string array field helper operation for this module.
+ * @param {Record<string, unknown>} record - Input value for record.
+ * @param {string} field - Input value for field.
+ * @returns {readonly string[] | null} Result of the string array field operation.
+ */
+function stringArrayField(
+  record: Record<string, unknown>,
+  field: string,
+): readonly string[] | null {
   const value = record[field];
   if (!Array.isArray(value)) {
     return null;
@@ -383,6 +465,11 @@ function stringArrayField(record: Record<string, unknown>, field: string): reado
   return value.filter((item): item is string => typeof item === "string");
 }
 
+/**
+ * @description Performs the supports generate content helper operation for this module.
+ * @param {unknown} model - Input value for model.
+ * @returns {boolean | null} Result of the supports generate content operation.
+ */
 export function supportsGenerateContent(model: unknown): boolean | null {
   const record = unknownRecord(model);
   if (!record) {
@@ -396,14 +483,17 @@ export function supportsGenerateContent(model: unknown): boolean | null {
 
   const supportedGenerationMethods = stringArrayField(record, "supportedGenerationMethods");
   if (supportedGenerationMethods && supportedGenerationMethods.length > 0) {
-    return supportedGenerationMethods.some(
-      (action) => action.toLowerCase() === "generatecontent",
-    );
+    return supportedGenerationMethods.some((action) => action.toLowerCase() === "generatecontent");
   }
 
   return null;
 }
 
+/**
+ * @description Performs the classify gemini doctor error helper operation for this module.
+ * @param {unknown} error - Input value for error.
+ * @returns {GeminiErrorCategory} Result of the classify gemini doctor error operation.
+ */
 export function classifyGeminiDoctorError(error: unknown): GeminiErrorCategory {
   const details =
     error instanceof ExternalServiceError
@@ -416,9 +506,7 @@ export function classifyGeminiDoctorError(error: unknown): GeminiErrorCategory {
       : undefined;
   const status = typeof details?.status === "number" ? details.status : getErrorStatus(error);
   const message =
-    typeof details?.message === "string"
-      ? details.message
-      : getProviderMessage(error);
+    typeof details?.message === "string" ? details.message : getProviderMessage(error);
 
   if (/API_KEY_INVALID|api key not valid|invalid api key|unauth/i.test(message ?? "")) {
     return "AUTHENTICATION_ERROR";
@@ -444,6 +532,13 @@ export function classifyGeminiDoctorError(error: unknown): GeminiErrorCategory {
   return "UNKNOWN_ERROR";
 }
 
+/**
+ * @description Performs the classify gemini structured llm error helper operation for this module.
+ * @param {unknown} error - Input value for error.
+ * @param {unknown} operationName - Input value for operation name.
+ * @param {unknown} model - Input value for model.
+ * @returns {ClassifiedGeminiError} Result of the classify gemini structured llm error operation.
+ */
 export function classifyGeminiStructuredLlmError(
   error: unknown,
   operationName = "unknown",
@@ -454,7 +549,9 @@ export function classifyGeminiStructuredLlmError(
     return {
       retryable: error.details.retryable,
       ...(providerMessage ? { providerMessage } : {}),
-      ...(error.details.validationIssues ? { validationIssues: error.details.validationIssues } : {}),
+      ...(error.details.validationIssues
+        ? { validationIssues: error.details.validationIssues }
+        : {}),
     };
   }
 
@@ -491,6 +588,11 @@ export function classifyGeminiStructuredLlmError(
   };
 }
 
+/**
+ * @description Performs the extract response text helper operation for this module.
+ * @param {unknown} response - Input value for response.
+ * @returns {string} Result of the extract response text operation.
+ */
 function extractResponseText(response: unknown): string {
   const text = (response as { readonly text?: unknown }).text;
   if (typeof text === "string") {
@@ -503,14 +605,18 @@ function extractResponseText(response: unknown): string {
 
   const candidates = (response as { readonly candidates?: unknown[] }).candidates;
   const firstCandidate = candidates?.[0] as
-    | { readonly content?: { readonly parts?: readonly { readonly text?: unknown }[] } }
-    | undefined;
+    { readonly content?: { readonly parts?: readonly { readonly text?: unknown }[] } } | undefined;
   const partText = firstCandidate?.content?.parts
     ?.map((part) => (typeof part.text === "string" ? part.text : ""))
     .join("");
   return partText?.trim() ?? "";
 }
 
+/**
+ * @description Performs the collect async iterable helper operation for this module.
+ * @param {AsyncIterable<unknown>} value - Input value for value.
+ * @returns {Promise<unknown[]>} Result of the collect async iterable operation.
+ */
 async function collectAsyncIterable(value: AsyncIterable<unknown>): Promise<unknown[]> {
   const output: unknown[] = [];
   for await (const item of value) {
@@ -519,6 +625,11 @@ async function collectAsyncIterable(value: AsyncIterable<unknown>): Promise<unkn
   return output;
 }
 
+/**
+ * @description Performs the collect model list response helper operation for this module.
+ * @param {unknown} response - Input value for response.
+ * @returns {Promise<unknown[]>} Result of the collect model list response operation.
+ */
 async function collectModelListResponse(response: unknown): Promise<unknown[]> {
   if (Array.isArray(response)) {
     return response;
@@ -539,6 +650,11 @@ async function collectModelListResponse(response: unknown): Promise<unknown[]> {
   return [];
 }
 
+/**
+ * @description Performs the to gemini model summary helper operation for this module.
+ * @param {unknown} model - Input value for model.
+ * @returns {GeminiModelSummary | null} Result of the to gemini model summary operation.
+ */
 function toGeminiModelSummary(model: unknown): GeminiModelSummary | null {
   const record = unknownRecord(model);
   if (!record) {
@@ -558,7 +674,16 @@ function toGeminiModelSummary(model: unknown): GeminiModelSummary | null {
   };
 }
 
-function withSignal(request: Record<string, unknown>, signal?: AbortSignal): Record<string, unknown> {
+/**
+ * @description Performs the with signal helper operation for this module.
+ * @param {Record<string, unknown>} request - Input value for request.
+ * @param {AbortSignal} signal - Input value for signal.
+ * @returns {Record<string, unknown>} Result of the with signal operation.
+ */
+function withSignal(
+  request: Record<string, unknown>,
+  signal?: AbortSignal,
+): Record<string, unknown> {
   if (!signal) {
     return request;
   }
@@ -598,6 +723,12 @@ export class GeminiStructuredLlmClient
   private quotaRetryCount = 0;
   private quotaWaitMilliseconds = 0;
 
+  /**
+   * @description Implements the constructor method for this service or adapter.
+   * @param {GeminiStructuredLlmClientDependencies} dependencies - Input value for dependencies.
+   * @returns {unknown} Result of the constructor operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   constructor(dependencies: GeminiStructuredLlmClientDependencies) {
     if (!dependencies.env.GEMINI_API_KEY) {
       throw new ExternalServiceError("Gemini API key is required for structured LLM calls", {
@@ -617,8 +748,7 @@ export class GeminiStructuredLlmClient
     this.requestTimeoutMilliseconds = dependencies.env.GEMINI_REQUEST_TIMEOUT_MS;
     this.maxAttempts = dependencies.env.GEMINI_MAX_ATTEMPTS;
     this.maxRequestsPerContract = dependencies.env.GEMINI_MAX_REQUESTS_PER_CONTRACT;
-    this.configuredMinRequestIntervalMilliseconds =
-      dependencies.env.GEMINI_MIN_REQUEST_INTERVAL_MS;
+    this.configuredMinRequestIntervalMilliseconds = dependencies.env.GEMINI_MIN_REQUEST_INTERVAL_MS;
     this.adaptiveMinRequestIntervalMilliseconds = this.configuredMinRequestIntervalMilliseconds;
     this.maxQuotaRetries = dependencies.env.GEMINI_MAX_QUOTA_RETRIES;
     this.maxRetryDelayMilliseconds = dependencies.env.GEMINI_MAX_RETRY_DELAY_MS;
@@ -628,18 +758,37 @@ export class GeminiStructuredLlmClient
     this.delay = dependencies.delay ?? delay;
   }
 
+  /**
+   * @description Implements the preflight method for this service or adapter.
+   * @param {AbortSignal} signal - Input value for signal.
+   * @returns {Promise<void>} Result of the preflight operation.
+   */
   async preflight(signal?: AbortSignal): Promise<void> {
     await this.selectUsableModel(signal);
   }
 
+  /**
+   * @description Executes the get selected model operation used by the application workflow.
+   * @returns {string | null} Result of the get selected model operation.
+   */
   getSelectedModel(): string | null {
     return this.selectedModel;
   }
 
+  /**
+   * @description Executes the get candidate models operation used by the application workflow.
+   * @returns {readonly string[]} Result of the get candidate models operation.
+   */
   getCandidateModels(): readonly string[] {
     return this.candidateModels;
   }
 
+  /**
+   * @description Implements the select usable model method for this service or adapter.
+   * @param {AbortSignal} signal - Input value for signal.
+   * @returns {Promise<ModelSelectionResult>} Result of the select usable model operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   async selectUsableModel(signal?: AbortSignal): Promise<ModelSelectionResult> {
     if (this.selectedModelResult) {
       return this.selectedModelResult;
@@ -709,44 +858,64 @@ export class GeminiStructuredLlmClient
     });
   }
 
+  /**
+   * @description Executes the list generate content models operation used by the application workflow.
+   * @param {AbortSignal} signal - Input value for signal.
+   * @returns {Promise<readonly GeminiModelSummary[]>} Result of the list generate content models operation.
+   */
   async listGenerateContentModels(signal?: AbortSignal): Promise<readonly GeminiModelSummary[]> {
     const models = await this.listModelsForSelection(signal);
     return models.filter((model) => model.supportsGenerateContent !== false);
   }
 
+  /**
+   * @description Implements the generate structured method for this service or adapter.
+   * @param {StructuredLlmRequest<T>} request - Input value for request.
+   * @returns {Promise<T>} Result of the generate structured operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   async generateStructured<T>(request: StructuredLlmRequest<T>): Promise<T> {
     const selectedModel = (await this.selectUsableModel(request.signal)).selectedModel;
-    return this.withRetries(request.operationName, selectedModel, request.signal, async (attemptSignal) => {
-      const client = await this.getClient();
-      const response = await this.callGemini(request.operationName, () =>
-        client.models.generateContent(
-          this.buildGenerateContentRequest({
-            model: selectedModel,
-            systemInstruction: request.systemInstruction,
-            prompt: request.prompt,
-            jsonSchema: request.jsonSchema,
-            ...(request.maxOutputTokens !== undefined
-              ? { maxOutputTokens: request.maxOutputTokens }
-              : {}),
-            signal: attemptSignal,
-          }),
-        ),
-      );
-      const rawText = extractResponseText(response);
-      if (!rawText) {
-        throw new ExternalServiceError("Gemini structured generation returned no text", {
-          operationName: request.operationName,
-          retryable: true,
-        });
-      }
-      return validateStructuredData(
-        parseStructuredJson(rawText, request.operationName),
-        request.validator,
-        request.operationName,
-      );
-    });
+    return this.withRetries(
+      request.operationName,
+      selectedModel,
+      request.signal,
+      async (attemptSignal) => {
+        const client = await this.getClient();
+        const response = await this.callGemini(request.operationName, () =>
+          client.models.generateContent(
+            this.buildGenerateContentRequest({
+              model: selectedModel,
+              systemInstruction: request.systemInstruction,
+              prompt: request.prompt,
+              jsonSchema: request.jsonSchema,
+              ...(request.maxOutputTokens !== undefined
+                ? { maxOutputTokens: request.maxOutputTokens }
+                : {}),
+              signal: attemptSignal,
+            }),
+          ),
+        );
+        const rawText = extractResponseText(response);
+        if (!rawText) {
+          throw new ExternalServiceError("Gemini structured generation returned no text", {
+            operationName: request.operationName,
+            retryable: true,
+          });
+        }
+        return validateStructuredData(
+          parseStructuredJson(rawText, request.operationName),
+          request.validator,
+          request.operationName,
+        );
+      },
+    );
   }
 
+  /**
+   * @description Executes the get metrics snapshot operation used by the application workflow.
+   * @returns {StructuredLlmMetricsSnapshot} Result of the get metrics snapshot operation.
+   */
   getMetricsSnapshot(): StructuredLlmMetricsSnapshot {
     return {
       retryCount: this.retryCount,
@@ -756,6 +925,10 @@ export class GeminiStructuredLlmClient
     };
   }
 
+  /**
+   * @description Implements the reset request budget scope method for this service or adapter.
+   * @returns {void} Result of the reset request budget scope operation.
+   */
   resetRequestBudgetScope(): void {
     this.requestCount = 0;
     this.retryCount = 0;
@@ -765,6 +938,12 @@ export class GeminiStructuredLlmClient
     this.lastRequestStartedAt = 0;
   }
 
+  /**
+   * @description Implements the selection source for method for this service or adapter.
+   * @param {string} candidate - Input value for candidate.
+   * @param {boolean} candidateListed - Input value for candidate listed.
+   * @returns {ModelSelectionResult["selectionSource"]} Result of the selection source for operation.
+   */
   private selectionSourceFor(
     candidate: string,
     candidateListed: boolean,
@@ -775,16 +954,25 @@ export class GeminiStructuredLlmClient
     return candidateListed ? "LISTED_CANDIDATE" : "DIRECT_PREFLIGHT";
   }
 
-  private async listModelsForSelection(signal?: AbortSignal): Promise<readonly GeminiModelSummary[]> {
+  /**
+   * @description Executes the list models for selection operation used by the application workflow.
+   * @param {AbortSignal} signal - Input value for signal.
+   * @returns {Promise<readonly GeminiModelSummary[]>} Result of the list models for selection operation.
+   */
+  private async listModelsForSelection(
+    signal?: AbortSignal,
+  ): Promise<readonly GeminiModelSummary[]> {
     return this.withRetries("gemini_models_list", "model-list", signal, async (attemptSignal) => {
       const client = await this.getClient();
       if (!client.models.list) {
         return [];
       }
 
-      const response = await this.callGemini("gemini_models_list", () =>
-        client.models.list?.(withSignal({ config: { pageSize: 100 } }, attemptSignal)) ??
-        Promise.resolve([]),
+      const response = await this.callGemini(
+        "gemini_models_list",
+        () =>
+          client.models.list?.(withSignal({ config: { pageSize: 100 } }, attemptSignal)) ??
+          Promise.resolve([]),
       );
       const models = await collectModelListResponse(response);
       return models.flatMap((model) => {
@@ -797,32 +985,47 @@ export class GeminiStructuredLlmClient
     });
   }
 
+  /**
+   * @description Implements the run structured output preflight for model method for this service or adapter.
+   * @param {string} model - Input value for model.
+   * @param {AbortSignal} signal - Input value for signal.
+   * @returns {Promise<void>} Result of the run structured output preflight for model operation.
+   */
   private async runStructuredOutputPreflightForModel(
     model: string,
     signal?: AbortSignal,
   ): Promise<void> {
-    await this.withRetries("gemini_structured_output_preflight", model, signal, async (attemptSignal) => {
-      const client = await this.getClient();
-      const response = await this.callGemini("gemini_structured_output_preflight", () =>
-        client.models.generateContent(
-          this.buildGenerateContentRequest({
-            model,
-            systemInstruction: "Return only the requested structured response.",
-            prompt: "Return status OK.",
-            jsonSchema: preflightJsonSchema,
-            maxOutputTokens: 32,
-            signal: attemptSignal,
-          }),
-        ),
-      );
-      validateStructuredData(
-        parseStructuredJson(extractResponseText(response), "gemini_structured_output_preflight"),
-        preflightValidator,
-        "gemini_structured_output_preflight",
-      );
-    });
+    await this.withRetries(
+      "gemini_structured_output_preflight",
+      model,
+      signal,
+      async (attemptSignal) => {
+        const client = await this.getClient();
+        const response = await this.callGemini("gemini_structured_output_preflight", () =>
+          client.models.generateContent(
+            this.buildGenerateContentRequest({
+              model,
+              systemInstruction: "Return only the requested structured response.",
+              prompt: "Return status OK.",
+              jsonSchema: preflightJsonSchema,
+              maxOutputTokens: 32,
+              signal: attemptSignal,
+            }),
+          ),
+        );
+        validateStructuredData(
+          parseStructuredJson(extractResponseText(response), "gemini_structured_output_preflight"),
+          preflightValidator,
+          "gemini_structured_output_preflight",
+        );
+      },
+    );
   }
 
+  /**
+   * @description Executes the get client operation used by the application workflow.
+   * @returns {Promise<GeminiSdkClient>} Result of the get client operation.
+   */
   private async getClient(): Promise<GeminiSdkClient> {
     if (!this.client) {
       const sdk = await this.sdkLoader();
@@ -831,6 +1034,11 @@ export class GeminiStructuredLlmClient
     return this.client;
   }
 
+  /**
+   * @description Implements the build generate content request method for this service or adapter.
+   * @param {{ readonly model: string; readonly systemInstruction: string; readonly prompt: string; readonly jsonSchema: Record<string, unknown>; readonly maxOutputTokens?: number; readonly signal?: AbortSignal; }} input - Input value for input.
+   * @returns {Record<string, unknown>} Result of the build generate content request operation.
+   */
   private buildGenerateContentRequest(input: {
     readonly model: string;
     readonly systemInstruction: string;
@@ -858,6 +1066,13 @@ export class GeminiStructuredLlmClient
     );
   }
 
+  /**
+   * @description Implements the call gemini method for this service or adapter.
+   * @param {string} operationName - Input value for operation name.
+   * @param {() => Promise<T>} operation - Input value for operation.
+   * @returns {Promise<T>} Result of the call gemini operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   private async callGemini<T>(operationName: string, operation: () => Promise<T>): Promise<T> {
     if (this.requestCount >= this.maxRequestsPerContract) {
       throw new ExternalServiceError("GEMINI_CONTRACT_REQUEST_BUDGET_EXCEEDED", {
@@ -879,6 +1094,10 @@ export class GeminiStructuredLlmClient
     return operation();
   }
 
+  /**
+   * @description Implements the wait for minimum request interval method for this service or adapter.
+   * @returns {Promise<void>} Result of the wait for minimum request interval operation.
+   */
   private async waitForMinimumRequestInterval(): Promise<void> {
     if (this.adaptiveMinRequestIntervalMilliseconds <= 0 || this.lastRequestStartedAt === 0) {
       return;
@@ -891,6 +1110,12 @@ export class GeminiStructuredLlmClient
     }
   }
 
+  /**
+   * @description Implements the can retry method for this service or adapter.
+   * @param {ClassifiedGeminiError} classification - Input value for classification.
+   * @param {number} attempt - Input value for attempt.
+   * @returns {boolean} Result of the can retry operation.
+   */
   private canRetry(classification: ClassifiedGeminiError, attempt: number): boolean {
     if (classification.quotaError) {
       return this.quotaRetryCount < this.maxQuotaRetries;
@@ -898,10 +1123,13 @@ export class GeminiStructuredLlmClient
     return attempt < this.maxAttempts;
   }
 
-  private nextQuotaRetryDelay(
-    quotaError: GeminiQuotaError,
-    retryIndex: number,
-  ): number {
+  /**
+   * @description Implements the next quota retry delay method for this service or adapter.
+   * @param {GeminiQuotaError} quotaError - Input value for quota error.
+   * @param {number} retryIndex - Input value for retry index.
+   * @returns {number} Result of the next quota retry delay operation.
+   */
+  private nextQuotaRetryDelay(quotaError: GeminiQuotaError, retryIndex: number): number {
     if (quotaError.category === "REQUESTS_PER_MINUTE") {
       this.adaptiveMinRequestIntervalMilliseconds = Math.min(
         this.maxRetryDelayMilliseconds,
@@ -926,6 +1154,15 @@ export class GeminiStructuredLlmClient
     return Math.min(this.maxRetryDelayMilliseconds, Math.max(minimumDelay, exponential + jitter));
   }
 
+  /**
+   * @description Implements the with retries method for this service or adapter.
+   * @param {string} operationName - Input value for operation name.
+   * @param {string} model - Input value for model.
+   * @param {AbortSignal | undefined} signal - Input value for signal.
+   * @param {(signal: AbortSignal) => Promise<T>} operation - Input value for operation.
+   * @returns {Promise<T>} Result of the with retries operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   private async withRetries<T>(
     operationName: string,
     model: string,
@@ -937,6 +1174,11 @@ export class GeminiStructuredLlmClient
     for (let attempt = 1; attempt <= maxLoopAttempts; attempt += 1) {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), this.requestTimeoutMilliseconds);
+
+      /**
+       * @description Performs the abort forwarder helper operation for this module.
+       * @returns {unknown} Result of the abort forwarder operation.
+       */
       const abortForwarder = () => controller.abort();
       signal?.addEventListener("abort", abortForwarder, { once: true });
 
@@ -1025,7 +1267,9 @@ export class GeminiStructuredLlmClient
       status: classification.status,
       message: redactSecretFromMessage(classification.providerMessage, this.apiKey),
       ...(classification.quotaError ? { quota: classification.quotaError } : {}),
-      ...(classification.validationIssues ? { validationIssues: classification.validationIssues } : {}),
+      ...(classification.validationIssues
+        ? { validationIssues: classification.validationIssues }
+        : {}),
     });
   }
 }

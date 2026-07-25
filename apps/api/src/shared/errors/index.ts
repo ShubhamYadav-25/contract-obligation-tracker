@@ -1,3 +1,6 @@
+/**
+ * @file Defines shared API errors, middleware, validation, or boundary types.
+ */
 export type { ApiErrorBody } from "./application-error.js";
 export { ApplicationError } from "./application-error.js";
 export { ConflictError } from "./conflict-error.js";

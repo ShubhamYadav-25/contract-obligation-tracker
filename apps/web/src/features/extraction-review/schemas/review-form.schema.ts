@@ -1,3 +1,6 @@
+/**
+ * @file Defines feature-level web application code for the contract tracker.
+ */
 import { z } from "zod";
 
 export const reviewFormSchema = z.object({

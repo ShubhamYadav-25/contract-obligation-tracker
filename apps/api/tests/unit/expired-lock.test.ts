@@ -1,3 +1,6 @@
+/**
+ * @file Contains automated tests that verify contract tracker behavior.
+ */
 import { describe, expect, it } from "vitest";
 
 import { hasExpiredProcessingLease } from "../../src/jobs/recovery/expired-lock.js";

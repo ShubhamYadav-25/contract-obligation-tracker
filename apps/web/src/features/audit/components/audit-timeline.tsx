@@ -1,3 +1,6 @@
+/**
+ * @file Defines feature-specific React UI components for the contract tracker.
+ */
 import { formatDateTime } from "@/utils/format-date.js";
 
 export interface AuditTimelineItem {
@@ -10,6 +13,11 @@ export interface AuditTimelineItem {
   readonly correlationId?: string;
 }
 
+/**
+ * @description Renders the audit timeline component for the contract tracker UI.
+ * @param {{ readonly items: readonly AuditTimelineItem[] }} { items } - Input value for { items }.
+ * @returns {JSX.Element} Result of the audit timeline operation.
+ */
 export function AuditTimeline({ items }: { readonly items: readonly AuditTimelineItem[] }) {
   if (items.length === 0) {
     return <p className="text-sm text-muted">No audit events are available.</p>;

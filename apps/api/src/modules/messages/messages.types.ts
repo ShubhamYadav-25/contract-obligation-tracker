@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend messages module contracts, services, routes, or persistence logic.
+ */
 export interface MessageRecord {
   readonly id: string;
   readonly reminderId: string;

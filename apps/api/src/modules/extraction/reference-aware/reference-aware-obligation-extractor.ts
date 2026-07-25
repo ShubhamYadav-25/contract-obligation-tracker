@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend extraction module contracts, services, routes, or persistence logic.
+ */
 import type { Logger } from "../../../config/logger.js";
 import type {
   StructuredLlmClient,
@@ -63,16 +66,33 @@ const defaultConfig: ReferenceAwareObligationExtractorConfig = {
   maxBatchOutputTokens: 6_000,
 };
 
+/**
+ * @description Performs the normalize whitespace helper operation for this module.
+ * @param {string} value - Input value for value.
+ * @returns {string} Result of the normalize whitespace operation.
+ */
 function normalizeWhitespace(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
 
+/**
+ * @description Performs the stable summary helper operation for this module.
+ * @param {string} value - Input value for value.
+ * @returns {string} Result of the stable summary operation.
+ */
 function stableSummary(value: string): string {
   const normalized = normalizeWhitespace(value);
   return normalized.length > 240 ? `${normalized.slice(0, 237)}...` : normalized;
 }
 
-function sourceLinesFromLegacyPages(input: ObligationExtractionInput): readonly ContractSourceLineInput[] {
+/**
+ * @description Performs the source lines from legacy pages helper operation for this module.
+ * @param {ObligationExtractionInput} input - Input value for input.
+ * @returns {readonly ContractSourceLineInput[]} Result of the source lines from legacy pages operation.
+ */
+function sourceLinesFromLegacyPages(
+  input: ObligationExtractionInput,
+): readonly ContractSourceLineInput[] {
   const lines: ContractSourceLineInput[] = [];
   let globalLineNumber = 1;
 
@@ -97,6 +117,11 @@ function sourceLinesFromLegacyPages(input: ObligationExtractionInput): readonly 
   return lines;
 }
 
+/**
+ * @description Performs the build source index helper operation for this module.
+ * @param {ObligationExtractionInput} input - Input value for input.
+ * @returns {ContractSourceIndex} Result of the build source index operation.
+ */
 function buildSourceIndex(input: ObligationExtractionInput): ContractSourceIndex {
   if (input.segmentedPages && input.segmentedPages.length > 0) {
     return ContractSourceIndex.fromParsedPages(input.segmentedPages);
@@ -104,6 +129,12 @@ function buildSourceIndex(input: ObligationExtractionInput): ContractSourceIndex
   return new ContractSourceIndex(sourceLinesFromLegacyPages(input));
 }
 
+/**
+ * @description Performs the first evidence helper operation for this module.
+ * @param {SourceVerifiedOperationalObligation} obligation - Input value for obligation.
+ * @param {EvidenceRole} role - Input value for role.
+ * @returns {SourceVerifiedOperationalObligation["sourceEvidence"][number] | undefined} Result of the first evidence operation.
+ */
 function firstEvidence(
   obligation: SourceVerifiedOperationalObligation,
   role: EvidenceRole,
@@ -114,6 +145,11 @@ function firstEvidence(
   );
 }
 
+/**
+ * @description Performs the to timing helper operation for this module.
+ * @param {SourceVerifiedOperationalObligation} obligation - Input value for obligation.
+ * @returns {Record<string, unknown>} Result of the to timing operation.
+ */
 function toTiming(obligation: SourceVerifiedOperationalObligation): Record<string, unknown> {
   return {
     explicitDueDate: obligation.explicitDueDate,
@@ -128,6 +164,12 @@ function toTiming(obligation: SourceVerifiedOperationalObligation): Record<strin
   };
 }
 
+/**
+ * @description Performs the to source evidence records helper operation for this module.
+ * @param {SourceVerifiedOperationalObligation} obligation - Input value for obligation.
+ * @param {ContractSourceIndex} sourceIndex - Input value for source index.
+ * @returns {readonly Record<string, unknown>[]} Result of the to source evidence records operation.
+ */
 function toSourceEvidenceRecords(
   obligation: SourceVerifiedOperationalObligation,
   sourceIndex: ContractSourceIndex,
@@ -148,17 +190,22 @@ function toSourceEvidenceRecords(
   });
 }
 
+/**
+ * @description Performs the to field anchor helper operation for this module.
+ * @param {SourceVerifiedOperationalObligation} obligation - Input value for obligation.
+ * @param {ContractSourceIndex} sourceIndex - Input value for source index.
+ * @returns {FieldAnchor} Result of the to field anchor operation.
+ */
 function toFieldAnchor(
   obligation: SourceVerifiedOperationalObligation,
   sourceIndex: ContractSourceIndex,
 ): FieldAnchor {
   const primaryEvidence = firstEvidence(obligation, "ACTION");
-  const primaryLine =
-    primaryEvidence ? sourceIndex.getLine(primaryEvidence.globalStartLine) : null;
+  const primaryLine = primaryEvidence ? sourceIndex.getLine(primaryEvidence.globalStartLine) : null;
   const endLine = primaryEvidence ? sourceIndex.getLine(primaryEvidence.globalEndLine) : null;
-  const startLineNumber =
-    primaryLine?.pageLocalLineNumber ?? primaryLine?.globalLineNumber ?? 1;
-  const endLineNumber = endLine?.pageLocalLineNumber ?? endLine?.globalLineNumber ?? startLineNumber;
+  const startLineNumber = primaryLine?.pageLocalLineNumber ?? primaryLine?.globalLineNumber ?? 1;
+  const endLineNumber =
+    endLine?.pageLocalLineNumber ?? endLine?.globalLineNumber ?? startLineNumber;
 
   return {
     text: obligation.summary,
@@ -192,6 +239,11 @@ function toFieldAnchor(
   };
 }
 
+/**
+ * @description Performs the average confidence helper operation for this module.
+ * @param {readonly SourceVerifiedOperationalObligation[]} obligations - Input value for obligations.
+ * @returns {number} Result of the average confidence operation.
+ */
 function averageConfidence(obligations: readonly SourceVerifiedOperationalObligation[]): number {
   if (obligations.length === 0) {
     return 0.75;
@@ -202,6 +254,11 @@ function averageConfidence(obligations: readonly SourceVerifiedOperationalObliga
   return Number(average.toFixed(3));
 }
 
+/**
+ * @description Performs the review candidate helper operation for this module.
+ * @param {{ readonly stableCandidateKey: string; readonly summary: string; readonly reviewReasons: readonly string[]; readonly sourceReferences?: ObligationExtractionReviewCandidate["sourceReferences"]; }} input - Input value for input.
+ * @returns {ObligationExtractionReviewCandidate} Result of the review candidate operation.
+ */
 function reviewCandidate(input: {
   readonly stableCandidateKey: string;
   readonly summary: string;
@@ -216,6 +273,12 @@ function reviewCandidate(input: {
   };
 }
 
+/**
+ * @description Performs the source references for review helper operation for this module.
+ * @param {SourceVerifiedOperationalObligation} obligation - Input value for obligation.
+ * @param {ContractSourceIndex} sourceIndex - Input value for source index.
+ * @returns {ObligationExtractionReviewCandidate["sourceReferences"]} Result of the source references for review operation.
+ */
 function sourceReferencesForReview(
   obligation: SourceVerifiedOperationalObligation,
   sourceIndex: ContractSourceIndex,
@@ -250,6 +313,11 @@ function sourceReferencesForReview(
   return sourceReferences;
 }
 
+/**
+ * @description Executes the get structured llm metrics provider operation used by the application workflow.
+ * @param {StructuredLlmClient} client - Input value for client.
+ * @returns {StructuredLlmMetricsProvider | null} Result of the get structured llm metrics provider operation.
+ */
 function getStructuredLlmMetricsProvider(
   client: StructuredLlmClient,
 ): StructuredLlmMetricsProvider | null {
@@ -259,6 +327,11 @@ function getStructuredLlmMetricsProvider(
     : null;
 }
 
+/**
+ * @description Executes the get structured llm request budget provider operation used by the application workflow.
+ * @param {StructuredLlmClient} client - Input value for client.
+ * @returns {StructuredLlmRequestBudgetProvider | null} Result of the get structured llm request budget provider operation.
+ */
 function getStructuredLlmRequestBudgetProvider(
   client: StructuredLlmClient,
 ): StructuredLlmRequestBudgetProvider | null {
@@ -272,8 +345,19 @@ class CountingStructuredLlmClient implements StructuredLlmClient {
   private requestCount = 0;
   private retryCount = 0;
 
+  /**
+   * @description Implements the constructor method for this service or adapter.
+   * @param {StructuredLlmClient} delegate - Input value for delegate.
+   * @returns {unknown} Result of the constructor operation.
+   */
   constructor(private readonly delegate: StructuredLlmClient) {}
 
+  /**
+   * @description Implements the generate structured method for this service or adapter.
+   * @param {StructuredLlmRequest<T>} request - Input value for request.
+   * @returns {Promise<T>} Result of the generate structured operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   async generateStructured<T>(request: StructuredLlmRequest<T>): Promise<T> {
     this.requestCount += 1;
     try {
@@ -288,6 +372,10 @@ class CountingStructuredLlmClient implements StructuredLlmClient {
     }
   }
 
+  /**
+   * @description Implements the snapshot method for this service or adapter.
+   * @returns {ReferenceAwareObligationExtractorMetricsSnapshot} Result of the snapshot operation.
+   */
   snapshot(): ReferenceAwareObligationExtractorMetricsSnapshot {
     const providerMetrics = getStructuredLlmMetricsProvider(this.delegate)?.getMetricsSnapshot();
     return {
@@ -296,6 +384,10 @@ class CountingStructuredLlmClient implements StructuredLlmClient {
     };
   }
 
+  /**
+   * @description Implements the reset request budget scope method for this service or adapter.
+   * @returns {void} Result of the reset request budget scope operation.
+   */
   resetRequestBudgetScope(): void {
     this.requestCount = 0;
     this.retryCount = 0;
@@ -313,6 +405,11 @@ export class ReferenceAwareObligationExtractor implements ObligationExtractionPr
   private readonly config: ReferenceAwareObligationExtractorConfig;
   private readonly logger: Logger;
 
+  /**
+   * @description Implements the constructor method for this service or adapter.
+   * @param {ReferenceAwareObligationExtractorDependencies} dependencies - Input value for dependencies.
+   * @returns {unknown} Result of the constructor operation.
+   */
   constructor(dependencies: ReferenceAwareObligationExtractorDependencies) {
     const config = { ...defaultConfig, ...dependencies.config };
     this.config = config;
@@ -333,6 +430,11 @@ export class ReferenceAwareObligationExtractor implements ObligationExtractionPr
     this.logger = dependencies.logger;
   }
 
+  /**
+   * @description Implements the extract method for this service or adapter.
+   * @param {ObligationExtractionInput} input - Input value for input.
+   * @returns {Promise<ObligationExtractionResult>} Result of the extract operation.
+   */
   async extract(input: ObligationExtractionInput): Promise<ObligationExtractionResult> {
     const startedAt = Date.now();
     this.llm.resetRequestBudgetScope();
@@ -347,12 +449,16 @@ export class ReferenceAwareObligationExtractor implements ObligationExtractionPr
     });
     const context = await this.contextExtractor.extract({
       sourceIndex,
-      ...(input.segmentedPages ? { segments: input.segmentedPages.flatMap((page) => page.segments) } : {}),
+      ...(input.segmentedPages
+        ? { segments: input.segmentedPages.flatMap((page) => page.segments) }
+        : {}),
     });
     const allRawCandidates: unknown[] = [];
     const allExtractorRejected: ObligationExtractionReviewCandidate[] = [];
     const verificationItems: {
-      readonly candidate: Awaited<ReturnType<ObligationCandidateExtractor["extract"]>>["verifiedCandidates"][number];
+      readonly candidate: Awaited<
+        ReturnType<ObligationCandidateExtractor["extract"]>
+      >["verifiedCandidates"][number];
       readonly window: DetectedCandidateWindow;
     }[] = [];
 
@@ -407,9 +513,7 @@ export class ReferenceAwareObligationExtractor implements ObligationExtractionPr
     });
     const deduplicated = this.deduplicator.deduplicate(sourceVerified.verified);
     const consolidated = this.consolidator.consolidate(deduplicated);
-    const confirmed = consolidated.filter(
-      (obligation) => obligation.reviewStatus === "CONFIRMED",
-    );
+    const confirmed = consolidated.filter((obligation) => obligation.reviewStatus === "CONFIRMED");
     const reviewRequired = consolidated.filter(
       (obligation) => obligation.reviewStatus === "REVIEW_REQUIRED",
     );

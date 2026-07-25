@@ -1,3 +1,6 @@
+/**
+ * @file Defines routed feature page components for the contract tracker.
+ */
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -24,6 +27,10 @@ import {
   contractToUploadRecord,
 } from "../components/upload-contract-dialog.js";
 
+/**
+ * @description Renders the dashboard page component for the contract tracker UI.
+ * @returns {JSX.Element} Result of the dashboard page operation.
+ */
 export function DashboardPage() {
   const [uploadOpen, setUploadOpen] = useState(false);
   const contracts = useContracts();

@@ -17,12 +17,18 @@
     "test:kpi": "corepack pnpm --filter @contract-obligation-tracker/test-kit run test:kpi",
     "import:cuad-subset": "corepack pnpm --filter @contract-obligation-tracker/api run import:cuad-subset",
     "reset:dev-data": "corepack pnpm --filter @contract-obligation-tracker/api run reset:dev-data",
+    "render:build:api": "corepack pnpm install --frozen-lockfile && corepack pnpm --filter @contract-obligation-tracker/api run build",
+    "render:build:web": "corepack pnpm install --frozen-lockfile && corepack pnpm --filter @contract-obligation-tracker/web run build",
+    "render:start:api": "corepack pnpm --filter @contract-obligation-tracker/api run start:render",
     "lint": "corepack pnpm -r --if-present run lint",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
   "devDependencies": {
     "@types/node": "^24.1.0",
+    "libreoffice-convert": "^1.8.2",
+    "pdfkit": "^0.19.1",
+    "pptxgenjs": "^4.0.1",
     "prettier": "^3.6.2",
     "typescript": "^5.8.3",
     "vitest": "^3.2.4"

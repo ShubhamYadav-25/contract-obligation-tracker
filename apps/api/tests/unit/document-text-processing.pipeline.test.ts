@@ -1,3 +1,6 @@
+/**
+ * @file Contains automated tests that verify contract tracker behavior.
+ */
 import { describe, expect, it, vi } from "vitest";
 
 import type { Logger } from "../../src/config/logger.js";
@@ -56,6 +59,12 @@ const config: DocumentTextProcessingConfig = {
   geminiFallbackEnabled: true,
 };
 
+/**
+ * @description Performs the page helper operation for this module.
+ * @param {number} pageNumber - Input value for page number.
+ * @param {string} text - Input value for text.
+ * @returns {ParsedDocumentPage} Result of the page operation.
+ */
 function page(pageNumber: number, text: string): ParsedDocumentPage {
   const quality = evaluateTextQuality(text, config.quality);
   return {
@@ -74,6 +83,12 @@ function page(pageNumber: number, text: string): ParsedDocumentPage {
   };
 }
 
+/**
+ * @description Performs the setup helper operation for this module.
+ * @param {{ readonly pages: readonly ParsedDocumentPage[]; readonly tesseractText?: string; readonly tesseractConfidence?: number; readonly geminiText?: string; readonly obligationExtractor?: ObligationExtractionProvider; readonly persistenceFails?: boolean; readonly renderFails?: boolean; }} input - Input value for input.
+ * @returns {unknown} Result of the setup operation.
+ * @throws {Error} When validation, I/O, or downstream service operations fail.
+ */
 function setup(input: {
   readonly pages: readonly ParsedDocumentPage[];
   readonly tesseractText?: string;

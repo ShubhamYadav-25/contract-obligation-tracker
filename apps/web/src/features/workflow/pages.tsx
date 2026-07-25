@@ -1,3 +1,6 @@
+/**
+ * @file Defines feature-level web application code for the contract tracker.
+ */
 import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ExternalLink, FileSearch } from "lucide-react";
@@ -52,6 +55,11 @@ const terminalProcessingStatuses = new Set<ContractProcessingStatus>([
   "FAILED",
 ]);
 
+/**
+ * @description Renders the summary tab component for the contract tracker UI.
+ * @param {{ readonly contractId: string }} { contractId } - Input value for { contract id }.
+ * @returns {JSX.Element} Result of the summary tab operation.
+ */
 function SummaryTab({ contractId }: { readonly contractId: string }) {
   const queryClient = useQueryClient();
   const contract = useContract(contractId);
@@ -174,6 +182,11 @@ function SummaryTab({ contractId }: { readonly contractId: string }) {
   );
 }
 
+/**
+ * @description Renders the review evidence tab component for the contract tracker UI.
+ * @param {{ readonly contractId: string; readonly selectedObligationId?: string; readonly sourceCommand?: PdfSourceNavigationCommand | null; }} { contractId, selectedObligationId, sourceCommand, } - Input value for { contract id, selected obligation id, source command, }.
+ * @returns {JSX.Element} Result of the review evidence tab operation.
+ */
 function ReviewEvidenceTab({
   contractId,
   selectedObligationId,
@@ -204,6 +217,11 @@ function ReviewEvidenceTab({
     if (!activeObligationId && rows[0]) setActiveObligationId(rows[0].id);
   }, [activeObligationId, rows]);
 
+  /**
+   * @description Performs the navigate to anchor helper operation for this module.
+   * @param {ObligationSourceAnchor} anchor - Input value for anchor.
+   * @returns {void} Result of the navigate to anchor operation.
+   */
   function navigateToAnchor(anchor: ObligationSourceAnchor): void {
     const command = sourceCommandFromAnchor(anchor);
     if (command) setActiveSourceCommand(command);
@@ -265,6 +283,11 @@ function ReviewEvidenceTab({
   );
 }
 
+/**
+ * @description Renders the workspace obligations tab component for the contract tracker UI.
+ * @param {{ readonly contractId: string }} { contractId } - Input value for { contract id }.
+ * @returns {JSX.Element} Result of the workspace obligations tab operation.
+ */
 function WorkspaceObligationsTab({ contractId }: { readonly contractId: string }) {
   const obligations = useObligations(contractId);
 
@@ -369,6 +392,10 @@ function WorkspaceObligationsTab({ contractId }: { readonly contractId: string }
   );
 }
 
+/**
+ * @description Renders the contract workspace page component for the contract tracker UI.
+ * @returns {JSX.Element} Result of the contract workspace page operation.
+ */
 export function ContractWorkspacePage() {
   const contractId = useParams().contractId ?? "";
   const location = useLocation();

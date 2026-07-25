@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend reminders module contracts, services, routes, or persistence logic.
+ */
 export { createReminderOccurrenceKey } from "./reminder-occurrence-key.js";
 export { PostgresReminderSchedulerRepository } from "./postgres-reminder-scheduler.repository.js";
 export { ReminderController } from "./reminders.controller.js";

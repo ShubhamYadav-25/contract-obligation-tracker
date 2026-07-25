@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend extraction module contracts, services, routes, or persistence logic.
+ */
 export { evaluateExtractionConfidence } from "./confidence-evaluator.js";
 export type { ExtractionCandidateRepository } from "./extraction.repository.js";
 export {

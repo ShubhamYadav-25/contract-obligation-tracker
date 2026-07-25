@@ -1,5 +1,13 @@
+/**
+ * @file Defines feature-specific React UI components for the contract tracker.
+ */
 import React from "react";
 
+/**
+ * @description Renders the text pages viewer component for the contract tracker UI.
+ * @param {{ readonly pages: { pageNumber: number; normalizedText: string }[]; }} { pages, } - Input value for { pages, }.
+ * @returns {JSX.Element} Result of the text pages viewer operation.
+ */
 export function TextPagesViewer({
   pages,
 }: {

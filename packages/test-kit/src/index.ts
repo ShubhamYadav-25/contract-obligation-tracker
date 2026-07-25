@@ -1,3 +1,6 @@
+/**
+ * @file Defines reusable test helpers, fixtures, and mock providers.
+ */
 export type { DatabaseTestContext, DatabaseTestHelper } from "./database-test-helpers.js";
 export type {
   ExtractionProviderMock,

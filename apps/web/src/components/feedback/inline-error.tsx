@@ -1,5 +1,13 @@
+/**
+ * @file Defines reusable feedback components for loading, empty, retry, or error states.
+ */
 import { ApiError } from "@/services/api-error.js";
 
+/**
+ * @description Renders the inline error component for the contract tracker UI.
+ * @param {{ readonly error: unknown }} { error } - Input value for { error }.
+ * @returns {JSX.Element} Result of the inline error operation.
+ */
 export function InlineError({ error }: { readonly error: unknown }) {
   const message = error instanceof Error ? error.message : "Something went wrong";
   const detail =

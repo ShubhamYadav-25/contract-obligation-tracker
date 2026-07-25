@@ -1,3 +1,6 @@
+/**
+ * @file Contains automated tests that verify contract tracker behavior.
+ */
 import { describe, expect, it, vi } from "vitest";
 
 import { ProcessorRegistry } from "../../src/jobs/processors/processor-registry.js";

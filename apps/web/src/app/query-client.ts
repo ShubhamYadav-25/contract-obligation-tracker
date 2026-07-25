@@ -1,3 +1,6 @@
+/**
+ * @file Defines web app routing, providers, paths, or app composition.
+ */
 import { QueryClient } from "@tanstack/react-query";
 
 export const queryClient = new QueryClient({

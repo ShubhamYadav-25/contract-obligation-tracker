@@ -1,8 +1,16 @@
+/**
+ * @file Defines feature-specific React UI components for the contract tracker.
+ */
 import { useMemo } from "react";
 import { useReviewCandidates } from "../../extraction-review/hooks/use-review-candidates.js";
 import { ReviewCandidateCard } from "../../extraction-review/components/review-candidate-card.js";
 import { approveReviewCandidate } from "../../extraction-review/api/approve-review-candidate.js";
 
+/**
+ * @description Renders the candidates for contract component for the contract tracker UI.
+ * @param {{ readonly contractId: string }} { contractId } - Input value for { contract id }.
+ * @returns {JSX.Element} Result of the candidates for contract operation.
+ */
 export function CandidatesForContract({ contractId }: { readonly contractId: string }) {
   const all = useReviewCandidates();
 

@@ -1,7 +1,15 @@
+/**
+ * @file Defines reusable layout components for the web shell.
+ */
 import type { PropsWithChildren } from "react";
 
 import { cx } from "@/utils/cx.js";
 
+/**
+ * @description Renders the content container component for the contract tracker UI.
+ * @param {PropsWithChildren<{ readonly className?: string; }>} { children, className, } - Input value for { children, class name, }.
+ * @returns {JSX.Element} Result of the content container operation.
+ */
 export function ContentContainer({
   children,
   className,

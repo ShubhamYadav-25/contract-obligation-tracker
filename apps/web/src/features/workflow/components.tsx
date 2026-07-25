@@ -1,3 +1,6 @@
+/**
+ * @file Defines feature-level web application code for the contract tracker.
+ */
 import type { PropsWithChildren, ReactNode } from "react";
 import { useEffect } from "react";
 import {
@@ -45,6 +48,11 @@ const statusIconByLabel = {
   Missed: CircleX,
 } as const;
 
+/**
+ * @description Renders the section card component for the contract tracker UI.
+ * @param {PropsWithChildren<{ readonly title: string; readonly description?: string; readonly action?: ReactNode; readonly className?: string; }>} { action, children, className, description, title, } - Input value for { action, children, class name, description, title, }.
+ * @returns {JSX.Element} Result of the section card operation.
+ */
 export function SectionCard({
   action,
   children,
@@ -78,6 +86,11 @@ export function SectionCard({
   );
 }
 
+/**
+ * @description Renders the kpi card component for the contract tracker UI.
+ * @param {{ readonly label: string; readonly value: string; readonly helper: string; readonly tone?: Tone; }} { label, value, helper, tone = "neutral", } - Input value for { label, value, helper, tone = "neutral", }.
+ * @returns {JSX.Element} Result of the kpi card operation.
+ */
 export function KpiCard({
   label,
   value,
@@ -100,6 +113,11 @@ export function KpiCard({
   );
 }
 
+/**
+ * @description Renders the status badge component for the contract tracker UI.
+ * @param {{ readonly label: string; readonly tone?: Tone; }} { label, tone = "neutral", } - Input value for { label, tone = "neutral", }.
+ * @returns {JSX.Element} Result of the status badge operation.
+ */
 export function StatusBadge({
   label,
   tone = "neutral",
@@ -125,6 +143,11 @@ export function StatusBadge({
   );
 }
 
+/**
+ * @description Renders the confidence badge component for the contract tracker UI.
+ * @param {{ readonly confidence?: number }} { confidence } - Input value for { confidence }.
+ * @returns {JSX.Element} Result of the confidence badge operation.
+ */
 export function ConfidenceBadge({ confidence }: { readonly confidence?: number }) {
   if (typeof confidence !== "number") {
     return <StatusBadge label="Unavailable" tone="neutral" />;
@@ -134,6 +157,11 @@ export function ConfidenceBadge({ confidence }: { readonly confidence?: number }
   return <StatusBadge label={`${label} ${confidence}%`} tone={tone} />;
 }
 
+/**
+ * @description Renders the data table component for the contract tracker UI.
+ * @param {PropsWithChildren<{ readonly minWidth?: string }>} { children, minWidth = "min-w-[720px]", } - Input value for { children, min width = "min w [720px]", }.
+ * @returns {JSX.Element} Result of the data table operation.
+ */
 export function DataTable({
   children,
   minWidth = "min-w-[720px]",
@@ -147,6 +175,11 @@ export function DataTable({
   );
 }
 
+/**
+ * @description Renders the table head component for the contract tracker UI.
+ * @param {{ readonly columns: readonly string[] }} { columns } - Input value for { columns }.
+ * @returns {JSX.Element} Result of the table head operation.
+ */
 export function TableHead({ columns }: { readonly columns: readonly string[] }) {
   return (
     <thead className="bg-slate-50 text-xs uppercase text-slate-600">
@@ -175,10 +208,20 @@ export function TableHead({ columns }: { readonly columns: readonly string[] }) 
   );
 }
 
+/**
+ * @description Renders the pagination component for the contract tracker UI.
+ * @param {{ readonly label: string }} { label } - Input value for { label }.
+ * @returns {JSX.Element} Result of the pagination operation.
+ */
 export function Pagination({ label }: { readonly label: string }) {
   return <PaginationControls label={label} />;
 }
 
+/**
+ * @description Renders the pagination controls component for the contract tracker UI.
+ * @param {{ readonly label: string; readonly onNext?: () => void; readonly onPrevious?: () => void; readonly nextDisabled?: boolean; readonly previousDisabled?: boolean; }} { label, onNext, onPrevious, nextDisabled = true, previousDisabled = true, } - Input value for { label, on next, on previous, next disabled = true, previous disabled = true, }.
+ * @returns {JSX.Element} Result of the pagination controls operation.
+ */
 export function PaginationControls({
   label,
   onNext,
@@ -207,6 +250,11 @@ export function PaginationControls({
   );
 }
 
+/**
+ * @description Renders the filter bar component for the contract tracker UI.
+ * @param {PropsWithChildren} { children } - Input value for { children }.
+ * @returns {JSX.Element} Result of the filter bar operation.
+ */
 export function FilterBar({ children }: PropsWithChildren) {
   return (
     <div className="mb-5 flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-card md:flex-row md:flex-wrap md:items-center">
@@ -215,6 +263,11 @@ export function FilterBar({ children }: PropsWithChildren) {
   );
 }
 
+/**
+ * @description Renders the search input component for the contract tracker UI.
+ * @param {{ readonly placeholder: string; readonly value?: string; readonly onChange?: (value: string) => void; }} { onChange, placeholder, value, } - Input value for { on change, placeholder, value, }.
+ * @returns {JSX.Element} Result of the search input operation.
+ */
 export function SearchInput({
   onChange,
   placeholder,
@@ -243,6 +296,11 @@ export function SearchInput({
   );
 }
 
+/**
+ * @description Renders the filter select component for the contract tracker UI.
+ * @param {{ readonly label: string; readonly options: readonly string[]; }} { label, options, } - Input value for { label, options, }.
+ * @returns {JSX.Element} Result of the filter select operation.
+ */
 export function FilterSelect({
   label,
   options,
@@ -259,6 +317,11 @@ export function FilterSelect({
   );
 }
 
+/**
+ * @description Renders the empty state component for the contract tracker UI.
+ * @param {PropsWithChildren<{ readonly title: string; readonly action?: ReactNode }>} { action, children, title, } - Input value for { action, children, title, }.
+ * @returns {JSX.Element} Result of the empty state operation.
+ */
 export function EmptyState({
   action,
   children,
@@ -274,6 +337,11 @@ export function EmptyState({
   );
 }
 
+/**
+ * @description Renders the error state component for the contract tracker UI.
+ * @param {{ readonly title: string; readonly detail: string; readonly action?: ReactNode; }} { action, detail, title, } - Input value for { action, detail, title, }.
+ * @returns {JSX.Element} Result of the error state operation.
+ */
 export function ErrorState({
   action,
   detail,
@@ -300,6 +368,11 @@ export function ErrorState({
   );
 }
 
+/**
+ * @description Renders the loading skeleton component for the contract tracker UI.
+ * @param {{ readonly label?: string }} { label = "Loading" } - Input value for { label = "loading" }.
+ * @returns {JSX.Element} Result of the loading skeleton operation.
+ */
 export function LoadingSkeleton({ label = "Loading" }: { readonly label?: string }) {
   return (
     <div aria-label={label} aria-live="polite" className="space-y-3">
@@ -311,6 +384,10 @@ export function LoadingSkeleton({ label = "Loading" }: { readonly label?: string
   );
 }
 
+/**
+ * @description Renders the table skeleton component for the contract tracker UI.
+ * @returns {JSX.Element} Result of the table skeleton operation.
+ */
 export function TableSkeleton() {
   return (
     <div className="rounded-lg border border-border bg-white p-4" aria-label="Loading table">
@@ -324,6 +401,11 @@ export function TableSkeleton() {
   );
 }
 
+/**
+ * @description Renders the modal component for the contract tracker UI.
+ * @param {PropsWithChildren<{ readonly open: boolean; readonly title: string; readonly onClose: () => void; }>} { children, onClose, open, title, } - Input value for { children, on close, open, title, }.
+ * @returns {JSX.Element} Result of the modal operation.
+ */
 export function Modal({
   children,
   onClose,
@@ -336,6 +418,12 @@ export function Modal({
 }>) {
   useEffect(() => {
     if (!open) return undefined;
+
+    /**
+     * @description Performs the on key helper operation for this module.
+     * @param {KeyboardEvent} event - Input value for event.
+     * @returns {unknown} Result of the on key operation.
+     */
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
     };
@@ -369,6 +457,11 @@ export function Modal({
   );
 }
 
+/**
+ * @description Renders the confirm dialog component for the contract tracker UI.
+ * @param {PropsWithChildren<{ readonly open: boolean; readonly title: string; readonly confirmLabel: string; readonly onCancel: () => void; readonly onConfirm: () => void; }>} { children, confirmLabel, onCancel, onConfirm, open, title, } - Input value for { children, confirm label, on cancel, on confirm, open, title, }.
+ * @returns {JSX.Element} Result of the confirm dialog operation.
+ */
 export function ConfirmDialog({
   children,
   confirmLabel,
@@ -400,6 +493,11 @@ export function ConfirmDialog({
   );
 }
 
+/**
+ * @description Renders the drawer component for the contract tracker UI.
+ * @param {PropsWithChildren<{ readonly open: boolean; readonly title: string; readonly onClose: () => void; }>} { children, onClose, open, title, } - Input value for { children, on close, open, title, }.
+ * @returns {JSX.Element} Result of the drawer operation.
+ */
 export function Drawer({
   children,
   onClose,
@@ -412,6 +510,12 @@ export function Drawer({
 }>) {
   useEffect(() => {
     if (!open) return undefined;
+
+    /**
+     * @description Performs the on key helper operation for this module.
+     * @param {KeyboardEvent} event - Input value for event.
+     * @returns {unknown} Result of the on key operation.
+     */
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
     };
@@ -451,6 +555,11 @@ export function Drawer({
   );
 }
 
+/**
+ * @description Renders the file dropzone component for the contract tracker UI.
+ * @param {{ readonly disabled?: boolean; readonly file: File | null; readonly onFile: (file: File | null) => void; }} { disabled = false, file, onFile, } - Input value for { disabled = false, file, on file, }.
+ * @returns {JSX.Element} Result of the file dropzone operation.
+ */
 export function FileDropzone({
   disabled = false,
   file,
@@ -507,6 +616,11 @@ export function FileDropzone({
   );
 }
 
+/**
+ * @description Renders the processing timeline component for the contract tracker UI.
+ * @param {{ readonly status: | "RECEIVED" | "STORED" | "QUEUED" | "PROCESSING" | "PARSING" | "OCR_PROCESSING" | "TEXT_SEGMENTED" | "COMPLETED" | "REVIEW_REQUIRED" | "FAILED" | undefined; }} { status, } - Input value for { status, }.
+ * @returns {JSX.Element} Result of the processing timeline operation.
+ */
 export function ProcessingTimeline({
   status,
 }: {
@@ -566,6 +680,10 @@ export function ProcessingTimeline({
   );
 }
 
+/**
+ * @description Renders the pdf viewer component for the contract tracker UI.
+ * @returns {JSX.Element} Result of the pdf viewer operation.
+ */
 export function PdfViewer() {
   return (
     <div className="grid min-h-80 place-items-center rounded-lg border border-border bg-white p-6 text-center">
@@ -581,6 +699,11 @@ export function PdfViewer() {
   );
 }
 
+/**
+ * @description Renders the source evidence panel component for the contract tracker UI.
+ * @param {{ readonly detail?: string | undefined }} { detail } - Input value for { detail }.
+ * @returns {JSX.Element} Result of the source evidence panel operation.
+ */
 export function SourceEvidencePanel({ detail }: { readonly detail?: string | undefined }) {
   return (
     <div className="rounded-lg border border-border bg-white p-5">
@@ -596,6 +719,10 @@ export function SourceEvidencePanel({ detail }: { readonly detail?: string | und
   );
 }
 
+/**
+ * @description Renders the audit timeline component for the contract tracker UI.
+ * @returns {JSX.Element} Result of the audit timeline operation.
+ */
 export function AuditTimeline() {
   return (
     <EmptyState title="No activity recorded yet.">
@@ -605,6 +732,11 @@ export function AuditTimeline() {
   );
 }
 
+/**
+ * @description Renders the toast component for the contract tracker UI.
+ * @param {{ readonly message: string }} { message } - Input value for { message }.
+ * @returns {JSX.Element} Result of the toast operation.
+ */
 export function Toast({ message }: { readonly message: string }) {
   return (
     <div
@@ -619,10 +751,18 @@ export function Toast({ message }: { readonly message: string }) {
   );
 }
 
+/**
+ * @description Renders the mutation spinner component for the contract tracker UI.
+ * @returns {JSX.Element} Result of the mutation spinner operation.
+ */
 export function MutationSpinner() {
   return <Loader2 aria-hidden className="animate-spin" size={16} />;
 }
 
+/**
+ * @description Renders the correction form component for the contract tracker UI.
+ * @returns {JSX.Element} Result of the correction form operation.
+ */
 export function CorrectionForm() {
   return (
     <div className="space-y-4">
@@ -648,6 +788,11 @@ export function CorrectionForm() {
   );
 }
 
+/**
+ * @description Performs the format status label helper operation for this module.
+ * @param {string | undefined} status - Input value for status.
+ * @returns {string} Result of the format status label operation.
+ */
 export function formatStatusLabel(status: string | undefined): string {
   if (!status) return "Unavailable";
   return status
@@ -657,6 +802,11 @@ export function formatStatusLabel(status: string | undefined): string {
     .join(" ");
 }
 
+/**
+ * @description Performs the status tone helper operation for this module.
+ * @param {string | undefined} status - Input value for status.
+ * @returns {Tone} Result of the status tone operation.
+ */
 export function statusTone(status: string | undefined): Tone {
   if (status === "FAILED" || status === "MISSED") return "danger";
   if (status === "QUEUED" || status === "DUE") return "warning";

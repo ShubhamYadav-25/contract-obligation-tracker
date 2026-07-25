@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend API application entrypoint or server composition code.
+ */
 import { createServer } from "node:http";
 
 import { createGracefulShutdown } from "./bootstrap/graceful-shutdown.js";

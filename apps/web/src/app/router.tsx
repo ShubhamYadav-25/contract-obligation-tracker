@@ -1,3 +1,6 @@
+/**
+ * @file Defines web app routing, providers, paths, or app composition.
+ */
 import { Navigate, createBrowserRouter } from "react-router-dom";
 
 import { AppShell } from "@/components/layout/app-shell.js";

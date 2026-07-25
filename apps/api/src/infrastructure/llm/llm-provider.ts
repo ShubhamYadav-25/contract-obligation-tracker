@@ -1,3 +1,6 @@
+/**
+ * @file Defines LLM infrastructure clients and structured response helpers.
+ */
 export interface LlmStructuredRequest {
   readonly prompt: string;
   readonly responseSchemaName: string;

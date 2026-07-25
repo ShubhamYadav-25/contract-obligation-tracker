@@ -1,7 +1,15 @@
+/**
+ * @file Defines reusable atomic UI primitives for the web app.
+ */
 import type { SelectHTMLAttributes } from "react";
 
 import { cx } from "@/utils/cx.js";
 
+/**
+ * @description Renders the select component for the contract tracker UI.
+ * @param {SelectHTMLAttributes<HTMLSelectElement>} { className, ...props } - Input value for { class name, ...props }.
+ * @returns {JSX.Element} Result of the select operation.
+ */
 export function Select({ className, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <select

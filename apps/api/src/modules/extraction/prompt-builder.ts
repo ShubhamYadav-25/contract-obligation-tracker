@@ -1,5 +1,13 @@
+/**
+ * @file Defines backend extraction module contracts, services, routes, or persistence logic.
+ */
 import type { ExtractionPromptInput } from "./extraction.types.js";
 
+/**
+ * @description Performs the build obligation extraction prompt helper operation for this module.
+ * @param {ExtractionPromptInput} input - Input value for input.
+ * @returns {string} Result of the build obligation extraction prompt operation.
+ */
 export function buildObligationExtractionPrompt(input: ExtractionPromptInput): string {
   const pages = input.parsedDocument.pages
     .map((page) => `Page ${page.pageNumber}\n${page.text}`)

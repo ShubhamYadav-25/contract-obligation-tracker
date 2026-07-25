@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend contracts module contracts, services, routes, or persistence logic.
+ */
 import type { DocumentTextExtractionMethod } from "../document-processing/document-processing.types.js";
 
 export type ContractStatus = "DRAFT";

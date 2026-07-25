@@ -1,3 +1,6 @@
+/**
+ * @file Contains automated tests that verify contract tracker behavior.
+ */
 import { describe, expect, it } from "vitest";
 
 import {
@@ -49,6 +52,11 @@ const resolvedParty = {
   reviewReasons: [],
 } as const;
 
+/**
+ * @description Performs the raw candidate helper operation for this module.
+ * @param {Record<string, unknown>} overrides - Input value for overrides.
+ * @returns {unknown} Result of the raw candidate operation.
+ */
 function rawCandidate(overrides: Record<string, unknown> = {}) {
   return {
     businessType: "REPORTING",
@@ -192,11 +200,15 @@ describe("reference-aware extraction schemas", () => {
   });
 
   it("rejects unknown timing type", () => {
-    expect(() => rawObligationCandidateSchema.parse(rawCandidate({ timingType: "SOON" }))).toThrow();
+    expect(() =>
+      rawObligationCandidateSchema.parse(rawCandidate({ timingType: "SOON" })),
+    ).toThrow();
   });
 
   it("rejects unknown extra model fields", () => {
-    expect(() => rawObligationCandidateSchema.parse(rawCandidate({ exactQuote: "text" }))).toThrow();
+    expect(() =>
+      rawObligationCandidateSchema.parse(rawCandidate({ exactQuote: "text" })),
+    ).toThrow();
   });
 
   it("rejects reviewRequired=true with no reviewReasons", () => {

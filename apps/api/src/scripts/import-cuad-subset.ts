@@ -1,3 +1,6 @@
+/**
+ * @file Defines a backend operational script for local maintenance or diagnostics.
+ */
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
@@ -18,6 +21,11 @@ interface ImportSummary {
   stored: number;
 }
 
+/**
+ * @description Runs the main script step for local operations.
+ * @returns {Promise<void>} Result of the main operation.
+ * @throws {Error} When validation, I/O, or downstream service operations fail.
+ */
 async function main(): Promise<void> {
   const env = loadEnv();
   const logger = createLogger(env);

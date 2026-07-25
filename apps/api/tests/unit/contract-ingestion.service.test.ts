@@ -1,3 +1,6 @@
+/**
+ * @file Contains automated tests that verify contract tracker behavior.
+ */
 import { randomUUID } from "node:crypto";
 import { Readable } from "node:stream";
 
@@ -21,6 +24,10 @@ const organizationId = "00000000-0000-4000-8000-000000000001";
 const uploadedBy = "00000000-0000-4000-8000-000000000002";
 const validPdf = Buffer.from("%PDF-1.4\n1 0 obj\n<< /Type /Page >>\nendobj\n%%EOF");
 
+/**
+ * @description Performs the logger helper operation for this module.
+ * @returns {Logger} Result of the logger operation.
+ */
 function logger(): Logger {
   return {
     info: vi.fn(),
@@ -29,6 +36,10 @@ function logger(): Logger {
   };
 }
 
+/**
+ * @description Executes the create existing document operation used by the application workflow.
+ * @returns {ExistingContractDocument} Result of the create existing document operation.
+ */
 function createExistingDocument(): ExistingContractDocument {
   const contractId = randomUUID();
   const documentId = randomUUID();
@@ -73,6 +84,12 @@ function createExistingDocument(): ExistingContractDocument {
   };
 }
 
+/**
+ * @description Executes the create dependencies operation used by the application workflow.
+ * @param {Partial<{ duplicate: ExistingContractDocument | null; duplicateAfterUniqueViolation: ExistingContractDocument | null; storageUploadFails: boolean; pendingTransactionFails: boolean; pendingUniqueViolation: boolean; finalizationTransactionFails: boolean; workspace: ReturnType<typeof createExistingDocument> | null; }>} overrides - Input value for overrides.
+ * @returns {unknown} Result of the create dependencies operation.
+ * @throws {Error} When validation, I/O, or downstream service operations fail.
+ */
 function createDependencies(
   overrides: Partial<{
     duplicate: ExistingContractDocument | null;
@@ -307,6 +324,10 @@ function createDependencies(
   };
 }
 
+/**
+ * @description Executes the upload input operation used by the application workflow.
+ * @returns {unknown} Result of the upload input operation.
+ */
 function uploadInput() {
   return {
     file: {

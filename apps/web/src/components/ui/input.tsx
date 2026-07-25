@@ -1,7 +1,15 @@
+/**
+ * @file Defines reusable atomic UI primitives for the web app.
+ */
 import type { InputHTMLAttributes } from "react";
 
 import { cx } from "@/utils/cx.js";
 
+/**
+ * @description Renders the input component for the contract tracker UI.
+ * @param {InputHTMLAttributes<HTMLInputElement>} { className, ...props } - Input value for { class name, ...props }.
+ * @returns {JSX.Element} Result of the input operation.
+ */
 export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input

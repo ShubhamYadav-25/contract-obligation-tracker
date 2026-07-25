@@ -1,8 +1,16 @@
+/**
+ * @file Defines feature-specific React UI components for the contract tracker.
+ */
 import { Table } from "@/components/ui/table.js";
 import { formatDateTime } from "@/utils/format-date.js";
 import { KpiStatusBadge } from "./kpi-status-badge.js";
 import type { KpiMetric } from "../types/kpi.js";
 
+/**
+ * @description Renders the kpi scoreboard component for the contract tracker UI.
+ * @param {{ readonly metrics: readonly KpiMetric[] }} { metrics } - Input value for { metrics }.
+ * @returns {JSX.Element} Result of the kpi scoreboard operation.
+ */
 export function KpiScoreboard({ metrics }: { readonly metrics: readonly KpiMetric[] }) {
   return (
     <Table>

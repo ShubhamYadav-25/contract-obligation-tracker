@@ -1,3 +1,6 @@
+/**
+ * @file Contains automated tests that verify contract tracker behavior.
+ */
 import { describe, expect, it } from "vitest";
 
 import { evaluateTextQuality } from "../../src/modules/document-processing/document-quality.js";
@@ -5,6 +8,12 @@ import type { ParsedDocumentPage } from "../../src/modules/document-processing/d
 import { segmentDocumentPages } from "../../src/modules/document-processing/text-segmentation.js";
 import { splitPageLines } from "../../src/modules/document-processing/text-normalizer.js";
 
+/**
+ * @description Performs the page helper operation for this module.
+ * @param {number} pageNumber - Input value for page number.
+ * @param {string} text - Input value for text.
+ * @returns {ParsedDocumentPage} Result of the page operation.
+ */
 function page(pageNumber: number, text: string): ParsedDocumentPage {
   const quality = evaluateTextQuality(text, {
     minCharacters: 1,

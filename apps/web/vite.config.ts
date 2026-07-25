@@ -1,3 +1,6 @@
+/**
+ * @file Configures Vite, aliases, and browser test settings for the web app.
+ */
 import react from "@vitejs/plugin-react";
 import path from "node:path";
 import { fileURLToPath } from "node:url";

@@ -1,3 +1,6 @@
+/**
+ * @file Defines feature-level web application code for the contract tracker.
+ */
 export interface ReviewSourceAnchor {
   readonly pageNumber: number;
   readonly startLine: number;

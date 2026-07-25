@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend contracts module contracts, services, routes, or persistence logic.
+ */
 import type { PostgreSqlClient } from "../../infrastructure/database/postgres-client.js";
 import type { TransactionContext } from "../../infrastructure/database/transaction-manager.js";
 import type {
@@ -116,38 +119,80 @@ interface DocumentTextPageRow {
   readonly created_at: PgTimestamp;
 }
 
+/**
+ * @description Performs the to date helper operation for this module.
+ * @param {PgTimestamp} value - Input value for value.
+ * @returns {Date} Result of the to date operation.
+ */
 function toDate(value: PgTimestamp): Date {
   return value instanceof Date ? value : new Date(value);
 }
 
+/**
+ * @description Performs the to optional date helper operation for this module.
+ * @param {PgTimestamp | null} value - Input value for value.
+ * @returns {Date | undefined} Result of the to optional date operation.
+ */
 function toOptionalDate(value: PgTimestamp | null): Date | undefined {
   return value ? toDate(value) : undefined;
 }
 
+/**
+ * @description Performs the to number helper operation for this module.
+ * @param {PgNumeric} value - Input value for value.
+ * @returns {number} Result of the to number operation.
+ */
 function toNumber(value: PgNumeric): number {
   return typeof value === "number" ? value : Number(value);
 }
 
+/**
+ * @description Performs the to optional number helper operation for this module.
+ * @param {PgNumeric | null} value - Input value for value.
+ * @returns {number | undefined} Result of the to optional number operation.
+ */
 function toOptionalNumber(value: PgNumeric | null): number | undefined {
   return value === null ? undefined : toNumber(value);
 }
 
+/**
+ * @description Performs the number from record helper operation for this module.
+ * @param {Record<string, unknown> | null} record - Input value for record.
+ * @param {string} key - Input value for key.
+ * @returns {number | undefined} Result of the number from record operation.
+ */
 function numberFromRecord(record: Record<string, unknown> | null, key: string): number | undefined {
   const value = record?.[key];
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
+/**
+ * @description Performs the string from record helper operation for this module.
+ * @param {Record<string, unknown> | null} record - Input value for record.
+ * @param {string} key - Input value for key.
+ * @returns {string | undefined} Result of the string from record operation.
+ */
 function stringFromRecord(record: Record<string, unknown> | null, key: string): string | undefined {
   const value = record?.[key];
   return typeof value === "string" && value.trim().length > 0 ? value : undefined;
 }
 
+/**
+ * @description Performs the record from unknown helper operation for this module.
+ * @param {unknown} value - Input value for value.
+ * @returns {Record<string, unknown> | null} Result of the record from unknown operation.
+ */
 function recordFromUnknown(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : null;
 }
 
+/**
+ * @description Performs the to record array helper operation for this module.
+ * @param {unknown} value - Input value for value.
+ * @returns {readonly Record<string, unknown>[]} Result of the to record array operation.
+ */
 function toRecordArray(value: unknown): readonly Record<string, unknown>[] {
   return Array.isArray(value)
     ? value.filter(
@@ -157,12 +202,22 @@ function toRecordArray(value: unknown): readonly Record<string, unknown>[] {
     : [];
 }
 
+/**
+ * @description Performs the to string array helper operation for this module.
+ * @param {unknown} value - Input value for value.
+ * @returns {readonly string[]} Result of the to string array operation.
+ */
 function toStringArray(value: unknown): readonly string[] {
   return Array.isArray(value)
     ? value.filter((item): item is string => typeof item === "string")
     : [];
 }
 
+/**
+ * @description Performs the map contract helper operation for this module.
+ * @param {ContractRow} row - Input value for row.
+ * @returns {ContractRecord} Result of the map contract operation.
+ */
 function mapContract(row: ContractRow): ContractRecord {
   return {
     id: row.id,
@@ -177,6 +232,11 @@ function mapContract(row: ContractRow): ContractRecord {
   };
 }
 
+/**
+ * @description Performs the map document helper operation for this module.
+ * @param {ContractDocumentRow} row - Input value for row.
+ * @returns {ContractDocumentRecord} Result of the map document operation.
+ */
 function mapDocument(row: ContractDocumentRow): ContractDocumentRecord {
   const uploadFailedAt = toOptionalDate(row.upload_failed_at);
 
@@ -203,6 +263,11 @@ function mapDocument(row: ContractDocumentRow): ContractDocumentRecord {
   };
 }
 
+/**
+ * @description Performs the map processing run helper operation for this module.
+ * @param {ContractProcessingRunRow} row - Input value for row.
+ * @returns {ContractProcessingRunRecord} Result of the map processing run operation.
+ */
 function mapProcessingRun(row: ContractProcessingRunRow): ContractProcessingRunRecord {
   const startedAt = toOptionalDate(row.started_at);
   const completedAt = toOptionalDate(row.completed_at);
@@ -227,6 +292,11 @@ function mapProcessingRun(row: ContractProcessingRunRow): ContractProcessingRunR
   };
 }
 
+/**
+ * @description Performs the map workspace helper operation for this module.
+ * @param {ContractWorkspaceRow} row - Input value for row.
+ * @returns {ContractWorkspaceRecord} Result of the map workspace operation.
+ */
 function mapWorkspace(row: ContractWorkspaceRow): ContractWorkspaceRecord {
   const auditData = recordFromUnknown(row.extraction_audit_data);
   const metadata = recordFromUnknown(auditData?.extractionMetadata);
@@ -274,6 +344,11 @@ function mapWorkspace(row: ContractWorkspaceRow): ContractWorkspaceRecord {
   };
 }
 
+/**
+ * @description Performs the map document text page helper operation for this module.
+ * @param {DocumentTextPageRow} row - Input value for row.
+ * @returns {DocumentTextPageRecord} Result of the map document text page operation.
+ */
 function mapDocumentTextPage(row: DocumentTextPageRow): DocumentTextPageRecord {
   const ocrConfidence = toOptionalNumber(row.ocr_confidence);
   const pageWidth = toOptionalNumber(row.page_width);
@@ -301,8 +376,18 @@ function mapDocumentTextPage(row: DocumentTextPageRow): DocumentTextPageRecord {
 }
 
 export class PostgresContractRepository implements ContractRepository, ContractWorkspaceRepository {
+  /**
+   * @description Implements the constructor method for this service or adapter.
+   * @param {PostgreSqlClient} database - Input value for database.
+   * @returns {unknown} Result of the constructor operation.
+   */
   constructor(private readonly database: PostgreSqlClient) {}
 
+  /**
+   * @description Executes the list by organization operation used by the application workflow.
+   * @param {{ readonly organizationId: string; readonly search?: string; readonly limit: number; readonly offset: number; }} input - Input value for input.
+   * @returns {Promise<readonly ContractWorkspaceRecord[]>} Result of the list by organization operation.
+   */
   async listByOrganization(input: {
     readonly organizationId: string;
     readonly search?: string;
@@ -378,6 +463,11 @@ export class PostgresContractRepository implements ContractRepository, ContractW
     return result.rows.map(mapWorkspace);
   }
 
+  /**
+   * @description Implements the find by organization and id method for this service or adapter.
+   * @param {{ readonly organizationId: string; readonly contractId: string; }} input - Input value for input.
+   * @returns {Promise<ContractWorkspaceRecord | null>} Result of the find by organization and id operation.
+   */
   async findByOrganizationAndId(input: {
     readonly organizationId: string;
     readonly contractId: string;
@@ -444,6 +534,11 @@ export class PostgresContractRepository implements ContractRepository, ContractW
     return result.rows[0] ? mapWorkspace(result.rows[0]) : null;
   }
 
+  /**
+   * @description Implements the find by id method for this service or adapter.
+   * @param {string} id - Input value for id.
+   * @returns {Promise<ContractRecord | null>} Result of the find by id operation.
+   */
   async findById(id: string): Promise<ContractRecord | null> {
     const result = await this.database.query<ContractRow>(
       `
@@ -457,6 +552,11 @@ export class PostgresContractRepository implements ContractRepository, ContractW
     return result.rows[0] ? mapContract(result.rows[0]) : null;
   }
 
+  /**
+   * @description Implements the find by sha256 method for this service or adapter.
+   * @param {string} sha256 - Input value for sha256.
+   * @returns {Promise<ContractRecord | null>} Result of the find by sha256 operation.
+   */
   async findBySha256(sha256: string): Promise<ContractRecord | null> {
     const result = await this.database.query<ContractRow>(
       `
@@ -474,6 +574,13 @@ export class PostgresContractRepository implements ContractRepository, ContractW
     return result.rows[0] ? mapContract(result.rows[0]) : null;
   }
 
+  /**
+   * @description Executes the create operation used by the application workflow.
+   * @param {CreateContractInput} input - Input value for input.
+   * @param {TransactionContext} transaction - Input value for transaction.
+   * @returns {Promise<ContractRecord>} Result of the create operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   async create(
     input: CreateContractInput,
     transaction: TransactionContext,
@@ -507,6 +614,12 @@ export class PostgresContractRepository implements ContractRepository, ContractW
     return mapContract(row);
   }
 
+  /**
+   * @description Implements the assign current document method for this service or adapter.
+   * @param {{ readonly contractId: string; readonly documentId: string }} input - Input value for input.
+   * @param {TransactionContext} transaction - Input value for transaction.
+   * @returns {Promise<void>} Result of the assign current document operation.
+   */
   async assignCurrentDocument(
     input: { readonly contractId: string; readonly documentId: string },
     transaction: TransactionContext,
@@ -524,8 +637,18 @@ export class PostgresContractRepository implements ContractRepository, ContractW
 }
 
 export class PostgresContractDocumentRepository implements ContractDocumentRepository {
+  /**
+   * @description Implements the constructor method for this service or adapter.
+   * @param {PostgreSqlClient} database - Input value for database.
+   * @returns {unknown} Result of the constructor operation.
+   */
   constructor(private readonly database: PostgreSqlClient) {}
 
+  /**
+   * @description Implements the find by organization and hash method for this service or adapter.
+   * @param {{ readonly organizationId: string; readonly fileHashSha256: string; }} input - Input value for input.
+   * @returns {Promise<ExistingContractDocument | null>} Result of the find by organization and hash operation.
+   */
   async findByOrganizationAndHash(input: {
     readonly organizationId: string;
     readonly fileHashSha256: string;
@@ -575,6 +698,13 @@ export class PostgresContractDocumentRepository implements ContractDocumentRepos
     };
   }
 
+  /**
+   * @description Executes the create pending operation used by the application workflow.
+   * @param {CreateContractDocumentInput} input - Input value for input.
+   * @param {TransactionContext} transaction - Input value for transaction.
+   * @returns {Promise<ContractDocumentRecord>} Result of the create pending operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   async createPending(
     input: CreateContractDocumentInput,
     transaction: TransactionContext,
@@ -627,6 +757,11 @@ export class PostgresContractDocumentRepository implements ContractDocumentRepos
     return mapDocument(row);
   }
 
+  /**
+   * @description Implements the find stored for processing method for this service or adapter.
+   * @param {{ readonly organizationId: string; readonly contractId: string; readonly documentId: string; }} input - Input value for input.
+   * @returns {Promise<ContractDocumentRecord | null>} Result of the find stored for processing operation.
+   */
   async findStoredForProcessing(input: {
     readonly organizationId: string;
     readonly contractId: string;
@@ -652,6 +787,13 @@ export class PostgresContractDocumentRepository implements ContractDocumentRepos
     return result.rows[0] ? mapDocument(result.rows[0]) : null;
   }
 
+  /**
+   * @description Implements the mark stored method for this service or adapter.
+   * @param {{ readonly documentId: string }} input - Input value for input.
+   * @param {TransactionContext} transaction - Input value for transaction.
+   * @returns {Promise<ContractDocumentRecord>} Result of the mark stored operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   async markStored(
     input: { readonly documentId: string },
     transaction: TransactionContext,
@@ -678,6 +820,13 @@ export class PostgresContractDocumentRepository implements ContractDocumentRepos
     return mapDocument(row);
   }
 
+  /**
+   * @description Implements the mark upload failed method for this service or adapter.
+   * @param {{ readonly documentId: string; readonly errorCode: string; readonly errorMessage: string; }} input - Input value for input.
+   * @param {TransactionContext} transaction - Input value for transaction.
+   * @returns {Promise<ContractDocumentRecord>} Result of the mark upload failed operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   async markUploadFailed(
     input: {
       readonly documentId: string;
@@ -709,8 +858,20 @@ export class PostgresContractDocumentRepository implements ContractDocumentRepos
 }
 
 export class PostgresContractProcessingRepository implements ContractProcessingRepository {
+  /**
+   * @description Implements the constructor method for this service or adapter.
+   * @param {PostgreSqlClient} database - Input value for database.
+   * @returns {unknown} Result of the constructor operation.
+   */
   constructor(private readonly database: PostgreSqlClient) {}
 
+  /**
+   * @description Executes the create run operation used by the application workflow.
+   * @param {CreateContractProcessingRunInput} input - Input value for input.
+   * @param {TransactionContext} transaction - Input value for transaction.
+   * @returns {Promise<ContractProcessingRunRecord>} Result of the create run operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   async createRun(
     input: CreateContractProcessingRunInput,
     transaction: TransactionContext,
@@ -737,6 +898,12 @@ export class PostgresContractProcessingRepository implements ContractProcessingR
     return mapProcessingRun(row);
   }
 
+  /**
+   * @description Implements the mark queued method for this service or adapter.
+   * @param {{ readonly processingRunId: string; readonly queueJobId: string; }} input - Input value for input.
+   * @returns {Promise<ContractProcessingRunRecord>} Result of the mark queued operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   async markQueued(input: {
     readonly processingRunId: string;
     readonly queueJobId: string;
@@ -760,6 +927,11 @@ export class PostgresContractProcessingRepository implements ContractProcessingR
     return mapProcessingRun(row);
   }
 
+  /**
+   * @description Implements the find latest by contract id method for this service or adapter.
+   * @param {{ readonly organizationId: string; readonly contractId: string; }} input - Input value for input.
+   * @returns {Promise<ContractProcessingRunRecord | null>} Result of the find latest by contract id operation.
+   */
   async findLatestByContractId(input: {
     readonly organizationId: string;
     readonly contractId: string;
@@ -781,6 +953,11 @@ export class PostgresContractProcessingRepository implements ContractProcessingR
     return result.rows[0] ? mapProcessingRun(result.rows[0]) : null;
   }
 
+  /**
+   * @description Implements the find by id method for this service or adapter.
+   * @param {{ readonly organizationId: string; readonly processingRunId: string; }} input - Input value for input.
+   * @returns {Promise<ContractProcessingRunRecord | null>} Result of the find by id operation.
+   */
   async findById(input: {
     readonly organizationId: string;
     readonly processingRunId: string;
@@ -801,6 +978,12 @@ export class PostgresContractProcessingRepository implements ContractProcessingR
     return result.rows[0] ? mapProcessingRun(result.rows[0]) : null;
   }
 
+  /**
+   * @description Implements the claim for processing method for this service or adapter.
+   * @param {ClaimContractProcessingRunInput} input - Input value for input.
+   * @param {TransactionContext} transaction - Input value for transaction.
+   * @returns {Promise<ContractProcessingRunRecord | null>} Result of the claim for processing operation.
+   */
   async claimForProcessing(
     input: ClaimContractProcessingRunInput,
     transaction: TransactionContext,
@@ -855,6 +1038,12 @@ export class PostgresContractProcessingRepository implements ContractProcessingR
     return result.rows[0] ? mapProcessingRun(result.rows[0]) : null;
   }
 
+  /**
+   * @description Implements the mark completed method for this service or adapter.
+   * @param {CompleteContractProcessingRunInput} input - Input value for input.
+   * @param {TransactionContext} transaction - Input value for transaction.
+   * @returns {Promise<ContractProcessingRunRecord>} Result of the mark completed operation.
+   */
   async markCompleted(
     input: CompleteContractProcessingRunInput,
     transaction: TransactionContext,
@@ -862,6 +1051,12 @@ export class PostgresContractProcessingRepository implements ContractProcessingR
     return this.markTerminal("COMPLETED", input, transaction);
   }
 
+  /**
+   * @description Implements the mark review required method for this service or adapter.
+   * @param {CompleteContractProcessingRunInput} input - Input value for input.
+   * @param {TransactionContext} transaction - Input value for transaction.
+   * @returns {Promise<ContractProcessingRunRecord>} Result of the mark review required operation.
+   */
   async markReviewRequired(
     input: CompleteContractProcessingRunInput,
     transaction: TransactionContext,
@@ -869,6 +1064,13 @@ export class PostgresContractProcessingRepository implements ContractProcessingR
     return this.markTerminal("REVIEW_REQUIRED", input, transaction);
   }
 
+  /**
+   * @description Implements the mark retryable failure method for this service or adapter.
+   * @param {FailContractProcessingRunInput} input - Input value for input.
+   * @param {TransactionContext} transaction - Input value for transaction.
+   * @returns {Promise<ContractProcessingRunRecord>} Result of the mark retryable failure operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   async markRetryableFailure(
     input: FailContractProcessingRunInput,
     transaction: TransactionContext,
@@ -910,6 +1112,13 @@ export class PostgresContractProcessingRepository implements ContractProcessingR
     return mapProcessingRun(row);
   }
 
+  /**
+   * @description Implements the mark stage method for this service or adapter.
+   * @param {MarkContractProcessingStageInput} input - Input value for input.
+   * @param {TransactionContext} transaction - Input value for transaction.
+   * @returns {Promise<ContractProcessingRunRecord>} Result of the mark stage operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   async markStage(
     input: MarkContractProcessingStageInput,
     transaction: TransactionContext,
@@ -945,6 +1154,13 @@ export class PostgresContractProcessingRepository implements ContractProcessingR
     return mapProcessingRun(row);
   }
 
+  /**
+   * @description Implements the mark text segmented method for this service or adapter.
+   * @param {CompleteContractProcessingRunInput} input - Input value for input.
+   * @param {TransactionContext} transaction - Input value for transaction.
+   * @returns {Promise<ContractProcessingRunRecord>} Result of the mark text segmented operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   async markTextSegmented(
     input: CompleteContractProcessingRunInput,
     transaction: TransactionContext,
@@ -980,6 +1196,13 @@ export class PostgresContractProcessingRepository implements ContractProcessingR
     return mapProcessingRun(row);
   }
 
+  /**
+   * @description Implements the mark failed method for this service or adapter.
+   * @param {FailContractProcessingRunInput} input - Input value for input.
+   * @param {TransactionContext} transaction - Input value for transaction.
+   * @returns {Promise<ContractProcessingRunRecord>} Result of the mark failed operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   async markFailed(
     input: FailContractProcessingRunInput,
     transaction: TransactionContext,
@@ -1024,6 +1247,14 @@ export class PostgresContractProcessingRepository implements ContractProcessingR
     return mapProcessingRun(row);
   }
 
+  /**
+   * @description Implements the mark terminal method for this service or adapter.
+   * @param {"COMPLETED" | "REVIEW_REQUIRED"} status - Input value for status.
+   * @param {CompleteContractProcessingRunInput} input - Input value for input.
+   * @param {TransactionContext} transaction - Input value for transaction.
+   * @returns {Promise<ContractProcessingRunRecord>} Result of the mark terminal operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   private async markTerminal(
     status: "COMPLETED" | "REVIEW_REQUIRED",
     input: CompleteContractProcessingRunInput,
@@ -1072,8 +1303,18 @@ export class PostgresContractProcessingRepository implements ContractProcessingR
 export class PostgresDocumentTextPageRepository
   implements DocumentTextPageRepository, DocumentTextPageReadRepository
 {
+  /**
+   * @description Implements the constructor method for this service or adapter.
+   * @param {PostgreSqlClient} database - Input value for database.
+   * @returns {unknown} Result of the constructor operation.
+   */
   constructor(private readonly database: PostgreSqlClient) {}
 
+  /**
+   * @description Executes the list by contract operation used by the application workflow.
+   * @param {{ readonly organizationId: string; readonly contractId: string; }} input - Input value for input.
+   * @returns {Promise<readonly DocumentTextPageRecord[]>} Result of the list by contract operation.
+   */
   async listByContract(input: {
     readonly organizationId: string;
     readonly contractId: string;
@@ -1096,6 +1337,12 @@ export class PostgresDocumentTextPageRepository
     return result.rows.map(mapDocumentTextPage);
   }
 
+  /**
+   * @description Implements the replace pages method for this service or adapter.
+   * @param {PersistDocumentTextPagesInput} input - Input value for input.
+   * @param {TransactionContext} transaction - Input value for transaction.
+   * @returns {Promise<void>} Result of the replace pages operation.
+   */
   async replacePages(
     input: PersistDocumentTextPagesInput,
     transaction: TransactionContext,

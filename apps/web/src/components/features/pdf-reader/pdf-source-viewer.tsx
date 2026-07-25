@@ -1,3 +1,6 @@
+/**
+ * @file Defines PDF reader UI, navigation, and source highlight behavior.
+ */
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
 
@@ -9,6 +12,11 @@ export interface SourceLine {
   readonly text: string;
 }
 
+/**
+ * @description Renders the pdf source viewer component for the contract tracker UI.
+ * @param {{ readonly pageCount: number; readonly initialPage?: number; readonly lines: readonly SourceLine[]; }} { initialPage = 1, lines, pageCount, } - Input value for { initial page = 1, lines, page count, }.
+ * @returns {JSX.Element} Result of the pdf source viewer operation.
+ */
 export function PdfSourceViewer({
   initialPage = 1,
   lines,

@@ -1,3 +1,6 @@
+/**
+ * @file Defines feature-specific React UI components for the contract tracker.
+ */
 import { FileText } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -7,6 +10,11 @@ import { formatDateTime } from "@/utils/format-date.js";
 import { ContractStatusBadge } from "./contract-status-badge.js";
 import type { ContractSummary } from "../types/contracts.js";
 
+/**
+ * @description Renders the contract card component for the contract tracker UI.
+ * @param {{ readonly contract: ContractSummary }} { contract } - Input value for { contract }.
+ * @returns {JSX.Element} Result of the contract card operation.
+ */
 export function ContractCard({ contract }: { readonly contract: ContractSummary }) {
   const status = contract.processing?.status ?? "RECEIVED";
   const uploadedAt = contract.currentDocument?.uploadedAt ?? contract.createdAt;

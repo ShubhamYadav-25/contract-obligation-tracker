@@ -139,6 +139,12 @@ corepack pnpm --filter @contract-obligation-tracker/web run test
 corepack pnpm --filter @contract-obligation-tracker/web run build
 ```
 
+## Deploy On Render
+
+Use the root `render.yaml` Blueprint to deploy the API web service and Vite
+static site. See `docs/render-deployment.md` for the required Render secrets,
+service URLs, and health check.
+
 ## Useful Local Commands
 
 ```powershell

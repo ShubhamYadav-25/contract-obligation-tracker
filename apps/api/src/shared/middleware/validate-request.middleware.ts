@@ -1,3 +1,6 @@
+/**
+ * @file Defines shared API errors, middleware, validation, or boundary types.
+ */
 import type { RequestHandler } from "express";
 import type { ZodType } from "zod";
 
@@ -7,6 +10,11 @@ export interface RequestValidationSchemas {
   readonly query?: ZodType;
 }
 
+/**
+ * @description Performs the validate request helper operation for this module.
+ * @param {RequestValidationSchemas} schemas - Input value for schemas.
+ * @returns {RequestHandler} Result of the validate request operation.
+ */
 export function validateRequest(schemas: RequestValidationSchemas): RequestHandler {
   return (request, _response, next) => {
     if (schemas.body) {

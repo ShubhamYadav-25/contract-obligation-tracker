@@ -1,3 +1,6 @@
+/**
+ * @file Defines feature-level web application code for the contract tracker.
+ */
 import { z } from "zod";
 
 const maxContractBytes = 25 * 1024 * 1024;

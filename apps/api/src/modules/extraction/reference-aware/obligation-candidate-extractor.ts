@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend extraction module contracts, services, routes, or persistence logic.
+ */
 import { z } from "zod";
 
 import type { StructuredLlmClient } from "../../../infrastructure/llm/structured-llm-client.js";
@@ -315,6 +318,11 @@ const batchObligationCandidateJsonSchema = {
   required: ["windowResults"],
 } satisfies Record<string, unknown>;
 
+/**
+ * @description Performs the render party map helper operation for this module.
+ * @param {RelevantContextSelection} selection - Input value for selection.
+ * @returns {string} Result of the render party map operation.
+ */
 function renderPartyMap(selection: RelevantContextSelection): string {
   if (selection.canonicalPartyMap.length === 0) {
     return "[]";
@@ -329,6 +337,11 @@ function renderPartyMap(selection: RelevantContextSelection): string {
     .join("\n");
 }
 
+/**
+ * @description Performs the render defined terms helper operation for this module.
+ * @param {RelevantContextSelection} selection - Input value for selection.
+ * @returns {string} Result of the render defined terms operation.
+ */
 function renderDefinedTerms(selection: RelevantContextSelection): string {
   if (selection.definedTerms.length === 0) {
     return "[]";
@@ -345,6 +358,11 @@ function renderDefinedTerms(selection: RelevantContextSelection): string {
     .join("\n");
 }
 
+/**
+ * @description Performs the render batch source helper operation for this module.
+ * @param {DetectedCandidateWindow} window - Input value for window.
+ * @returns {string} Result of the render batch source operation.
+ */
 function renderBatchSource(window: DetectedCandidateWindow): string {
   return window.sourceLines
     .map((line) => {
@@ -356,19 +374,22 @@ function renderBatchSource(window: DetectedCandidateWindow): string {
     .join("\n");
 }
 
+/**
+ * @description Performs the estimated window characters helper operation for this module.
+ * @param {DetectedCandidateWindow} window - Input value for window.
+ * @returns {number} Result of the estimated window characters operation.
+ */
 function estimatedWindowCharacters(window: DetectedCandidateWindow): number {
-  return (
-    window.characterCount +
-    window.sectionPath.join(" > ").length +
-    window.id.length +
-    160
-  );
+  return window.characterCount + window.sectionPath.join(" > ").length + window.id.length + 160;
 }
 
-function sameBatchSection(
-  left: DetectedCandidateWindow,
-  right: DetectedCandidateWindow,
-): boolean {
+/**
+ * @description Performs the same batch section helper operation for this module.
+ * @param {DetectedCandidateWindow} left - Input value for left.
+ * @param {DetectedCandidateWindow} right - Input value for right.
+ * @returns {boolean} Result of the same batch section operation.
+ */
+function sameBatchSection(left: DetectedCandidateWindow, right: DetectedCandidateWindow): boolean {
   return (
     left.sectionPath.length > 0 &&
     left.sectionPath.length === right.sectionPath.length &&
@@ -376,16 +397,29 @@ function sameBatchSection(
   );
 }
 
+/**
+ * @description Performs the batch id helper operation for this module.
+ * @param {readonly DetectedCandidateWindow[]} windows - Input value for windows.
+ * @returns {string} Result of the batch id operation.
+ */
 function batchId(windows: readonly DetectedCandidateWindow[]): string {
   return `cb_${stableHash(
-    JSON.stringify(windows.map((window) => ({
-      id: window.id,
-      start: window.globalStartLine,
-      end: window.globalEndLine,
-    }))),
+    JSON.stringify(
+      windows.map((window) => ({
+        id: window.id,
+        start: window.globalStartLine,
+        end: window.globalEndLine,
+      })),
+    ),
   )}`;
 }
 
+/**
+ * @description Performs the build candidate window batches helper operation for this module.
+ * @param {readonly DetectedCandidateWindow[]} windows - Input value for windows.
+ * @param {Pick< ObligationCandidateExtractorConfig, "maxWindowsPerBatch" | "maxBatchInputCharacters" >} config - Input value for config.
+ * @returns {readonly CandidateWindowBatch[]} Result of the build candidate window batches operation.
+ */
 export function buildCandidateWindowBatches(
   windows: readonly DetectedCandidateWindow[],
   config: Pick<
@@ -403,6 +437,10 @@ export function buildCandidateWindowBatches(
   let current: DetectedCandidateWindow[] = [];
   let currentCharacters = 0;
 
+  /**
+   * @description Performs the flush helper operation for this module.
+   * @returns {void} Result of the flush operation.
+   */
   function flush(): void {
     if (current.length === 0) {
       return;
@@ -444,6 +482,11 @@ export function buildCandidateWindowBatches(
   return batches;
 }
 
+/**
+ * @description Performs the evidence references helper operation for this module.
+ * @param {readonly ModelEvidenceSpan[]} spans - Input value for spans.
+ * @returns {unknown} Result of the evidence references operation.
+ */
 function evidenceReferences(spans: readonly ModelEvidenceSpan[]) {
   return spans.map((span) => ({
     startLine: span.startLine,
@@ -452,9 +495,12 @@ function evidenceReferences(spans: readonly ModelEvidenceSpan[]) {
   }));
 }
 
-function toPageEvidenceSpan(
-  resolved: ResolvedEvidenceSpanWithRole,
-): VerifiedEvidenceSpan | null {
+/**
+ * @description Performs the to page evidence span helper operation for this module.
+ * @param {ResolvedEvidenceSpanWithRole} resolved - Input value for resolved.
+ * @returns {VerifiedEvidenceSpan | null} Result of the to page evidence span operation.
+ */
+function toPageEvidenceSpan(resolved: ResolvedEvidenceSpanWithRole): VerifiedEvidenceSpan | null {
   const firstLine = resolved.sourceLines[0];
   const lastLine = resolved.sourceLines[resolved.sourceLines.length - 1];
   if (
@@ -478,9 +524,12 @@ function toPageEvidenceSpan(
   };
 }
 
-function toEvidenceCandidate(
-  resolved: ResolvedEvidenceSpanWithRole,
-) {
+/**
+ * @description Performs the to evidence candidate helper operation for this module.
+ * @param {ResolvedEvidenceSpanWithRole} resolved - Input value for resolved.
+ * @returns {unknown} Result of the to evidence candidate operation.
+ */
+function toEvidenceCandidate(resolved: ResolvedEvidenceSpanWithRole) {
   const firstLine = resolved.sourceLines[0];
   const lastLine = resolved.sourceLines[resolved.sourceLines.length - 1];
   if (
@@ -500,6 +549,12 @@ function toEvidenceCandidate(
   };
 }
 
+/**
+ * @description Performs the normalize evidence spans helper operation for this module.
+ * @param {ContractSourceIndex} sourceIndex - Input value for source index.
+ * @param {readonly ModelEvidenceSpan[]} spans - Input value for spans.
+ * @returns {unknown} Result of the normalize evidence spans operation.
+ */
 function normalizeEvidenceSpans(
   sourceIndex: ContractSourceIndex,
   spans: readonly ModelEvidenceSpan[],
@@ -508,21 +563,27 @@ function normalizeEvidenceSpans(
   const verifiedEvidenceSpans = resolved
     .map(toPageEvidenceSpan)
     .filter((span): span is VerifiedEvidenceSpan => Boolean(span));
-  const evidenceSpans = resolved.map(toEvidenceCandidate).filter((span): span is {
-    pageNumber: number;
-    startLine: number;
-    endLine: number;
-    evidenceRole: EvidenceRole;
-  } => Boolean(span));
+  const evidenceSpans = resolved.map(toEvidenceCandidate).filter(
+    (
+      span,
+    ): span is {
+      pageNumber: number;
+      startLine: number;
+      endLine: number;
+      evidenceRole: EvidenceRole;
+    } => Boolean(span),
+  );
   const reviewReasons = resolved.flatMap((span) =>
     span.verificationErrors.map((error) => error.message),
   );
 
-  if (resolved.some((span) => {
-    const firstLine = span.sourceLines[0];
-    const lastLine = span.sourceLines[span.sourceLines.length - 1];
-    return firstLine && lastLine && firstLine.pageNumber !== lastLine.pageNumber;
-  })) {
+  if (
+    resolved.some((span) => {
+      const firstLine = span.sourceLines[0];
+      const lastLine = span.sourceLines[span.sourceLines.length - 1];
+      return firstLine && lastLine && firstLine.pageNumber !== lastLine.pageNumber;
+    })
+  ) {
     reviewReasons.push("Evidence span crosses pages and requires review");
   }
 
@@ -533,10 +594,13 @@ function normalizeEvidenceSpans(
   };
 }
 
-function findParty(
-  context: ContractContextExtractionResult,
-  value: string | null,
-) {
+/**
+ * @description Performs the find party helper operation for this module.
+ * @param {ContractContextExtractionResult} context - Input value for context.
+ * @param {string | null} value - Input value for value.
+ * @returns {unknown} Result of the find party operation.
+ */
+function findParty(context: ContractContextExtractionResult, value: string | null) {
   if (!value) {
     return undefined;
   }
@@ -548,11 +612,24 @@ function findParty(
   );
 }
 
+/**
+ * @description Performs the contains term helper operation for this module.
+ * @param {string} text - Input value for text.
+ * @param {string} term - Input value for term.
+ * @returns {boolean} Result of the contains term operation.
+ */
 function containsTerm(text: string, term: string): boolean {
   const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return new RegExp(`(^|[^A-Za-z0-9])${escaped}([^A-Za-z0-9]|$)`, "i").test(text);
 }
 
+/**
+ * @description Performs the resolve party helper operation for this module.
+ * @param {ModelPartyResolution} party - Input value for party.
+ * @param {ContractContextExtractionResult} context - Input value for context.
+ * @param {ContractSourceIndex} sourceIndex - Input value for source index.
+ * @returns {{ readonly party: PartyResolution; readonly reviewReasons: readonly string[] }} Result of the resolve party operation.
+ */
 function resolveParty(
   party: ModelPartyResolution,
   context: ContractContextExtractionResult,
@@ -563,10 +640,7 @@ function resolveParty(
     findParty(context, party.roleLabel) ??
     findParty(context, party.explicitText);
   const supportingEvidence = normalizeEvidenceSpans(sourceIndex, party.supportingEvidence);
-  const reviewReasons = [
-    ...party.reviewReasons,
-    ...supportingEvidence.reviewReasons,
-  ];
+  const reviewReasons = [...party.reviewReasons, ...supportingEvidence.reviewReasons];
 
   if (match) {
     return {
@@ -602,6 +676,11 @@ function resolveParty(
   };
 }
 
+/**
+ * @description Performs the is excluded evidence line helper operation for this module.
+ * @param {ContractSourceLine} line - Input value for line.
+ * @returns {boolean} Result of the is excluded evidence line operation.
+ */
 function isExcludedEvidenceLine(line: ContractSourceLine): boolean {
   const text = line.normalizedText;
   return (
@@ -613,6 +692,12 @@ function isExcludedEvidenceLine(line: ContractSourceLine): boolean {
   );
 }
 
+/**
+ * @description Performs the all evidence excluded helper operation for this module.
+ * @param {ContractSourceIndex} sourceIndex - Input value for source index.
+ * @param {ModelObligationCandidate} candidate - Input value for candidate.
+ * @returns {boolean} Result of the all evidence excluded operation.
+ */
 function allEvidenceExcluded(
   sourceIndex: ContractSourceIndex,
   candidate: ModelObligationCandidate,
@@ -624,6 +709,12 @@ function allEvidenceExcluded(
   return lines.length > 0 && lines.every(isExcludedEvidenceLine);
 }
 
+/**
+ * @description Performs the cross reference needs review helper operation for this module.
+ * @param {{ readonly crossReferences: readonly string[] }} candidate - Input value for candidate.
+ * @param {ContractContextExtractionResult} context - Input value for context.
+ * @returns {string[]} Result of the cross reference needs review operation.
+ */
 function crossReferenceNeedsReview(
   candidate: { readonly crossReferences: readonly string[] },
   context: ContractContextExtractionResult,
@@ -645,6 +736,13 @@ function crossReferenceNeedsReview(
   });
 }
 
+/**
+ * @description Performs the supported cross references helper operation for this module.
+ * @param {ModelObligationCandidate} candidate - Input value for candidate.
+ * @param {DetectedCandidateWindow} window - Input value for window.
+ * @param {ContractContextExtractionResult} context - Input value for context.
+ * @returns {string[]} Result of the supported cross references operation.
+ */
 function supportedCrossReferences(
   candidate: ModelObligationCandidate,
   window: DetectedCandidateWindow,
@@ -664,6 +762,11 @@ function supportedCrossReferences(
   });
 }
 
+/**
+ * @description Performs the stable hash helper operation for this module.
+ * @param {string} value - Input value for value.
+ * @returns {string} Result of the stable hash operation.
+ */
 function stableHash(value: string): string {
   let hash = 2_166_136_261;
   for (let index = 0; index < value.length; index += 1) {
@@ -673,6 +776,11 @@ function stableHash(value: string): string {
   return (hash >>> 0).toString(36);
 }
 
+/**
+ * @description Performs the normalize key text helper operation for this module.
+ * @param {string | null} value - Input value for value.
+ * @returns {string} Result of the normalize key text operation.
+ */
 function normalizeKeyText(value: string | null): string {
   return (value ?? "")
     .toLowerCase()
@@ -681,12 +789,22 @@ function normalizeKeyText(value: string | null): string {
     .replace(/\s+/g, " ");
 }
 
+/**
+ * @description Performs the sorted unique strings helper operation for this module.
+ * @param {readonly string[]} values - Input value for values.
+ * @returns {readonly string[]} Result of the sorted unique strings operation.
+ */
 function sortedUniqueStrings(values: readonly string[]): readonly string[] {
   return [...new Set(values.map(normalizeKeyText))].sort((left, right) =>
     left.localeCompare(right),
   );
 }
 
+/**
+ * @description Performs the sorted evidence spans helper operation for this module.
+ * @param {readonly ModelEvidenceSpan[]} spans - Input value for spans.
+ * @returns {readonly ModelEvidenceSpan[]} Result of the sorted evidence spans operation.
+ */
 function sortedEvidenceSpans(spans: readonly ModelEvidenceSpan[]): readonly ModelEvidenceSpan[] {
   return [...spans].sort(
     (left, right) =>
@@ -696,7 +814,16 @@ function sortedEvidenceSpans(spans: readonly ModelEvidenceSpan[]): readonly Mode
   );
 }
 
-function stableCandidateKey(window: DetectedCandidateWindow, candidate: ModelObligationCandidate): string {
+/**
+ * @description Performs the stable candidate key helper operation for this module.
+ * @param {DetectedCandidateWindow} window - Input value for window.
+ * @param {ModelObligationCandidate} candidate - Input value for candidate.
+ * @returns {string} Result of the stable candidate key operation.
+ */
+function stableCandidateKey(
+  window: DetectedCandidateWindow,
+  candidate: ModelObligationCandidate,
+): string {
   return `oc_${window.id}_${stableHash(
     JSON.stringify({
       businessType: candidate.businessType,
@@ -732,6 +859,11 @@ function stableCandidateKey(window: DetectedCandidateWindow, candidate: ModelObl
   )}`;
 }
 
+/**
+ * @description Performs the review status helper operation for this module.
+ * @param {{ readonly candidate: ModelObligationCandidate; readonly reviewReasons: readonly string[]; readonly lowConfidenceThreshold: number; }} input - Input value for input.
+ * @returns {ExtractionReviewStatus} Result of the review status operation.
+ */
 function reviewStatus(input: {
   readonly candidate: ModelObligationCandidate;
   readonly reviewReasons: readonly string[];
@@ -747,6 +879,11 @@ function reviewStatus(input: {
   return "CONFIRMED";
 }
 
+/**
+ * @description Performs the merge relevant context helper operation for this module.
+ * @param {readonly RelevantContextSelection[]} selections - Input value for selections.
+ * @returns {RelevantContextSelection} Result of the merge relevant context operation.
+ */
 function mergeRelevantContext(
   selections: readonly RelevantContextSelection[],
 ): RelevantContextSelection {
@@ -771,23 +908,32 @@ function mergeRelevantContext(
   }
 
   return {
-    canonicalPartyMap: [...partyMap.values()].sort((left, right) =>
-      left.roleLabel.localeCompare(right.roleLabel) ||
-      left.canonicalName.localeCompare(right.canonicalName),
+    canonicalPartyMap: [...partyMap.values()].sort(
+      (left, right) =>
+        left.roleLabel.localeCompare(right.roleLabel) ||
+        left.canonicalName.localeCompare(right.canonicalName),
     ),
-    parties: [...parties.values()].sort((left, right) =>
-      left.roleLabel.localeCompare(right.roleLabel) ||
-      left.canonicalName.localeCompare(right.canonicalName),
+    parties: [...parties.values()].sort(
+      (left, right) =>
+        left.roleLabel.localeCompare(right.roleLabel) ||
+        left.canonicalName.localeCompare(right.canonicalName),
     ),
     definedTerms: [...definedTerms.values()].sort((left, right) =>
       left.term.localeCompare(right.term),
     ),
-    keyDates: [...keyDates.values()].sort((left, right) =>
-      left.label.localeCompare(right.label) || left.rawValue.localeCompare(right.rawValue),
+    keyDates: [...keyDates.values()].sort(
+      (left, right) =>
+        left.label.localeCompare(right.label) || left.rawValue.localeCompare(right.rawValue),
     ),
   };
 }
 
+/**
+ * @description Performs the evidence within window helper operation for this module.
+ * @param {ModelObligationCandidate} candidate - Input value for candidate.
+ * @param {DetectedCandidateWindow} window - Input value for window.
+ * @returns {boolean} Result of the evidence within window operation.
+ */
 function evidenceWithinWindow(
   candidate: ModelObligationCandidate,
   window: DetectedCandidateWindow,
@@ -797,6 +943,11 @@ function evidenceWithinWindow(
   );
 }
 
+/**
+ * @description Performs the words for matching helper operation for this module.
+ * @param {string} value - Input value for value.
+ * @returns {readonly string[]} Result of the words for matching operation.
+ */
 function wordsForMatching(value: string): readonly string[] {
   return value
     .toLowerCase()
@@ -806,6 +957,12 @@ function wordsForMatching(value: string): readonly string[] {
     .slice(0, 4);
 }
 
+/**
+ * @description Performs the add deterministic action evidence helper operation for this module.
+ * @param {ModelObligationCandidate} candidate - Input value for candidate.
+ * @param {DetectedCandidateWindow} window - Input value for window.
+ * @returns {ModelObligationCandidate} Result of the add deterministic action evidence operation.
+ */
 function addDeterministicActionEvidence(
   candidate: ModelObligationCandidate,
   window: DetectedCandidateWindow,
@@ -842,6 +999,11 @@ export class ObligationCandidateExtractor {
   private readonly relevantContextSelector: RelevantContextSelector;
   private readonly config: ObligationCandidateExtractorConfig;
 
+  /**
+   * @description Implements the constructor method for this service or adapter.
+   * @param {{ readonly llm: StructuredLlmClient; readonly relevantContextSelector?: RelevantContextSelector; readonly config?: Partial<ObligationCandidateExtractorConfig>; }} input - Input value for input.
+   * @returns {unknown} Result of the constructor operation.
+   */
   constructor(input: {
     readonly llm: StructuredLlmClient;
     readonly relevantContextSelector?: RelevantContextSelector;
@@ -852,7 +1014,15 @@ export class ObligationCandidateExtractor {
     this.config = { ...defaultConfig, ...input.config };
   }
 
-  async extract(input: ObligationCandidateExtractorInput): Promise<ObligationCandidateExtractionResult> {
+  /**
+   * @description Implements the extract method for this service or adapter.
+   * @param {ObligationCandidateExtractorInput} input - Input value for input.
+   * @returns {Promise<ObligationCandidateExtractionResult>} Result of the extract operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
+  async extract(
+    input: ObligationCandidateExtractorInput,
+  ): Promise<ObligationCandidateExtractionResult> {
     const rawCandidates: RawObligationCandidate[] = [];
     const verifiedCandidates: VerifiedObligationCandidate[] = [];
     const rejected: RejectedObligationCandidate[] = [];
@@ -891,12 +1061,15 @@ export class ObligationCandidateExtractor {
           });
         }
         if (seenWindowIds.has(window.id)) {
-          throw new ExternalServiceError("Batch obligation extraction returned duplicate window ID", {
-            operationName: "obligation_candidate_extraction",
-            retryable: false,
-            batchId: batch.id,
-            windowId: window.id,
-          });
+          throw new ExternalServiceError(
+            "Batch obligation extraction returned duplicate window ID",
+            {
+              operationName: "obligation_candidate_extraction",
+              retryable: false,
+              batchId: batch.id,
+              windowId: window.id,
+            },
+          );
         }
         seenWindowIds.add(window.id);
 
@@ -910,90 +1083,93 @@ export class ObligationCandidateExtractor {
             });
             continue;
           }
-        if (allEvidenceExcluded(input.sourceIndex, candidate)) {
-          rejected.push({
-            windowId: window.id,
-            label: candidate.summary,
-            reasons: ["Candidate evidence is excluded by extraction scope"],
-          });
-          continue;
-        }
+          if (allEvidenceExcluded(input.sourceIndex, candidate)) {
+            rejected.push({
+              windowId: window.id,
+              label: candidate.summary,
+              reasons: ["Candidate evidence is excluded by extraction scope"],
+            });
+            continue;
+          }
 
-        const normalizedEvidence = normalizeEvidenceSpans(input.sourceIndex, candidate.evidenceSpans);
-        if (normalizedEvidence.verifiedEvidenceSpans.length === 0) {
-          rejected.push({
-            windowId: window.id,
-            label: candidate.summary,
-            reasons:
-              normalizedEvidence.reviewReasons.length > 0
-                ? normalizedEvidence.reviewReasons
-                : ["Candidate has no valid source evidence"],
-          });
-          continue;
-        }
+          const normalizedEvidence = normalizeEvidenceSpans(
+            input.sourceIndex,
+            candidate.evidenceSpans,
+          );
+          if (normalizedEvidence.verifiedEvidenceSpans.length === 0) {
+            rejected.push({
+              windowId: window.id,
+              label: candidate.summary,
+              reasons:
+                normalizedEvidence.reviewReasons.length > 0
+                  ? normalizedEvidence.reviewReasons
+                  : ["Candidate has no valid source evidence"],
+            });
+            continue;
+          }
 
-        const responsibleParty = resolveParty(
-          candidate.responsibleParty,
-          input.context,
-          input.sourceIndex,
-        );
-        const counterparty = candidate.counterparty
-          ? resolveParty(candidate.counterparty, input.context, input.sourceIndex)
-          : null;
-        const crossReferences = supportedCrossReferences(candidate, window, input.context);
-        const candidateForReview = { crossReferences };
-        const reviewReasons = [
-          ...candidate.reviewReasons,
-          ...normalizedEvidence.reviewReasons,
-          ...responsibleParty.reviewReasons,
-          ...(counterparty?.reviewReasons ?? []),
-          ...crossReferenceNeedsReview(candidateForReview, input.context),
-          ...(candidate.confidence < this.config.lowConfidenceThreshold
-            ? ["Candidate confidence is below review threshold"]
-            : []),
-        ];
-        const rawCandidate: RawObligationCandidate = {
-          ...candidate,
-          responsibleParty: responsibleParty.party,
-          counterparty: counterparty?.party ?? null,
-          referencedTerms: [...candidate.referencedTerms],
-          crossReferences,
-          evidenceSpans: normalizedEvidence.evidenceSpans,
-          reviewRequired: candidate.reviewRequired || reviewReasons.length > 0,
-          reviewReasons,
-        };
-        const verifiedCandidate: VerifiedObligationCandidate = {
-          businessType: rawCandidate.businessType,
-          timingType: rawCandidate.timingType,
-          responsibleParty: rawCandidate.responsibleParty,
-          counterparty: rawCandidate.counterparty,
-          action: rawCandidate.action,
-          object: rawCandidate.object,
-          summary: rawCandidate.summary,
-          explicitDueDate: rawCandidate.explicitDueDate,
-          triggerEvent: rawCandidate.triggerEvent,
-          referenceDateLabel: rawCandidate.referenceDateLabel,
-          offsetValue: rawCandidate.offsetValue,
-          offsetUnit: rawCandidate.offsetUnit,
-          offsetDirection: rawCandidate.offsetDirection,
-          frequency: rawCandidate.frequency,
-          duration: rawCandidate.duration,
-          referencedTerms: rawCandidate.referencedTerms,
-          crossReferences: rawCandidate.crossReferences,
-          verifiedEvidenceSpans: normalizedEvidence.verifiedEvidenceSpans,
-          confidence: rawCandidate.confidence,
-          reviewStatus: reviewStatus({
-            candidate,
+          const responsibleParty = resolveParty(
+            candidate.responsibleParty,
+            input.context,
+            input.sourceIndex,
+          );
+          const counterparty = candidate.counterparty
+            ? resolveParty(candidate.counterparty, input.context, input.sourceIndex)
+            : null;
+          const crossReferences = supportedCrossReferences(candidate, window, input.context);
+          const candidateForReview = { crossReferences };
+          const reviewReasons = [
+            ...candidate.reviewReasons,
+            ...normalizedEvidence.reviewReasons,
+            ...responsibleParty.reviewReasons,
+            ...(counterparty?.reviewReasons ?? []),
+            ...crossReferenceNeedsReview(candidateForReview, input.context),
+            ...(candidate.confidence < this.config.lowConfidenceThreshold
+              ? ["Candidate confidence is below review threshold"]
+              : []),
+          ];
+          const rawCandidate: RawObligationCandidate = {
+            ...candidate,
+            responsibleParty: responsibleParty.party,
+            counterparty: counterparty?.party ?? null,
+            referencedTerms: [...candidate.referencedTerms],
+            crossReferences,
+            evidenceSpans: normalizedEvidence.evidenceSpans,
+            reviewRequired: candidate.reviewRequired || reviewReasons.length > 0,
             reviewReasons,
-            lowConfidenceThreshold: this.config.lowConfidenceThreshold,
-          }),
-          reviewReasons,
-          stableCandidateKey: stableCandidateKey(window, candidate),
-        };
+          };
+          const verifiedCandidate: VerifiedObligationCandidate = {
+            businessType: rawCandidate.businessType,
+            timingType: rawCandidate.timingType,
+            responsibleParty: rawCandidate.responsibleParty,
+            counterparty: rawCandidate.counterparty,
+            action: rawCandidate.action,
+            object: rawCandidate.object,
+            summary: rawCandidate.summary,
+            explicitDueDate: rawCandidate.explicitDueDate,
+            triggerEvent: rawCandidate.triggerEvent,
+            referenceDateLabel: rawCandidate.referenceDateLabel,
+            offsetValue: rawCandidate.offsetValue,
+            offsetUnit: rawCandidate.offsetUnit,
+            offsetDirection: rawCandidate.offsetDirection,
+            frequency: rawCandidate.frequency,
+            duration: rawCandidate.duration,
+            referencedTerms: rawCandidate.referencedTerms,
+            crossReferences: rawCandidate.crossReferences,
+            verifiedEvidenceSpans: normalizedEvidence.verifiedEvidenceSpans,
+            confidence: rawCandidate.confidence,
+            reviewStatus: reviewStatus({
+              candidate,
+              reviewReasons,
+              lowConfidenceThreshold: this.config.lowConfidenceThreshold,
+            }),
+            reviewReasons,
+            stableCandidateKey: stableCandidateKey(window, candidate),
+          };
 
-        rawCandidates.push(rawCandidate);
-        verifiedCandidates.push(verifiedCandidate);
-      }
+          rawCandidates.push(rawCandidate);
+          verifiedCandidates.push(verifiedCandidate);
+        }
       }
 
       const missingWindowIds = batch.windows
@@ -1020,6 +1196,12 @@ export class ObligationCandidateExtractor {
     };
   }
 
+  /**
+   * @description Implements the render batch prompt method for this service or adapter.
+   * @param {CandidateWindowBatch} batch - Input value for batch.
+   * @param {RelevantContextSelection} relevantContext - Input value for relevant context.
+   * @returns {string} Result of the render batch prompt operation.
+   */
   private renderBatchPrompt(
     batch: CandidateWindowBatch,
     relevantContext: RelevantContextSelection,
@@ -1068,7 +1250,7 @@ export class ObligationCandidateExtractor {
         "10. For recurring payment duties, capture frequency, trigger event, offset value/unit/direction, and the payment object as the distinguishing subject.",
       ].join("\n"),
       "",
-      "Return JSON only with shape: { \"windowResults\": [{ \"windowId\": string, \"obligations\": [] }] }.",
+      'Return JSON only with shape: { "windowResults": [{ "windowId": string, "obligations": [] }] }.',
     ].join("\n");
   }
 }

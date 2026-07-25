@@ -1,6 +1,14 @@
+/**
+ * @file Defines backend runtime configuration and environment helpers.
+ */
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 
+/**
+ * @description Performs the find dot env file helper operation for this module.
+ * @param {string} startDirectory - Input value for start directory.
+ * @returns {string | null} Result of the find dot env file operation.
+ */
 function findDotEnvFile(startDirectory: string): string | null {
   let current = resolve(startDirectory);
 
@@ -20,6 +28,11 @@ function findDotEnvFile(startDirectory: string): string | null {
   return null;
 }
 
+/**
+ * @description Performs the load dot env file helper operation for this module.
+ * @param {unknown} startDirectory - Input value for start directory.
+ * @returns {void} Result of the load dot env file operation.
+ */
 export function loadDotEnvFile(startDirectory = process.cwd()): void {
   const envFile = findDotEnvFile(startDirectory);
   if (!envFile) {

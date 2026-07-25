@@ -29,5 +29,6 @@ reports/kpi/*.json
 reports/kpi/*.csv
 reports/kpi/*.html
 dev-output/
+outputs/
 datasets/contracts/*
 !datasets/contracts/README.md

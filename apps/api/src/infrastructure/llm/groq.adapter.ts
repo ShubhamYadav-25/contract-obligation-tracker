@@ -1,3 +1,6 @@
+/**
+ * @file Defines LLM infrastructure clients and structured response helpers.
+ */
 import { ExternalServiceError } from "../../shared/errors/external-service-error.js";
 import type { LlmProvider, LlmStructuredRequest, LlmStructuredResponse } from "./llm-provider.js";
 
@@ -17,6 +20,11 @@ type GroqErrorPayload = {
   };
 };
 
+/**
+ * @description Performs the safe parse json helper operation for this module.
+ * @param {string} text - Input value for text.
+ * @returns {unknown} Result of the safe parse json operation.
+ */
 function safeParseJson(text: string): unknown {
   try {
     return JSON.parse(text);
@@ -25,6 +33,11 @@ function safeParseJson(text: string): unknown {
   }
 }
 
+/**
+ * @description Performs the extract choice text helper operation for this module.
+ * @param {unknown} payload - Input value for payload.
+ * @returns {string} Result of the extract choice text operation.
+ */
 function extractChoiceText(payload: unknown): string {
   const choices = (payload as { choices?: unknown[] }).choices;
   const firstChoice = choices?.[0] as { message?: { content?: unknown } } | undefined;
@@ -40,6 +53,11 @@ export class GroqLlmAdapter implements LlmProvider {
   private readonly temperature: number;
   private readonly maxTokens: number;
 
+  /**
+   * @description Implements the constructor method for this service or adapter.
+   * @param {GroqLlmAdapterConfig} config - Input value for config.
+   * @returns {unknown} Result of the constructor operation.
+   */
   constructor(config: GroqLlmAdapterConfig) {
     this.apiKey = config.apiKey;
     this.defaultModel = config.defaultModel;
@@ -48,6 +66,12 @@ export class GroqLlmAdapter implements LlmProvider {
     this.maxTokens = config.maxTokens;
   }
 
+  /**
+   * @description Implements the generate structured method for this service or adapter.
+   * @param {LlmStructuredRequest} input - Input value for input.
+   * @returns {Promise<LlmStructuredResponse>} Result of the generate structured operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   async generateStructured(input: LlmStructuredRequest): Promise<LlmStructuredResponse> {
     if (!this.apiKey) {
       throw new ExternalServiceError("Groq API key is required for structured generation", {

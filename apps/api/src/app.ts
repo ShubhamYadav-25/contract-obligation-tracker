@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend API application entrypoint or server composition code.
+ */
 import cors from "cors";
 import express from "express";
 
@@ -7,6 +10,10 @@ import { errorMiddleware } from "./shared/middleware/error.middleware.js";
 import { notFoundMiddleware } from "./shared/middleware/not-found.middleware.js";
 import { requestCorrelationMiddleware } from "./shared/middleware/request-correlation.middleware.js";
 
+/**
+ * @description Executes the create app operation used by the application workflow.
+ * @returns {express.Express} Result of the create app operation.
+ */
 export function createApp(): express.Express {
   const app = express();
 

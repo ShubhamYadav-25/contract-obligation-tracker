@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend review module contracts, services, routes, or persistence logic.
+ */
 export type ReviewDecision = "APPROVE" | "REJECT";
 
 export interface ReviewActor {

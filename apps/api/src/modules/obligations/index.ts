@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend obligations module contracts, services, routes, or persistence logic.
+ */
 export {
   assertObligationTransition,
   canTransitionObligation,

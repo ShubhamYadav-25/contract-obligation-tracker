@@ -1,3 +1,6 @@
+/**
+ * @file Contains automated tests that verify contract tracker behavior.
+ */
 import { describe, expect, it } from "vitest";
 
 import {
@@ -10,6 +13,10 @@ import {
   type VerifiedObligationCandidate,
 } from "../../src/modules/extraction/reference-aware/index.js";
 
+/**
+ * @description Performs the source index helper operation for this module.
+ * @returns {ContractSourceIndex} Result of the source index operation.
+ */
 function sourceIndex(): ContractSourceIndex {
   const lines: readonly ContractSourceLineInput[] = [
     {
@@ -105,6 +112,13 @@ function sourceIndex(): ContractSourceIndex {
   return new ContractSourceIndex(lines);
 }
 
+/**
+ * @description Performs the window for helper operation for this module.
+ * @param {ContractSourceIndex} index - Input value for index.
+ * @param {{ readonly id: string; readonly start: number; readonly end: number }} input - Input value for input.
+ * @returns {DetectedCandidateWindow} Result of the window for operation.
+ * @throws {Error} When validation, I/O, or downstream service operations fail.
+ */
 function windowFor(
   index: ContractSourceIndex,
   input: { readonly id: string; readonly start: number; readonly end: number },
@@ -138,6 +152,11 @@ function windowFor(
   };
 }
 
+/**
+ * @description Performs the customer party helper operation for this module.
+ * @param {Partial<VerifiedObligationCandidate["responsibleParty"]>} overrides - Input value for overrides.
+ * @returns {unknown} Result of the customer party operation.
+ */
 function customerParty(overrides: Partial<VerifiedObligationCandidate["responsibleParty"]> = {}) {
   return {
     explicitText: "Customer",
@@ -151,6 +170,11 @@ function customerParty(overrides: Partial<VerifiedObligationCandidate["responsib
   } satisfies VerifiedObligationCandidate["responsibleParty"];
 }
 
+/**
+ * @description Performs the candidate helper operation for this module.
+ * @param {Partial<VerifiedObligationCandidate>} overrides - Input value for overrides.
+ * @returns {VerifiedObligationCandidate} Result of the candidate operation.
+ */
 function candidate(
   overrides: Partial<VerifiedObligationCandidate> = {},
 ): VerifiedObligationCandidate {
@@ -209,9 +233,18 @@ function candidate(
   };
 }
 
+/**
+ * @description Performs the verify helper operation for this module.
+ * @param {ContractSourceIndex} index - Input value for index.
+ * @param {readonly { readonly candidate: VerifiedObligationCandidate; readonly window: DetectedCandidateWindow }[]} items - Input value for items.
+ * @returns {unknown} Result of the verify operation.
+ */
 function verify(
   index: ContractSourceIndex,
-  items: readonly { readonly candidate: VerifiedObligationCandidate; readonly window: DetectedCandidateWindow }[],
+  items: readonly {
+    readonly candidate: VerifiedObligationCandidate;
+    readonly window: DetectedCandidateWindow;
+  }[],
 ) {
   return new ObligationSourceVerifier({ confidenceThreshold: 0.7 }).verify({
     sourceIndex: index,
@@ -233,10 +266,7 @@ describe("ObligationSourceVerifier", () => {
 
     expect(result.confirmed).toHaveLength(2);
     expect(deduplicated).toHaveLength(1);
-    expect(deduplicated[0]?.sourceCandidateKeys).toEqual([
-      "candidate_first",
-      "candidate_second",
-    ]);
+    expect(deduplicated[0]?.sourceCandidateKeys).toEqual(["candidate_first", "candidate_second"]);
   });
 
   it("deduplicates identical line span and actor candidates", () => {
@@ -691,7 +721,9 @@ describe("ObligationSourceVerifier", () => {
             explicitText: "Provider",
             roleLabel: "Provider",
             canonicalName: "Acme Network Corporation",
-            supportingEvidence: [{ pageNumber: 2, startLine: 1, endLine: 1, evidenceRole: "ACTOR" }],
+            supportingEvidence: [
+              { pageNumber: 2, startLine: 1, endLine: 1, evidenceRole: "ACTOR" },
+            ],
           }),
           action: "deliver",
           object: "monthly reports",
@@ -741,6 +773,10 @@ describe("ObligationSourceVerifier", () => {
       { candidate: candidate({ stableCandidateKey: "candidate_b" }), window: paymentWindow },
     ];
 
+    /**
+     * @description Performs the run helper operation for this module.
+     * @returns {unknown} Result of the run operation.
+     */
     const run = () => {
       const verified = verify(index, input);
       const deduplicated = new ObligationDeduplicator().deduplicate(verified.verified);

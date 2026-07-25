@@ -1,3 +1,6 @@
+/**
+ * @file Defines frontend API client calls for a contract tracker feature.
+ */
 import { z } from "zod";
 
 import { apiRequest } from "@/services/api-client.js";
@@ -33,6 +36,12 @@ export const processingStatusResponseSchema = z.object({
 
 export type ProcessingStatusResponse = z.infer<typeof processingStatusResponseSchema>;
 
+/**
+ * @description Executes the get processing status operation used by the application workflow.
+ * @param {string} contractId - Input value for contract id.
+ * @param {AbortSignal} signal - Input value for signal.
+ * @returns {unknown} Result of the get processing status operation.
+ */
 export function getProcessingStatus(contractId: string, signal?: AbortSignal) {
   return apiRequest(`/api/v1/contracts/${contractId}/processing-status`, {
     signal,

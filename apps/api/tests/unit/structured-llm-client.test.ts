@@ -1,3 +1,6 @@
+/**
+ * @file Contains automated tests that verify contract tracker behavior.
+ */
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
@@ -25,6 +28,10 @@ const validator = z.object({
   ok: z.boolean(),
 });
 
+/**
+ * @description Performs the logger helper operation for this module.
+ * @returns {Logger} Result of the logger operation.
+ */
 function logger(): Logger {
   return {
     info: vi.fn(),
@@ -33,7 +40,14 @@ function logger(): Logger {
   };
 }
 
-function env(overrides: Partial<ConstructorParameters<typeof GeminiStructuredLlmClient>[0]["env"]> = {}) {
+/**
+ * @description Performs the env helper operation for this module.
+ * @param {Partial<ConstructorParameters<typeof GeminiStructuredLlmClient>[0]["env"]>} overrides - Input value for overrides.
+ * @returns {unknown} Result of the env operation.
+ */
+function env(
+  overrides: Partial<ConstructorParameters<typeof GeminiStructuredLlmClient>[0]["env"]> = {},
+) {
   return {
     GEMINI_API_KEY: "test-gemini-key",
     GEMINI_MODEL: undefined,
@@ -48,6 +62,11 @@ function env(overrides: Partial<ConstructorParameters<typeof GeminiStructuredLlm
   };
 }
 
+/**
+ * @description Performs the setup gemini helper operation for this module.
+ * @param {{ readonly listModels?: ReturnType<typeof vi.fn>; readonly generateContent?: ReturnType<typeof vi.fn>; readonly overrideEnv?: Partial<ConstructorParameters<typeof GeminiStructuredLlmClient>[0]["env"]>; readonly modelCandidates?: readonly string[]; }} input - Input value for input.
+ * @returns {unknown} Result of the setup gemini operation.
+ */
 function setupGemini(input: {
   readonly listModels?: ReturnType<typeof vi.fn>;
   readonly generateContent?: ReturnType<typeof vi.fn>;
@@ -75,6 +94,11 @@ function setupGemini(input: {
         })),
     };
 
+    /**
+     * @description Implements the constructor method for this service or adapter.
+     * @param {unknown} config - Input value for config.
+     * @returns {unknown} Result of the constructor operation.
+     */
     constructor(config: unknown) {
       constructorCalls.push(config);
     }
@@ -186,9 +210,7 @@ describe("Gemini model discovery", () => {
   });
 
   it("normalizes optional models/ prefixes", () => {
-    expect(normalizeGeminiModelName("models/gemini-3.5-flash-lite")).toBe(
-      "gemini-3.5-flash-lite",
-    );
+    expect(normalizeGeminiModelName("models/gemini-3.5-flash-lite")).toBe("gemini-3.5-flash-lite");
   });
 
   it("selects the first successful default candidate when GEMINI_MODEL is absent", async () => {
@@ -209,10 +231,7 @@ describe("Gemini model discovery", () => {
       modelCandidates: ["gemini-3.1-flash-lite", "gemini-2.5-flash-lite"],
     });
 
-    expect(client.getCandidateModels()).toEqual([
-      "gemini-3.1-flash-lite",
-      "gemini-2.5-flash-lite",
-    ]);
+    expect(client.getCandidateModels()).toEqual(["gemini-3.1-flash-lite", "gemini-2.5-flash-lite"]);
     await expect(client.selectUsableModel()).resolves.toMatchObject({
       selectedModel: "gemini-3.1-flash-lite",
       selectionSource: "CONFIGURED_MODEL",
@@ -234,7 +253,9 @@ describe("Gemini model discovery", () => {
     const authList = vi.fn(async () => {
       throw { status: 400, message: "API_KEY_INVALID" };
     });
-    await expect(setupGemini({ listModels: authList }).client.selectUsableModel()).rejects.toMatchObject({
+    await expect(
+      setupGemini({ listModels: authList }).client.selectUsableModel(),
+    ).rejects.toMatchObject({
       details: expect.objectContaining({ status: 400 }),
     });
 
@@ -290,9 +311,11 @@ describe("Gemini model discovery", () => {
       throw { status: 400, message: "API_KEY_INVALID" };
     });
 
-    await expect(setupGemini({ generateContent }).client.selectUsableModel()).rejects.toMatchObject({
-      details: expect.objectContaining({ status: 400 }),
-    });
+    await expect(setupGemini({ generateContent }).client.selectUsableModel()).rejects.toMatchObject(
+      {
+        details: expect.objectContaining({ status: 400 }),
+      },
+    );
     expect(generateContent).toHaveBeenCalledTimes(1);
   });
 
@@ -330,12 +353,14 @@ describe("Gemini model discovery", () => {
       };
     });
 
-    await expect(setupGemini({ generateContent }).client.selectUsableModel()).rejects.toMatchObject({
-      message: "DAILY_QUOTA_EXHAUSTED",
-      details: expect.objectContaining({
-        quota: expect.objectContaining({ category: "REQUESTS_PER_DAY" }),
-      }),
-    });
+    await expect(setupGemini({ generateContent }).client.selectUsableModel()).rejects.toMatchObject(
+      {
+        message: "DAILY_QUOTA_EXHAUSTED",
+        details: expect.objectContaining({
+          quota: expect.objectContaining({ category: "REQUESTS_PER_DAY" }),
+        }),
+      },
+    );
     expect(generateContent).toHaveBeenCalledTimes(1);
   });
 
@@ -381,6 +406,11 @@ describe("Gemini model discovery", () => {
         generateContent,
       };
 
+      /**
+       * @description Implements the constructor method for this service or adapter.
+       * @param {unknown} _config - Input value for config.
+       * @returns {unknown} Result of the constructor operation.
+       */
       constructor(_config: unknown) {}
     }
     const client = new GeminiStructuredLlmClient({
@@ -439,7 +469,11 @@ describe("Gemini model discovery", () => {
     const generateContent = vi.fn(async () => {
       throw { status: 400, message: "API_KEY_INVALID test-gemini-key" };
     });
-    const { client, constructorCalls, logger: testLogger } = setupGemini({
+    const {
+      client,
+      constructorCalls,
+      logger: testLogger,
+    } = setupGemini({
       generateContent,
       overrideEnv: { GOOGLE_API_KEY: "google-key" },
     });

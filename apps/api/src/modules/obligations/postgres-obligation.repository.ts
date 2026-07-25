@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend obligations module contracts, services, routes, or persistence logic.
+ */
 import type {
   TransactionContext,
   TransactionManager,
@@ -56,10 +59,20 @@ const emptyStatusCounts: ObligationStatusCounts = {
   MISSED: 0,
 };
 
+/**
+ * @description Performs the to date helper operation for this module.
+ * @param {Date | string} value - Input value for value.
+ * @returns {Date} Result of the to date operation.
+ */
 function toDate(value: Date | string): Date {
   return value instanceof Date ? value : new Date(value);
 }
 
+/**
+ * @description Performs the map obligation helper operation for this module.
+ * @param {ObligationRow} row - Input value for row.
+ * @returns {ObligationRecord} Result of the map obligation operation.
+ */
 function mapObligation(row: ObligationRow): ObligationRecord {
   const primaryAnchor = primaryAnchorFromAnchors(row.anchors);
   const timing = recordFromUnknown(primaryAnchor?.timing);
@@ -126,25 +139,50 @@ function mapObligation(row: ObligationRow): ObligationRecord {
   };
 }
 
+/**
+ * @description Performs the record from unknown helper operation for this module.
+ * @param {unknown} value - Input value for value.
+ * @returns {Record<string, unknown> | null} Result of the record from unknown operation.
+ */
 function recordFromUnknown(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : null;
 }
 
+/**
+ * @description Performs the string from unknown helper operation for this module.
+ * @param {unknown} value - Input value for value.
+ * @returns {string | undefined} Result of the string from unknown operation.
+ */
 function stringFromUnknown(value: unknown): string | undefined {
   return typeof value === "string" && value.trim().length > 0 ? value : undefined;
 }
 
+/**
+ * @description Performs the number from unknown helper operation for this module.
+ * @param {unknown} value - Input value for value.
+ * @returns {number | undefined} Result of the number from unknown operation.
+ */
 function numberFromUnknown(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
+/**
+ * @description Performs the normalized number helper operation for this module.
+ * @param {unknown} value - Input value for value.
+ * @returns {number | null} Result of the normalized number operation.
+ */
 function normalizedNumber(value: unknown): number | null {
   if (typeof value !== "number" || !Number.isFinite(value)) return null;
   return Math.max(0, Math.min(1, value));
 }
 
+/**
+ * @description Performs the box from unknown helper operation for this module.
+ * @param {unknown} value - Input value for value.
+ * @returns {ObligationSourceBox | null} Result of the box from unknown operation.
+ */
 function boxFromUnknown(value: unknown): ObligationSourceBox | null {
   if (!value || typeof value !== "object") return null;
   const box = value as {
@@ -161,6 +199,11 @@ function boxFromUnknown(value: unknown): ObligationSourceBox | null {
   return { x, y, width, height };
 }
 
+/**
+ * @description Performs the fallback box from line offset helper operation for this module.
+ * @param {number} lineOffset - Input value for line offset.
+ * @returns {ObligationSourceBox} Result of the fallback box from line offset operation.
+ */
 function fallbackBoxFromLineOffset(lineOffset: number): ObligationSourceBox {
   const estimatedY = Math.max(0.05, Math.min(0.92, 0.08 + lineOffset * 0.024));
   return {
@@ -171,10 +214,21 @@ function fallbackBoxFromLineOffset(lineOffset: number): ObligationSourceBox {
   };
 }
 
+/**
+ * @description Performs the primary anchor from anchors helper operation for this module.
+ * @param {unknown} anchors - Input value for anchors.
+ * @returns {Record<string, unknown> | null} Result of the primary anchor from anchors operation.
+ */
 function primaryAnchorFromAnchors(anchors: unknown): Record<string, unknown> | null {
   return Array.isArray(anchors) ? (recordFromUnknown(anchors[0]) ?? null) : null;
 }
 
+/**
+ * @description Performs the source anchors from anchors helper operation for this module.
+ * @param {unknown} anchors - Input value for anchors.
+ * @param {string | undefined} documentId - Input value for document id.
+ * @returns {readonly ObligationSourceAnchor[]} Result of the source anchors from anchors operation.
+ */
 function sourceAnchorsFromAnchors(
   anchors: unknown,
   documentId: string | undefined,
@@ -297,6 +351,11 @@ function sourceAnchorsFromAnchors(
   return dedupeSourceAnchors(mapped);
 }
 
+/**
+ * @description Performs the dedupe source anchors helper operation for this module.
+ * @param {readonly ObligationSourceAnchor[]} anchors - Input value for anchors.
+ * @returns {readonly ObligationSourceAnchor[]} Result of the dedupe source anchors operation.
+ */
 function dedupeSourceAnchors(
   anchors: readonly ObligationSourceAnchor[],
 ): readonly ObligationSourceAnchor[] {
@@ -320,6 +379,12 @@ function dedupeSourceAnchors(
   return deduped;
 }
 
+/**
+ * @description Performs the source text from anchors helper operation for this module.
+ * @param {unknown} anchors - Input value for anchors.
+ * @param {string} fallback - Input value for fallback.
+ * @returns {string} Result of the source text from anchors operation.
+ */
 function sourceTextFromAnchors(anchors: unknown, fallback: string): string {
   if (!Array.isArray(anchors)) return fallback;
 
@@ -336,6 +401,11 @@ function sourceTextFromAnchors(anchors: unknown, fallback: string): string {
   return quotedText.length > 0 ? quotedText.join("\n") : fallback;
 }
 
+/**
+ * @description Performs the map transition history helper operation for this module.
+ * @param {readonly ObligationTransitionHistoryRow[]} rows - Input value for rows.
+ * @returns {readonly ObligationTransitionHistoryRecord[]} Result of the map transition history operation.
+ */
 function mapTransitionHistory(
   rows: readonly ObligationTransitionHistoryRow[],
 ): readonly ObligationTransitionHistoryRecord[] {
@@ -347,6 +417,11 @@ function mapTransitionHistory(
   }));
 }
 
+/**
+ * @description Performs the map status counts helper operation for this module.
+ * @param {readonly ObligationCountRow[]} rows - Input value for rows.
+ * @returns {ObligationStatusCounts} Result of the map status counts operation.
+ */
 function mapStatusCounts(rows: readonly ObligationCountRow[]): ObligationStatusCounts {
   const counts = { ...emptyStatusCounts };
   for (const row of rows) {
@@ -355,6 +430,12 @@ function mapStatusCounts(rows: readonly ObligationCountRow[]): ObligationStatusC
   return counts;
 }
 
+/**
+ * @description Performs the has editable field helper operation for this module.
+ * @param {ObligationEditableFields} fields - Input value for fields.
+ * @param {Key} key - Input value for key.
+ * @returns {fields is ObligationEditableFields & Required<Pick<ObligationEditableFields, Key>>} Result of the has editable field operation.
+ */
 function hasEditableField<Key extends keyof ObligationEditableFields>(
   fields: ObligationEditableFields,
   key: Key,
@@ -362,12 +443,25 @@ function hasEditableField<Key extends keyof ObligationEditableFields>(
   return Object.prototype.hasOwnProperty.call(fields, key);
 }
 
+/**
+ * @description Performs the clone anchor record helper operation for this module.
+ * @param {unknown} value - Input value for value.
+ * @returns {Record<string, unknown>} Result of the clone anchor record operation.
+ */
 function cloneAnchorRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value)
     ? { ...(value as Record<string, unknown>) }
     : {};
 }
 
+/**
+ * @description Performs the set nullable string field helper operation for this module.
+ * @param {Record<string, unknown>} anchor - Input value for anchor.
+ * @param {ObligationEditableFields} fields - Input value for fields.
+ * @param {keyof ObligationEditableFields} key - Input value for key.
+ * @param {string} anchorKey - Input value for anchor key.
+ * @returns {void} Result of the set nullable string field operation.
+ */
 function setNullableStringField(
   anchor: Record<string, unknown>,
   fields: ObligationEditableFields,
@@ -379,6 +473,12 @@ function setNullableStringField(
   anchor[anchorKey] = typeof value === "string" ? value : null;
 }
 
+/**
+ * @description Executes the update timing anchor fields operation used by the application workflow.
+ * @param {Record<string, unknown>} anchor - Input value for anchor.
+ * @param {ObligationEditableFields} fields - Input value for fields.
+ * @returns {void} Result of the update timing anchor fields operation.
+ */
 function updateTimingAnchorFields(
   anchor: Record<string, unknown>,
   fields: ObligationEditableFields,
@@ -401,6 +501,12 @@ function updateTimingAnchorFields(
   anchor.timing = timing;
 }
 
+/**
+ * @description Executes the update confidence anchor fields operation used by the application workflow.
+ * @param {Record<string, unknown>} anchor - Input value for anchor.
+ * @param {ObligationEditableFields} fields - Input value for fields.
+ * @returns {void} Result of the update confidence anchor fields operation.
+ */
 function updateConfidenceAnchorFields(
   anchor: Record<string, unknown>,
   fields: ObligationEditableFields,
@@ -411,6 +517,12 @@ function updateConfidenceAnchorFields(
   anchor.confidence = confidence;
 }
 
+/**
+ * @description Executes the update anchor metadata operation used by the application workflow.
+ * @param {unknown} anchors - Input value for anchors.
+ * @param {ObligationEditableFields} fields - Input value for fields.
+ * @returns {readonly Record<string, unknown>[]} Result of the update anchor metadata operation.
+ */
 function updateAnchorMetadata(
   anchors: unknown,
   fields: ObligationEditableFields,
@@ -432,8 +544,18 @@ function updateAnchorMetadata(
 }
 
 export class PostgresObligationRepository implements ObligationRepository {
+  /**
+   * @description Implements the constructor method for this service or adapter.
+   * @param {TransactionManager} transactions - Input value for transactions.
+   * @returns {unknown} Result of the constructor operation.
+   */
   constructor(private readonly transactions: TransactionManager) {}
 
+  /**
+   * @description Executes the list by organization operation used by the application workflow.
+   * @param {{ readonly organizationId: string; readonly contractId?: string; readonly search?: string; readonly status?: ObligationStatus; readonly reminderStatus?: ObligationReminderFilter; readonly dueDateRange?: ObligationDueDateRangeFilter; readonly limit: number; readonly offset: number; }} input - Input value for input.
+   * @returns {Promise<ListObligationsResult>} Result of the list by organization operation.
+   */
   async listByOrganization(input: {
     readonly organizationId: string;
     readonly contractId?: string;
@@ -578,6 +700,11 @@ export class PostgresObligationRepository implements ObligationRepository {
     });
   }
 
+  /**
+   * @description Implements the find by id method for this service or adapter.
+   * @param {string} id - Input value for id.
+   * @returns {Promise<ObligationRecord | null>} Result of the find by id operation.
+   */
   async findById(id: string): Promise<ObligationRecord | null> {
     return this.transactions.inTransaction(async ({ client }) => {
       const result = await client.query<ObligationRow>(
@@ -596,6 +723,11 @@ export class PostgresObligationRepository implements ObligationRepository {
     });
   }
 
+  /**
+   * @description Implements the find detail by organization and id method for this service or adapter.
+   * @param {{ readonly organizationId: string; readonly obligationId: string; }} input - Input value for input.
+   * @returns {Promise<ObligationDetailRecord | null>} Result of the find detail by organization and id operation.
+   */
   async findDetailByOrganizationAndId(input: {
     readonly organizationId: string;
     readonly obligationId: string;
@@ -646,6 +778,12 @@ export class PostgresObligationRepository implements ObligationRepository {
     });
   }
 
+  /**
+   * @description Executes the update editable fields operation used by the application workflow.
+   * @param {{ readonly organizationId: string; readonly obligationId: string; readonly expectedVersion: number; readonly fields: ObligationEditableFields; }} input - Input value for input.
+   * @returns {Promise<ObligationRecord>} Result of the update editable fields operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   async updateEditableFields(input: {
     readonly organizationId: string;
     readonly obligationId: string;
@@ -742,6 +880,12 @@ export class PostgresObligationRepository implements ObligationRepository {
     });
   }
 
+  /**
+   * @description Executes the update status operation used by the application workflow.
+   * @param {{ readonly id: string; readonly fromStatus: ObligationStatus; readonly toStatus: ObligationStatus; readonly expectedVersion: number; }} input - Input value for input.
+   * @returns {Promise<ObligationRecord>} Result of the update status operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   async updateStatus(input: {
     readonly id: string;
     readonly fromStatus: ObligationStatus;
@@ -783,6 +927,12 @@ export class PostgresObligationRepository implements ObligationRepository {
     });
   }
 
+  /**
+   * @description Implements the upsert extracted for contract method for this service or adapter.
+   * @param {{ readonly contractId: string; readonly obligations: readonly ExtractedObligationInput[]; }} input - Input value for input.
+   * @param {TransactionContext} transaction - Input value for transaction.
+   * @returns {Promise<readonly ObligationRecord[]>} Result of the upsert extracted for contract operation.
+   */
   async upsertExtractedForContract(
     input: {
       readonly contractId: string;

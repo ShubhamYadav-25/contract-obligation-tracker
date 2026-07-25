@@ -1,3 +1,6 @@
+/**
+ * @file Defines PDF validation, text extraction, and rendering infrastructure.
+ */
 import type {
   DocumentExtractionInput,
   DocumentTextExtractor,
@@ -59,6 +62,11 @@ interface PdfJsModule {
   }): PdfLoadingTask;
 }
 
+/**
+ * @description Performs the is text item helper operation for this module.
+ * @param {unknown} item - Input value for item.
+ * @returns {item is PdfTextItem} Result of the is text item operation.
+ */
 function isTextItem(item: unknown): item is PdfTextItem {
   return (
     typeof item === "object" &&
@@ -74,6 +82,11 @@ function isTextItem(item: unknown): item is PdfTextItem {
   );
 }
 
+/**
+ * @description Performs the text items to lines helper operation for this module.
+ * @param {readonly PdfTextItem[]} items - Input value for items.
+ * @returns {string} Result of the text items to lines operation.
+ */
 function textItemsToLines(items: readonly PdfTextItem[]): string {
   const sortedItems = [...items].sort((left, right) => {
     const leftY = left.transform[5] ?? 0;
@@ -103,6 +116,12 @@ function textItemsToLines(items: readonly PdfTextItem[]): string {
 }
 
 export class NativePdfTextExtractorAdapter implements DocumentTextExtractor {
+  /**
+   * @description Implements the extract method for this service or adapter.
+   * @param {DocumentExtractionInput} input - Input value for input.
+   * @returns {Promise<ParsedDocument>} Result of the extract operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   async extract(input: DocumentExtractionInput): Promise<ParsedDocument> {
     if (!isProbablyPdf(input.fileBytes)) {
       throw new ExternalServiceError("Input is not a valid PDF");

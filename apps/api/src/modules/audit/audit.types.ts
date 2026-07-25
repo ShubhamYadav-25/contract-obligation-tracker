@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend audit module contracts, services, routes, or persistence logic.
+ */
 export interface AuditActor {
   readonly id: string;
   readonly type: "USER" | "SYSTEM";

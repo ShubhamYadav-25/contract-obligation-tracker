@@ -1,3 +1,6 @@
+/**
+ * @file Defines API bootstrap wiring for routes, workers, schedulers, or shutdown handling.
+ */
 import type { Logger } from "../config/logger.js";
 import { createJobConfig } from "../config/jobs.js";
 import { createSchedulerConfig } from "../config/scheduler.js";
@@ -19,6 +22,11 @@ export interface SchedulerRuntime extends SchedulerRegistry {
   runOnce(): Promise<number>;
 }
 
+/**
+ * @description Executes the create reminder scheduler runtime operation used by the application workflow.
+ * @param {{ readonly logger: Logger; }} { logger, } - Input value for { logger, }.
+ * @returns {SchedulerRuntime} Result of the create reminder scheduler runtime operation.
+ */
 export function createReminderSchedulerRuntime({
   logger,
 }: {
@@ -37,13 +45,21 @@ export function createReminderSchedulerRuntime({
   const names = ["REMINDER_SCHEDULER"] as const;
   let timer: NodeJS.Timeout | undefined;
 
+  /**
+   * @description Performs the poll helper operation for this module.
+   * @returns {Promise<number>} Result of the poll operation.
+   */
   async function poll(): Promise<number> {
     return poller.pollDueReminders(jobConfig.batchSize);
   }
 
   return {
     names,
-    start() {
+
+    /**
+     * @description Implements the start method for this service or adapter.
+     * @returns {unknown} Result of the start operation.
+     */ start() {
       void poll().catch((error: unknown) => {
         logger.error("reminder_scheduler_failed", {
           message: error instanceof Error ? error.message : String(error),
@@ -59,7 +75,11 @@ export function createReminderSchedulerRuntime({
       logger.info("schedulers_registered", { schedulers: names });
     },
     runOnce: poll,
-    async close() {
+
+    /**
+     * @description Implements the close method for this service or adapter.
+     * @returns {Promise<unknown>} Result of the close operation.
+     */ async close() {
       if (timer) {
         clearInterval(timer);
       }
@@ -69,6 +89,11 @@ export function createReminderSchedulerRuntime({
   };
 }
 
+/**
+ * @description Performs the register schedulers helper operation for this module.
+ * @param {{ readonly logger: Logger; readonly createRuntime?: (input: { readonly logger: Logger }) => SchedulerRuntime; }} { createRuntime = createReminderSchedulerRuntime, logger, } - Input value for { create runtime = create reminder scheduler runtime, logger, }.
+ * @returns {SchedulerRegistry} Result of the register schedulers operation.
+ */
 export function registerSchedulers({
   createRuntime = createReminderSchedulerRuntime,
   logger,

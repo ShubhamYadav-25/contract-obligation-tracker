@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend contracts module contracts, services, routes, or persistence logic.
+ */
 import type { Logger } from "../../config/logger.js";
 import type { TransactionManager } from "../../infrastructure/database/transaction-manager.js";
 import type { AuditRepository } from "../audit/audit.repository.js";
@@ -43,13 +46,29 @@ const terminalStatuses = new Set<ContractProcessingRunStatus>([
   "FAILED",
 ]);
 
+/**
+ * @description Performs the safe message helper operation for this module.
+ * @param {string} message - Input value for message.
+ * @returns {string} Result of the safe message operation.
+ */
 function safeMessage(message: string): string {
   return message.slice(0, 1_000);
 }
 
 export class ContractProcessingOrchestrator {
+  /**
+   * @description Implements the constructor method for this service or adapter.
+   * @param {ContractProcessingOrchestratorDependencies} dependencies - Input value for dependencies.
+   * @returns {unknown} Result of the constructor operation.
+   */
   constructor(private readonly dependencies: ContractProcessingOrchestratorDependencies) {}
 
+  /**
+   * @description Implements the process contract method for this service or adapter.
+   * @param {ProcessContractCommand} command - Input value for command.
+   * @returns {Promise<ContractProcessingOrchestrationResult>} Result of the process contract operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   async processContract(
     command: ProcessContractCommand,
   ): Promise<ContractProcessingOrchestrationResult> {

@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend obligations module contracts, services, routes, or persistence logic.
+ */
 import { Router } from "express";
 
 import { asyncRoute } from "../../shared/middleware/async-route.js";
@@ -5,6 +8,10 @@ import { ObligationController } from "./obligations.controller.js";
 import { createObligationServiceDependencies } from "./obligations.dependencies.js";
 import { requireAuthContext } from "../auth/request-context.js";
 
+/**
+ * @description Executes the create obligation router operation used by the application workflow.
+ * @returns {Router} Result of the create obligation router operation.
+ */
 export function createObligationRouter(): Router {
   const router = Router();
   const deps = createObligationServiceDependencies();

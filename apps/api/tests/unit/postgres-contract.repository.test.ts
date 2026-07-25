@@ -1,3 +1,6 @@
+/**
+ * @file Contains automated tests that verify contract tracker behavior.
+ */
 import { describe, expect, it, vi } from "vitest";
 
 import { PostgresContractDocumentRepository } from "../../src/modules/contracts/postgres-contract.repository.js";

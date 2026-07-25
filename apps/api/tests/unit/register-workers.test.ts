@@ -1,3 +1,6 @@
+/**
+ * @file Contains automated tests that verify contract tracker behavior.
+ */
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -116,9 +119,7 @@ describe("createObligationExtractor", () => {
         OBLIGATION_EXTRACTOR_MODE: "reference-aware-gemini",
         GEMINI_MODEL: "gemini-test-model",
       }),
-    ).toThrow(
-      "GEMINI_API_KEY is required when OBLIGATION_EXTRACTOR_MODE=reference-aware-gemini",
-    );
+    ).toThrow("GEMINI_API_KEY is required when OBLIGATION_EXTRACTOR_MODE=reference-aware-gemini");
     expect(() =>
       createObligationExtractor({
         env: parseEnv({

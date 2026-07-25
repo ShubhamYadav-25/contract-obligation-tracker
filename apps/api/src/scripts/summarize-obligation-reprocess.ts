@@ -1,7 +1,14 @@
+/**
+ * @file Defines a backend operational script for local maintenance or diagnostics.
+ */
 import { createDatabaseConfig } from "../config/database.js";
 import { loadEnv } from "../config/env.js";
 import { PgPoolClient } from "../infrastructure/database/postgres-client.js";
 
+/**
+ * @description Runs the main script step for local operations.
+ * @returns {Promise<void>} Result of the main operation.
+ */
 async function main(): Promise<void> {
   const database = new PgPoolClient(createDatabaseConfig(loadEnv()));
 

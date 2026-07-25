@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend reminders module contracts, services, routes, or persistence logic.
+ */
 export type ReminderStatus =
   "PENDING" | "ENQUEUED" | "PROCESSING" | "DELIVERED" | "RETRY_PENDING" | "FAILED" | "CANCELLED";
 

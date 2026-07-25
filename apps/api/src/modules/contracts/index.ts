@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend contracts module contracts, services, routes, or persistence logic.
+ */
 export {
   assertContractProcessingTransition,
   canTransitionContract,

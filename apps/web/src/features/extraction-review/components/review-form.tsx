@@ -1,3 +1,6 @@
+/**
+ * @file Defines feature-specific React UI components for the contract tracker.
+ */
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Check, X } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -8,6 +11,11 @@ import { Textarea } from "@/components/ui/textarea.js";
 import { reviewFormSchema } from "../schemas/review-form.schema.js";
 import type { ReviewFormValues } from "../schemas/review-form.schema.js";
 
+/**
+ * @description Renders the review form component for the contract tracker UI.
+ * @param {{ readonly defaultValues: ReviewFormValues; readonly disabled?: boolean; readonly onApprove: (values: ReviewFormValues) => void; readonly onReject: (reason: string) => void; }} { defaultValues, disabled = false, onApprove, onReject, } - Input value for { default values, disabled = false, on approve, on reject, }.
+ * @returns {JSX.Element} Result of the review form operation.
+ */
 export function ReviewForm({
   defaultValues,
   disabled = false,

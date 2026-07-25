@@ -1,9 +1,17 @@
+/**
+ * @file Defines backend source anchoring module contracts, services, routes, or persistence logic.
+ */
 import type {
   SourceAnchorValidationInput,
   SourceAnchorValidationResult,
 } from "./source-anchoring.types.js";
 
 export class SourceAnchorValidator {
+  /**
+   * @description Implements the validate method for this service or adapter.
+   * @param {SourceAnchorValidationInput} input - Input value for input.
+   * @returns {SourceAnchorValidationResult} Result of the validate operation.
+   */
   validate(input: SourceAnchorValidationInput): SourceAnchorValidationResult {
     const issues: string[] = [];
 

@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend contracts module contracts, services, routes, or persistence logic.
+ */
 import type { TransactionContext } from "../../infrastructure/database/transaction-manager.js";
 import type {
   ContractDocumentRecord,

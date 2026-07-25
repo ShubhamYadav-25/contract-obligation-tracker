@@ -1,3 +1,6 @@
+/**
+ * @file Defines PDF reader UI, navigation, and source highlight behavior.
+ */
 export interface PdfSourceBox {
   readonly x: number;
   readonly y: number;
@@ -23,11 +26,21 @@ export interface HighlightRect {
   readonly height: string;
 }
 
+/**
+ * @description Performs the clamp unit helper operation for this module.
+ * @param {number} value - Input value for value.
+ * @returns {number} Result of the clamp unit operation.
+ */
 function clampUnit(value: number): number {
   if (!Number.isFinite(value)) return 0;
   return Math.max(0, Math.min(1, value));
 }
 
+/**
+ * @description Performs the normalize source box helper operation for this module.
+ * @param {PdfSourceBox} box - Input value for box.
+ * @returns {PdfSourceBox} Result of the normalize source box operation.
+ */
 export function normalizeSourceBox(box: PdfSourceBox): PdfSourceBox {
   const x = clampUnit(box.x);
   const y = clampUnit(box.y);
@@ -36,6 +49,11 @@ export function normalizeSourceBox(box: PdfSourceBox): PdfSourceBox {
   return { x, y, width, height };
 }
 
+/**
+ * @description Performs the to highlight rect helper operation for this module.
+ * @param {PdfSourceBox} box - Input value for box.
+ * @returns {HighlightRect} Result of the to highlight rect operation.
+ */
 export function toHighlightRect(box: PdfSourceBox): HighlightRect {
   const normalized = normalizeSourceBox(box);
   return {
@@ -46,6 +64,11 @@ export function toHighlightRect(box: PdfSourceBox): HighlightRect {
   };
 }
 
+/**
+ * @description Performs the is pdf source navigation command helper operation for this module.
+ * @param {unknown} value - Input value for value.
+ * @returns {value is PdfSourceNavigationCommand} Result of the is pdf source navigation command operation.
+ */
 export function isPdfSourceNavigationCommand(value: unknown): value is PdfSourceNavigationCommand {
   if (!value || typeof value !== "object") return false;
   const command = value as Partial<PdfSourceNavigationCommand>;

@@ -1,3 +1,6 @@
+/**
+ * @file Defines feature-specific React UI components for the contract tracker.
+ */
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { FileSearch } from "lucide-react";
@@ -32,6 +35,11 @@ type ObligationEditFormState = {
   readonly reviewStatus: string;
 };
 
+/**
+ * @description Performs the format date input value helper operation for this module.
+ * @param {string | undefined} value - Input value for value.
+ * @returns {string} Result of the format date input value operation.
+ */
 function formatDateInputValue(value: string | undefined): string {
   if (!value) return "";
   const date = new Date(value);
@@ -39,6 +47,11 @@ function formatDateInputValue(value: string | undefined): string {
   return date.toISOString().slice(0, 10);
 }
 
+/**
+ * @description Performs the obligation to form state helper operation for this module.
+ * @param {ObligationSummary} obligation - Input value for obligation.
+ * @returns {ObligationEditFormState} Result of the obligation to form state operation.
+ */
 function obligationToFormState(obligation: ObligationSummary): ObligationEditFormState {
   return {
     title: obligation.title,
@@ -57,15 +70,31 @@ function obligationToFormState(obligation: ObligationSummary): ObligationEditFor
   };
 }
 
+/**
+ * @description Performs the nullable text helper operation for this module.
+ * @param {string} value - Input value for value.
+ * @returns {string | null} Result of the nullable text operation.
+ */
 function nullableText(value: string): string | null {
   const trimmed = value.trim();
   return trimmed ? trimmed : null;
 }
 
+/**
+ * @description Performs the due date payload helper operation for this module.
+ * @param {string} value - Input value for value.
+ * @returns {string | null} Result of the due date payload operation.
+ */
 function dueDatePayload(value: string): string | null {
   return value ? new Date(`${value}T00:00:00.000Z`).toISOString() : null;
 }
 
+/**
+ * @description Performs the anchor for evidence roles helper operation for this module.
+ * @param {ObligationSummary} obligation - Input value for obligation.
+ * @param {readonly string[]} roles - Input value for roles.
+ * @returns {ObligationSourceAnchor | undefined} Result of the anchor for evidence roles operation.
+ */
 function anchorForEvidenceRoles(
   obligation: ObligationSummary,
   roles: readonly string[],
@@ -77,6 +106,11 @@ function anchorForEvidenceRoles(
   );
 }
 
+/**
+ * @description Renders the field source button component for the contract tracker UI.
+ * @param {{ readonly anchor: ObligationSourceAnchor | undefined; readonly label: string; readonly onNavigate: (anchor: ObligationSourceAnchor) => void; }} { anchor, label, onNavigate, } - Input value for { anchor, label, on navigate, }.
+ * @returns {JSX.Element} Result of the field source button operation.
+ */
 function FieldSourceButton({
   anchor,
   label,
@@ -101,6 +135,11 @@ function FieldSourceButton({
   );
 }
 
+/**
+ * @description Renders the field label component for the contract tracker UI.
+ * @param {{ readonly anchor: ObligationSourceAnchor | undefined; readonly label: string; readonly onNavigate: (anchor: ObligationSourceAnchor) => void; }} { anchor, label, onNavigate, } - Input value for { anchor, label, on navigate, }.
+ * @returns {JSX.Element} Result of the field label operation.
+ */
 function FieldLabel({
   anchor,
   label,
@@ -118,6 +157,11 @@ function FieldLabel({
   );
 }
 
+/**
+ * @description Renders the obligation meta item component for the contract tracker UI.
+ * @param {{ readonly label: string; readonly value: string; readonly helper?: string | null; }} { label, value, helper, } - Input value for { label, value, helper, }.
+ * @returns {JSX.Element} Result of the obligation meta item operation.
+ */
 export function ObligationMetaItem({
   label,
   value,
@@ -136,6 +180,11 @@ export function ObligationMetaItem({
   );
 }
 
+/**
+ * @description Renders the obligation source chips component for the contract tracker UI.
+ * @param {{ readonly obligation: ObligationSummary }} { obligation } - Input value for { obligation }.
+ * @returns {JSX.Element} Result of the obligation source chips operation.
+ */
 export function ObligationSourceChips({ obligation }: { readonly obligation: ObligationSummary }) {
   if (obligation.sourceAnchors.length === 0) {
     return <span className="text-sm text-slate-500">No source anchors available</span>;
@@ -157,6 +206,11 @@ export function ObligationSourceChips({ obligation }: { readonly obligation: Obl
   );
 }
 
+/**
+ * @description Renders the editable obligation panel component for the contract tracker UI.
+ * @param {{ readonly obligation: ObligationSummary; readonly onNavigateSource: (anchor: ObligationSourceAnchor) => void; }} { obligation, onNavigateSource, } - Input value for { obligation, on navigate source, }.
+ * @returns {JSX.Element} Result of the editable obligation panel operation.
+ */
 export function EditableObligationPanel({
   obligation,
   onNavigateSource,
@@ -178,6 +232,12 @@ export function EditableObligationPanel({
     setForm(obligationToFormState(obligation));
   }, [obligation]);
 
+  /**
+   * @description Performs the set field helper operation for this module.
+   * @param {Key} key - Input value for key.
+   * @param {ObligationEditFormState[Key]} value - Input value for value.
+   * @returns {void} Result of the set field operation.
+   */
   function setField<Key extends keyof ObligationEditFormState>(
     key: Key,
     value: ObligationEditFormState[Key],
@@ -185,6 +245,11 @@ export function EditableObligationPanel({
     setForm((current) => ({ ...current, [key]: value }));
   }
 
+  /**
+   * @description Performs the submit helper operation for this module.
+   * @param {FormEvent<HTMLFormElement>} event - Input value for event.
+   * @returns {void} Result of the submit operation.
+   */
   function submit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
     updateObligation.mutate({

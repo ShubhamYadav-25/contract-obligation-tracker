@@ -1,3 +1,6 @@
+/**
+ * @file Defines reusable test helpers, fixtures, and mock providers.
+ */
 export interface KpiReportMetric {
   readonly name: string;
   readonly value: number;

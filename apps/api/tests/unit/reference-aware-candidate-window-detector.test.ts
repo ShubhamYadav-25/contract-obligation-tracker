@@ -1,3 +1,6 @@
+/**
+ * @file Contains automated tests that verify contract tracker behavior.
+ */
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
@@ -9,6 +12,10 @@ import {
   renderCandidateWindowForLlm,
 } from "../../src/modules/extraction/reference-aware/index.js";
 
+/**
+ * @description Performs the fixture index helper operation for this module.
+ * @returns {ContractSourceIndex} Result of the fixture index operation.
+ */
 function fixtureIndex(): ContractSourceIndex {
   const fixturePath = path.resolve(
     process.cwd(),
@@ -28,6 +35,11 @@ function fixtureIndex(): ContractSourceIndex {
   return new ContractSourceIndex(lines);
 }
 
+/**
+ * @description Performs the target lines helper operation for this module.
+ * @param {ContractSourceIndex} index - Input value for index.
+ * @returns {unknown} Result of the target lines operation.
+ */
 function targetLines(index: ContractSourceIndex) {
   return detectCandidateWindows(index).flatMap((window) => window.targetGlobalLines);
 }

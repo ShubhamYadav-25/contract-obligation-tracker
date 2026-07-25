@@ -1,3 +1,6 @@
+/**
+ * @file Contains automated tests that verify contract tracker behavior.
+ */
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
@@ -6,6 +9,11 @@ import { describe, expect, it } from "vitest";
 import { canTransitionObligation } from "../../src/modules/obligations/obligation.state-machine.js";
 import { createReminderOccurrenceKey } from "../../src/modules/reminders/reminder-occurrence-key.js";
 
+/**
+ * @description Performs the read jsonl helper operation for this module.
+ * @param {string} relativePath - Input value for relative path.
+ * @returns {Array<Record<string, unknown>>} Result of the read jsonl operation.
+ */
 function readJsonl(relativePath: string): Array<Record<string, unknown>> {
   const filePath = path.resolve(process.cwd(), relativePath);
   const content = readFileSync(filePath, "utf8");

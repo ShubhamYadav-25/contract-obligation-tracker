@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend document processing module contracts, services, routes, or persistence logic.
+ */
 export interface DocumentExtractionInput {
   readonly contractId: string;
   readonly documentId: string;

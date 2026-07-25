@@ -1,6 +1,14 @@
+/**
+ * @file Defines backend extraction module contracts, services, routes, or persistence logic.
+ */
 import type { TransactionManager } from "../../infrastructure/database/transaction-manager.js";
 import type { ExtractionCandidate } from "./extraction.types.js";
 
+/**
+ * @description Performs the map candidate row helper operation for this module.
+ * @param {any} row - Input value for row.
+ * @returns {ExtractionCandidate} Result of the map candidate row operation.
+ */
 function mapCandidateRow(row: any): ExtractionCandidate {
   const candidate: ExtractionCandidate = {
     id: row.id,
@@ -18,8 +26,18 @@ function mapCandidateRow(row: any): ExtractionCandidate {
 }
 
 export class PostgresExtractionCandidateRepository {
+  /**
+   * @description Implements the constructor method for this service or adapter.
+   * @param {TransactionManager} transactions - Input value for transactions.
+   * @returns {unknown} Result of the constructor operation.
+   */
   constructor(private readonly transactions: TransactionManager) {}
 
+  /**
+   * @description Executes the create pending operation used by the application workflow.
+   * @param {{ readonly contractId: string; readonly documentId: string; readonly extractedJson: unknown; readonly confidence: number; readonly validationIssues: readonly string[]; }} input - Input value for input.
+   * @returns {Promise<ExtractionCandidate>} Result of the create pending operation.
+   */
   async createPending(input: {
     readonly contractId: string;
     readonly documentId: string;
@@ -48,6 +66,11 @@ export class PostgresExtractionCandidateRepository {
     });
   }
 
+  /**
+   * @description Implements the find pending by id method for this service or adapter.
+   * @param {string} id - Input value for id.
+   * @returns {Promise<ExtractionCandidate | null>} Result of the find pending by id operation.
+   */
   async findPendingById(id: string): Promise<ExtractionCandidate | null> {
     return this.transactions.inTransaction(async ({ client }) => {
       const result = await client.query(
@@ -59,6 +82,11 @@ export class PostgresExtractionCandidateRepository {
     });
   }
 
+  /**
+   * @description Executes the list by contract operation used by the application workflow.
+   * @param {string} contractId - Input value for contract id.
+   * @returns {Promise<ExtractionCandidate[]>} Result of the list by contract operation.
+   */
   async listByContract(contractId: string): Promise<ExtractionCandidate[]> {
     return this.transactions.inTransaction(async ({ client }) => {
       const result = await client.query(
@@ -69,6 +97,10 @@ export class PostgresExtractionCandidateRepository {
     });
   }
 
+  /**
+   * @description Executes the list all operation used by the application workflow.
+   * @returns {Promise<ExtractionCandidate[]>} Result of the list all operation.
+   */
   async listAll(): Promise<ExtractionCandidate[]> {
     return this.transactions.inTransaction(async ({ client }) => {
       const result = await client.query(
@@ -79,6 +111,12 @@ export class PostgresExtractionCandidateRepository {
     });
   }
 
+  /**
+   * @description Implements the mark status method for this service or adapter.
+   * @param {string} id - Input value for id.
+   * @param {"APPROVED" | "REJECTED"} status - Input value for status.
+   * @returns {Promise<unknown>} Result of the mark status operation.
+   */
   async markStatus(id: string, status: "APPROVED" | "REJECTED") {
     return this.transactions.inTransaction(async ({ client }) => {
       await client.query(

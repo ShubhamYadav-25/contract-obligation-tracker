@@ -1,3 +1,6 @@
+/**
+ * @file Defines feature-specific React UI components for the contract tracker.
+ */
 import { Link } from "react-router-dom";
 
 import { routePaths } from "@/app/route-paths.js";
@@ -6,6 +9,11 @@ import { formatDateTime } from "@/utils/format-date.js";
 import { ObligationStatusBadge } from "./obligation-status-badge.js";
 import type { ObligationSummary } from "../types/obligation.js";
 
+/**
+ * @description Renders the obligation card component for the contract tracker UI.
+ * @param {{ readonly obligation: ObligationSummary }} { obligation } - Input value for { obligation }.
+ * @returns {JSX.Element} Result of the obligation card operation.
+ */
 export function ObligationCard({ obligation }: { readonly obligation: ObligationSummary }) {
   return (
     <Card>

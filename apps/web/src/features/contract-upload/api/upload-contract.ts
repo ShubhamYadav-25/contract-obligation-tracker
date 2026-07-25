@@ -1,3 +1,6 @@
+/**
+ * @file Defines frontend API client calls for a contract tracker feature.
+ */
 import { z } from "zod";
 
 import { uploadMultipart } from "@/services/api-client.js";
@@ -26,6 +29,11 @@ export type UploadContractInput = {
   readonly externalRef?: string;
 };
 
+/**
+ * @description Executes the upload contract operation used by the application workflow.
+ * @param {File | UploadContractInput} rawInput - Input value for raw input.
+ * @returns {unknown} Result of the upload contract operation.
+ */
 export function uploadContract(rawInput: File | UploadContractInput) {
   const input = rawInput instanceof File ? { file: rawInput } : rawInput;
   const formData = new FormData();

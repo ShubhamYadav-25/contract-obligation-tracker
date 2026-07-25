@@ -1,3 +1,6 @@
+/**
+ * @file Defines a backend operational script for local maintenance or diagnostics.
+ */
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
@@ -12,6 +15,10 @@ const workflowMigrationFiles = [
   "202607220003_extraction_candidates_status.up.sql",
 ] as const;
 
+/**
+ * @description Runs the main script step for local operations.
+ * @returns {Promise<void>} Result of the main operation.
+ */
 async function main(): Promise<void> {
   const database = new PgPoolClient(createDatabaseConfig(loadEnv()));
   const migrationsDirectory = resolve(process.cwd(), "../../packages/database/migrations");

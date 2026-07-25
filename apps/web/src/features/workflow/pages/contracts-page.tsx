@@ -1,3 +1,6 @@
+/**
+ * @file Defines routed feature page components for the contract tracker.
+ */
 import { useMemo, useState } from "react";
 
 import { InlineError } from "@/components/feedback/inline-error.js";
@@ -21,6 +24,10 @@ import {
 
 const listPageSize = 10;
 
+/**
+ * @description Renders the contracts page component for the contract tracker UI.
+ * @returns {JSX.Element} Result of the contracts page operation.
+ */
 export function ContractsPage() {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [search, setSearch] = useState("");

@@ -1,3 +1,6 @@
+/**
+ * @file Defines feature-specific React UI components for the contract tracker.
+ */
 import { Badge } from "@/components/ui/badge.js";
 import type { ContractProcessingStatus } from "../types/contracts.js";
 
@@ -17,6 +20,11 @@ const toneByStatus: Record<
   FAILED: "danger",
 };
 
+/**
+ * @description Renders the contract status badge component for the contract tracker UI.
+ * @param {{ readonly status: ContractProcessingStatus }} { status } - Input value for { status }.
+ * @returns {JSX.Element} Result of the contract status badge operation.
+ */
 export function ContractStatusBadge({ status }: { readonly status: ContractProcessingStatus }) {
   return <Badge tone={toneByStatus[status]}>{status.replace("_", " ")}</Badge>;
 }

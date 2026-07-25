@@ -1,6 +1,14 @@
+/**
+ * @file Defines feature-specific React UI components for the contract tracker.
+ */
 import { Card } from "@/components/ui/card.js";
 import type { ReviewSourceAnchor } from "../types/review-candidate.js";
 
+/**
+ * @description Renders the source evidence panel component for the contract tracker UI.
+ * @param {{ readonly anchors: readonly ReviewSourceAnchor[]; }} { anchors, } - Input value for { anchors, }.
+ * @returns {JSX.Element} Result of the source evidence panel operation.
+ */
 export function SourceEvidencePanel({
   anchors,
 }: {

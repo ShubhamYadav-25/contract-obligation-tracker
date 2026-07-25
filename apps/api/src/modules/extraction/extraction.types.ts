@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend extraction module contracts, services, routes, or persistence logic.
+ */
 import type { ParsedDocument } from "../document-processing/document-processing.types.js";
 
 export interface ExtractionPromptInput {

@@ -1,9 +1,18 @@
+/**
+ * @file Defines OCR infrastructure contracts and adapters.
+ */
 import { createWorker } from "tesseract.js";
 
 import { ExternalServiceError } from "../../shared/errors/external-service-error.js";
 import type { OcrInput, OcrProvider, OcrResult } from "./ocr-provider.js";
 
 export class TesseractOcrAdapter implements OcrProvider {
+  /**
+   * @description Implements the extract page text method for this service or adapter.
+   * @param {OcrInput} input - Input value for input.
+   * @returns {Promise<OcrResult>} Result of the extract page text operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   async extractPageText(input: OcrInput): Promise<OcrResult> {
     if (!input.pageImageBytes) {
       throw new ExternalServiceError("Rendered page image is required for Tesseract OCR", {

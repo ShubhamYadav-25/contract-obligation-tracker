@@ -1,3 +1,6 @@
+/**
+ * @file Defines routed feature page components for the contract tracker.
+ */
 import { BellRing, Clock3, ExternalLink, FileText, Inbox } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -13,6 +16,11 @@ import { DataTable, TableHead } from "../../workflow/components.js";
 import { useMessages } from "../hooks/use-messages.js";
 import type { MessageSummary } from "../types/message.js";
 
+/**
+ * @description Performs the payload type helper operation for this module.
+ * @param {unknown} payload - Input value for payload.
+ * @returns {string} Result of the payload type operation.
+ */
 function payloadType(payload: unknown): string {
   if (typeof payload === "object" && payload !== null && "type" in payload) {
     const type = (payload as { readonly type?: unknown }).type;
@@ -21,6 +29,11 @@ function payloadType(payload: unknown): string {
   return "Reminder message";
 }
 
+/**
+ * @description Renders the message mobile card component for the contract tracker UI.
+ * @param {{ readonly message: MessageSummary }} { message } - Input value for { message }.
+ * @returns {JSX.Element} Result of the message mobile card operation.
+ */
 function MessageMobileCard({ message }: { readonly message: MessageSummary }) {
   const actionClassName =
     "inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 shadow-card transition hover:bg-slate-50 focus-visible:shadow-focus active:translate-y-px";
@@ -62,6 +75,10 @@ function MessageMobileCard({ message }: { readonly message: MessageSummary }) {
   );
 }
 
+/**
+ * @description Renders the messages page component for the contract tracker UI.
+ * @returns {JSX.Element} Result of the messages page operation.
+ */
 export function MessagesPage() {
   const actionClassName =
     "inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 shadow-card transition hover:bg-slate-50 focus-visible:shadow-focus active:translate-y-px";

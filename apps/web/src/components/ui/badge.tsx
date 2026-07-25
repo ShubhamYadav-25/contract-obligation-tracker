@@ -1,3 +1,6 @@
+/**
+ * @file Defines reusable atomic UI primitives for the web app.
+ */
 import type { PropsWithChildren } from "react";
 
 import { cx } from "@/utils/cx.js";
@@ -17,6 +20,11 @@ const tones: Record<BadgeTone, string> = {
   info: "bg-cyan-100 text-cyan-800",
 };
 
+/**
+ * @description Renders the badge component for the contract tracker UI.
+ * @param {PropsWithChildren<BadgeProps>} { children, className, tone = "neutral" } - Input value for { children, class name, tone = "neutral" }.
+ * @returns {JSX.Element} Result of the badge operation.
+ */
 export function Badge({ children, className, tone = "neutral" }: PropsWithChildren<BadgeProps>) {
   return (
     <span

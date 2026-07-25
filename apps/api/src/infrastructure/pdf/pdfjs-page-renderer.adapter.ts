@@ -1,3 +1,6 @@
+/**
+ * @file Defines PDF validation, text extraction, and rendering infrastructure.
+ */
 import { createCanvas } from "@napi-rs/canvas";
 
 import type {
@@ -42,6 +45,12 @@ interface PdfJsModule {
 }
 
 export class PdfJsPageRendererAdapter implements PdfPageRenderer {
+  /**
+   * @description Implements the render page method for this service or adapter.
+   * @param {DocumentPageRenderInput} input - Input value for input.
+   * @returns {Promise<RenderedDocumentPage>} Result of the render page operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   async renderPage(input: DocumentPageRenderInput): Promise<RenderedDocumentPage> {
     if (!isProbablyPdf(input.fileBytes)) {
       throw new ExternalServiceError("Input is not a valid PDF");

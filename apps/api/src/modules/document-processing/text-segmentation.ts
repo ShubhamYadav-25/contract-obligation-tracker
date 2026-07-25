@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend document processing module contracts, services, routes, or persistence logic.
+ */
 import type {
   DocumentTextSegment,
   ParsedDocumentPage,
@@ -18,6 +21,11 @@ interface SourceLine {
   readonly endOffset: number;
 }
 
+/**
+ * @description Performs the split lines with offsets helper operation for this module.
+ * @param {string} text - Input value for text.
+ * @returns {readonly SourceLine[]} Result of the split lines with offsets operation.
+ */
 function splitLinesWithOffsets(text: string): readonly SourceLine[] {
   const normalizedPageText = normalizeExtractedText(text);
   const lines: SourceLine[] = [];
@@ -56,6 +64,12 @@ function splitLinesWithOffsets(text: string): readonly SourceLine[] {
   return lines;
 }
 
+/**
+ * @description Performs the next sentence boundary helper operation for this module.
+ * @param {string} text - Input value for text.
+ * @param {number} limit - Input value for limit.
+ * @returns {number} Result of the next sentence boundary operation.
+ */
 function nextSentenceBoundary(text: string, limit: number): number {
   const candidate = text.slice(0, limit + 1).search(/[.!?;:]\s+[A-Z0-9(]/);
   if (candidate > 0) {
@@ -66,6 +80,13 @@ function nextSentenceBoundary(text: string, limit: number): number {
   return lastSpace > 0 ? lastSpace : limit;
 }
 
+/**
+ * @description Performs the split oversized line helper operation for this module.
+ * @param {ParsedDocumentPage} page - Input value for page.
+ * @param {SourceLine} line - Input value for line.
+ * @param {number} maxSegmentCharacters - Input value for max segment characters.
+ * @returns {readonly DocumentTextSegment[]} Result of the split oversized line operation.
+ */
 function splitOversizedLine(
   page: ParsedDocumentPage,
   line: SourceLine,
@@ -102,6 +123,12 @@ function splitOversizedLine(
   return segments;
 }
 
+/**
+ * @description Performs the segment page text helper operation for this module.
+ * @param {ParsedDocumentPage} page - Input value for page.
+ * @param {TextSegmentationConfig} config - Input value for config.
+ * @returns {readonly DocumentTextSegment[]} Result of the segment page text operation.
+ */
 export function segmentPageText(
   page: ParsedDocumentPage,
   config: TextSegmentationConfig,
@@ -162,6 +189,12 @@ export function segmentPageText(
   return segments;
 }
 
+/**
+ * @description Performs the segment document pages helper operation for this module.
+ * @param {readonly ParsedDocumentPage[]} pages - Input value for pages.
+ * @param {TextSegmentationConfig} config - Input value for config.
+ * @returns {readonly SegmentedDocumentPage[]} Result of the segment document pages operation.
+ */
 export function segmentDocumentPages(
   pages: readonly ParsedDocumentPage[],
   config: TextSegmentationConfig,

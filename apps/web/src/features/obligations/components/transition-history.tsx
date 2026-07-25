@@ -1,6 +1,14 @@
+/**
+ * @file Defines feature-specific React UI components for the contract tracker.
+ */
 import { formatDateTime } from "@/utils/format-date.js";
 import type { ObligationTransition } from "../types/obligation.js";
 
+/**
+ * @description Renders the transition history component for the contract tracker UI.
+ * @param {{ readonly transitions: readonly ObligationTransition[]; }} { transitions, } - Input value for { transitions, }.
+ * @returns {JSX.Element} Result of the transition history operation.
+ */
 export function TransitionHistory({
   transitions,
 }: {

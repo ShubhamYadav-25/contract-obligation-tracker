@@ -1,3 +1,6 @@
+/**
+ * @file Defines background job scheduling, processing, recovery, or producer logic.
+ */
 import { pathToFileURL } from "node:url";
 
 import cron from "node-cron";
@@ -14,6 +17,10 @@ import { PgTransactionManager } from "../infrastructure/database/transaction-man
 import { PostgresReminderSchedulerRepository } from "../modules/reminders/postgres-reminder-scheduler.repository.js";
 import { ReminderPoller } from "./schedulers/reminder-poller.js";
 
+/**
+ * @description Executes the create scheduler runtime operation used by the application workflow.
+ * @returns {unknown} Result of the create scheduler runtime operation.
+ */
 export function createSchedulerRuntime() {
   const env = loadEnv();
   const logger = createLogger(env);
@@ -40,6 +47,10 @@ export function createSchedulerRuntime() {
   );
 
   const schedulerResource = {
+    /**
+     * @description Implements the close method for this service or adapter.
+     * @returns {unknown} Result of the close operation.
+     */
     close() {
       task.stop();
     },

@@ -1,3 +1,6 @@
+/**
+ * @file Defines frontend API client calls for a contract tracker feature.
+ */
 import { z } from "zod";
 
 import { apiRequest } from "@/services/api-client.js";
@@ -44,6 +47,12 @@ export type ContractTextPagesResponse = {
   readonly pages: readonly DocumentTextPage[];
 };
 
+/**
+ * @description Executes the list contract text pages operation used by the application workflow.
+ * @param {string} contractId - Input value for contract id.
+ * @param {AbortSignal} signal - Input value for signal.
+ * @returns {unknown} Result of the list contract text pages operation.
+ */
 export function listContractTextPages(contractId: string, signal?: AbortSignal) {
   return apiRequest<ContractTextPagesResponse>(`/api/v1/contracts/${contractId}/text-pages`, {
     signal,

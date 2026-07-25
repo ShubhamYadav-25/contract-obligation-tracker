@@ -1,9 +1,17 @@
+/**
+ * @file Defines feature-specific React UI components for the contract tracker.
+ */
 import type { ObligationStatus } from "@contract-obligation-tracker/shared";
 import { getAllowedObligationTransitions } from "@contract-obligation-tracker/shared";
 import { ArrowRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button.js";
 
+/**
+ * @description Renders the transition dialog component for the contract tracker UI.
+ * @param {{ readonly status: ObligationStatus; readonly disabled?: boolean; readonly onSelect: (nextStatus: ObligationStatus) => void; }} { disabled = false, onSelect, status, } - Input value for { disabled = false, on select, status, }.
+ * @returns {JSX.Element} Result of the transition dialog operation.
+ */
 export function TransitionDialog({
   disabled = false,
   onSelect,

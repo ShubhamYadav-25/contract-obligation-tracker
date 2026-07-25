@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend extraction module contracts, services, routes, or persistence logic.
+ */
 export type Page = { pageNumber: number; rawText: string };
 
 export type Anchor = {
@@ -38,6 +41,11 @@ export type StructuredExtraction = {
   obligations?: FieldAnchor[];
 };
 
+/**
+ * @description Performs the parse currency amount helper operation for this module.
+ * @param {string} text - Input value for text.
+ * @returns {number | undefined} Result of the parse currency amount operation.
+ */
 function parseCurrencyAmount(text: string): number | undefined {
   // Match numbers with optional commas and decimals, possibly preceded by currency symbol
   const m =
@@ -50,6 +58,11 @@ function parseCurrencyAmount(text: string): number | undefined {
   return Number.isFinite(v) ? v : undefined;
 }
 
+/**
+ * @description Performs the parse duration months helper operation for this module.
+ * @param {string} text - Input value for text.
+ * @returns {number | undefined} Result of the parse duration months operation.
+ */
 function parseDurationMonths(text: string): number | undefined {
   // Examples: "3 years", "36 months", "1 year", "6 months"
   const m = text.match(/(\d+)\s*(year|years|month|months)/i);
@@ -62,6 +75,11 @@ function parseDurationMonths(text: string): number | undefined {
   return n;
 }
 
+/**
+ * @description Performs the extract fields from pages helper operation for this module.
+ * @param {Page[]} pages - Input value for pages.
+ * @returns {{ extraction: StructuredExtraction; confidence: number; }} Result of the extract fields from pages operation.
+ */
 export function extractFieldsFromPages(pages: Page[]): {
   extraction: StructuredExtraction;
   confidence: number;

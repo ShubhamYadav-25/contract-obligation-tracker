@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend extraction module contracts, services, routes, or persistence logic.
+ */
 import type { DetectedCandidateWindow } from "./candidate-window-detector.js";
 import type {
   EvidenceRole,
@@ -92,6 +95,11 @@ const defaultConfig: ObligationSourceVerifierConfig = {
 
 const unresolvedPartyMethods = new Set(["AMBIGUOUS", "UNRESOLVED"]);
 
+/**
+ * @description Performs the stable hash helper operation for this module.
+ * @param {string} value - Input value for value.
+ * @returns {string} Result of the stable hash operation.
+ */
 function stableHash(value: string): string {
   let hash = 2_166_136_261;
   for (let index = 0; index < value.length; index += 1) {
@@ -101,6 +109,11 @@ function stableHash(value: string): string {
   return (hash >>> 0).toString(36);
 }
 
+/**
+ * @description Performs the normalize key text helper operation for this module.
+ * @param {string | null} value - Input value for value.
+ * @returns {string} Result of the normalize key text operation.
+ */
 function normalizeKeyText(value: string | null): string {
   return (value ?? "")
     .toLowerCase()
@@ -109,14 +122,30 @@ function normalizeKeyText(value: string | null): string {
     .replace(/\s+/g, " ");
 }
 
+/**
+ * @description Performs the sorted unique helper operation for this module.
+ * @param {readonly string[]} values - Input value for values.
+ * @returns {readonly string[]} Result of the sorted unique operation.
+ */
 function sortedUnique(values: readonly string[]): readonly string[] {
   return [...new Set(values)].sort((left, right) => left.localeCompare(right));
 }
 
+/**
+ * @description Performs the with reason helper operation for this module.
+ * @param {readonly string[]} reasons - Input value for reasons.
+ * @param {string} reason - Input value for reason.
+ * @returns {readonly string[]} Result of the with reason operation.
+ */
 function withReason(reasons: readonly string[], reason: string): readonly string[] {
   return sortedUnique([...reasons, reason]);
 }
 
+/**
+ * @description Performs the unique evidence helper operation for this module.
+ * @param {readonly SourceVerifiedEvidenceSpan[]} spans - Input value for spans.
+ * @returns {readonly SourceVerifiedEvidenceSpan[]} Result of the unique evidence operation.
+ */
 function uniqueEvidence(
   spans: readonly SourceVerifiedEvidenceSpan[],
 ): readonly SourceVerifiedEvidenceSpan[] {
@@ -131,6 +160,12 @@ function uniqueEvidence(
   return result;
 }
 
+/**
+ * @description Performs the evidence sort helper operation for this module.
+ * @param {SourceVerifiedEvidenceSpan} left - Input value for left.
+ * @param {SourceVerifiedEvidenceSpan} right - Input value for right.
+ * @returns {number} Result of the evidence sort operation.
+ */
 function evidenceSort(left: SourceVerifiedEvidenceSpan, right: SourceVerifiedEvidenceSpan): number {
   const roleOrder: readonly EvidenceRole[] = [
     "ACTOR",
@@ -153,6 +188,11 @@ function evidenceSort(left: SourceVerifiedEvidenceSpan, right: SourceVerifiedEvi
   );
 }
 
+/**
+ * @description Performs the candidate sort key helper operation for this module.
+ * @param {VerifiedObligationCandidate} candidate - Input value for candidate.
+ * @returns {string} Result of the candidate sort key operation.
+ */
 function candidateSortKey(candidate: VerifiedObligationCandidate): string {
   return JSON.stringify({
     responsibleParty: normalizeKeyText(candidate.responsibleParty.canonicalName),
@@ -169,6 +209,11 @@ function candidateSortKey(candidate: VerifiedObligationCandidate): string {
   });
 }
 
+/**
+ * @description Performs the obligation identity helper operation for this module.
+ * @param {{ readonly sourceCandidateKeys?: readonly string[]; readonly businessType: ObligationBusinessType; readonly timingType: ObligationTimingType; readonly responsibleParty: PartyResolution; readonly counterparty: PartyResolution | null; readonly action: string; readonly object: string; readonly explicitDueDate: string | null; readonly triggerEvent: string | null; readonly referenceDateLabel: string | null; readonly offsetValue: number | null; readonly offsetUnit: OffsetUnit; readonly offsetDirection: OffsetDirection; readonly frequency: string | null; readonly duration: string | null; readonly sectionPath: readonly string[]; readonly sourceEvidence: readonly SourceVerifiedEvidenceSpan[]; }} input - Input value for input.
+ * @returns {string} Result of the obligation identity operation.
+ */
 function obligationIdentity(input: {
   readonly sourceCandidateKeys?: readonly string[];
   readonly businessType: ObligationBusinessType;
@@ -214,6 +259,13 @@ function obligationIdentity(input: {
   )}`;
 }
 
+/**
+ * @description Performs the first global line for page local range helper operation for this module.
+ * @param {ContractSourceIndex} sourceIndex - Input value for source index.
+ * @param {number} pageNumber - Input value for page number.
+ * @param {number} pageLocalLineNumber - Input value for page local line number.
+ * @returns {ContractSourceLine | null} Result of the first global line for page local range operation.
+ */
 function firstGlobalLineForPageLocalRange(
   sourceIndex: ContractSourceIndex,
   pageNumber: number,
@@ -221,12 +273,16 @@ function firstGlobalLineForPageLocalRange(
 ): ContractSourceLine | null {
   return (
     sourceIndex.lines.find(
-      (line) =>
-        line.pageNumber === pageNumber && line.pageLocalLineNumber === pageLocalLineNumber,
+      (line) => line.pageNumber === pageNumber && line.pageLocalLineNumber === pageLocalLineNumber,
     ) ?? null
   );
 }
 
+/**
+ * @description Performs the resolve candidate evidence span helper operation for this module.
+ * @param {{ readonly sourceIndex: ContractSourceIndex; readonly candidate: VerifiedObligationCandidate; readonly span: VerifiedObligationCandidate["verifiedEvidenceSpans"][number]; readonly window: DetectedCandidateWindow; }} input - Input value for input.
+ * @returns {{ readonly evidence: SourceVerifiedEvidenceSpan | null; readonly errors: readonly string[] }} Result of the resolve candidate evidence span operation.
+ */
 function resolveCandidateEvidenceSpan(input: {
   readonly sourceIndex: ContractSourceIndex;
   readonly candidate: VerifiedObligationCandidate;
@@ -246,9 +302,7 @@ function resolveCandidateEvidenceSpan(input: {
   const errors: string[] = [];
 
   if (!startLine) {
-    errors.push(
-      `Missing source start line P${input.span.pageNumber}:L${input.span.startLine}`,
-    );
+    errors.push(`Missing source start line P${input.span.pageNumber}:L${input.span.startLine}`);
   }
   if (!endLine) {
     errors.push(`Missing source end line P${input.span.pageNumber}:L${input.span.endLine}`);
@@ -295,6 +349,11 @@ function resolveCandidateEvidenceSpan(input: {
   };
 }
 
+/**
+ * @description Performs the is definition candidate helper operation for this module.
+ * @param {VerifiedObligationCandidate} candidate - Input value for candidate.
+ * @returns {boolean} Result of the is definition candidate operation.
+ */
 function isDefinitionCandidate(candidate: VerifiedObligationCandidate): boolean {
   const action = normalizeKeyText(candidate.action);
   return (
@@ -307,10 +366,23 @@ function isDefinitionCandidate(candidate: VerifiedObligationCandidate): boolean 
   );
 }
 
+/**
+ * @description Performs the is rights only candidate helper operation for this module.
+ * @param {VerifiedObligationCandidate} candidate - Input value for candidate.
+ * @returns {boolean} Result of the is rights only candidate operation.
+ */
 function isRightsOnlyCandidate(candidate: VerifiedObligationCandidate): boolean {
-  return /\bmay\b/i.test(candidate.summary) && !/\b(?:shall|must|required\s+to|payable|due)\b/i.test(candidate.summary);
+  return (
+    /\bmay\b/i.test(candidate.summary) &&
+    !/\b(?:shall|must|required\s+to|payable|due)\b/i.test(candidate.summary)
+  );
 }
 
+/**
+ * @description Performs the has resolved responsible party helper operation for this module.
+ * @param {VerifiedObligationCandidate} candidate - Input value for candidate.
+ * @returns {boolean} Result of the has resolved responsible party operation.
+ */
 function hasResolvedResponsibleParty(candidate: VerifiedObligationCandidate): boolean {
   return (
     candidate.responsibleParty.canonicalName !== null &&
@@ -319,15 +391,19 @@ function hasResolvedResponsibleParty(candidate: VerifiedObligationCandidate): bo
   );
 }
 
+/**
+ * @description Performs the has valid actor basis helper operation for this module.
+ * @param {VerifiedObligationCandidate} candidate - Input value for candidate.
+ * @param {readonly SourceVerifiedEvidenceSpan[]} sourceEvidence - Input value for source evidence.
+ * @returns {boolean} Result of the has valid actor basis operation.
+ */
 function hasValidActorBasis(
   candidate: VerifiedObligationCandidate,
   sourceEvidence: readonly SourceVerifiedEvidenceSpan[],
 ): boolean {
   return (
     sourceEvidence.some((span) => span.evidenceRole === "ACTOR") ||
-    candidate.responsibleParty.supportingEvidence.some(
-      (span) => span.evidenceRole === "ACTOR",
-    ) ||
+    candidate.responsibleParty.supportingEvidence.some((span) => span.evidenceRole === "ACTOR") ||
     (hasResolvedResponsibleParty(candidate) &&
       [
         "EXPLICIT_IN_SENTENCE",
@@ -339,6 +415,11 @@ function hasValidActorBasis(
   );
 }
 
+/**
+ * @description Performs the has unresolved core cross reference helper operation for this module.
+ * @param {VerifiedObligationCandidate} candidate - Input value for candidate.
+ * @returns {boolean} Result of the has unresolved core cross reference operation.
+ */
 function hasUnresolvedCoreCrossReference(candidate: VerifiedObligationCandidate): boolean {
   if (candidate.crossReferences.length === 0) {
     return false;
@@ -350,6 +431,12 @@ function hasUnresolvedCoreCrossReference(candidate: VerifiedObligationCandidate)
   );
 }
 
+/**
+ * @description Performs the to rejected helper operation for this module.
+ * @param {VerifiedObligationCandidate} candidate - Input value for candidate.
+ * @param {readonly string[]} reviewReasons - Input value for review reasons.
+ * @returns {RejectedSourceObligation} Result of the to rejected operation.
+ */
 function toRejected(
   candidate: VerifiedObligationCandidate,
   reviewReasons: readonly string[],
@@ -365,18 +452,25 @@ function toRejected(
 export class ObligationReviewGate {
   private readonly config: ObligationReviewGateConfig;
 
+  /**
+   * @description Implements the constructor method for this service or adapter.
+   * @param {Partial<ObligationReviewGateConfig>} config - Input value for config.
+   * @returns {unknown} Result of the constructor operation.
+   */
   constructor(config: Partial<ObligationReviewGateConfig> = {}) {
     this.config = { confidenceThreshold: defaultConfig.confidenceThreshold, ...config };
   }
 
+  /**
+   * @description Implements the evaluate method for this service or adapter.
+   * @param {ReviewGateInput} input - Input value for input.
+   * @returns {{ readonly reviewStatus: ExtractionReviewStatus; readonly reviewReasons: readonly string[]; }} Result of the evaluate operation.
+   */
   evaluate(input: ReviewGateInput): {
     readonly reviewStatus: ExtractionReviewStatus;
     readonly reviewReasons: readonly string[];
   } {
-    let reviewReasons = sortedUnique([
-      ...input.candidate.reviewReasons,
-      ...input.sourceErrors,
-    ]);
+    let reviewReasons = sortedUnique([...input.candidate.reviewReasons, ...input.sourceErrors]);
 
     if (isDefinitionCandidate(input.candidate)) {
       return {
@@ -412,10 +506,7 @@ export class ObligationReviewGate {
       reviewReasons = withReason(reviewReasons, "Candidate confidence is below review threshold");
     }
     if (hasUnresolvedCoreCrossReference(input.candidate)) {
-      reviewReasons = withReason(
-        reviewReasons,
-        "Unresolved cross-reference affects core meaning",
-      );
+      reviewReasons = withReason(reviewReasons, "Unresolved cross-reference affects core meaning");
     }
 
     return {
@@ -428,12 +519,22 @@ export class ObligationReviewGate {
 export class ObligationSourceVerifier {
   private readonly gate: ObligationReviewGate;
 
+  /**
+   * @description Implements the constructor method for this service or adapter.
+   * @param {Partial<ObligationSourceVerifierConfig>} config - Input value for config.
+   * @returns {unknown} Result of the constructor operation.
+   */
   constructor(config: Partial<ObligationSourceVerifierConfig> = {}) {
     this.gate = new ObligationReviewGate({
       confidenceThreshold: { ...defaultConfig, ...config }.confidenceThreshold,
     });
   }
 
+  /**
+   * @description Implements the verify method for this service or adapter.
+   * @param {ObligationSourceVerificationInput} input - Input value for input.
+   * @returns {ObligationSourceVerificationResult} Result of the verify operation.
+   */
   verify(input: ObligationSourceVerificationInput): ObligationSourceVerificationResult {
     const verified: SourceVerifiedOperationalObligation[] = [];
     const rejected: RejectedSourceObligation[] = [];
@@ -511,6 +612,11 @@ export class ObligationSourceVerifier {
   }
 }
 
+/**
+ * @description Performs the dedupe key helper operation for this module.
+ * @param {SourceVerifiedOperationalObligation} obligation - Input value for obligation.
+ * @returns {string} Result of the dedupe key operation.
+ */
 function dedupeKey(obligation: SourceVerifiedOperationalObligation): string {
   return JSON.stringify({
     businessType: obligation.businessType,
@@ -537,6 +643,11 @@ function dedupeKey(obligation: SourceVerifiedOperationalObligation): string {
 }
 
 export class ObligationDeduplicator {
+  /**
+   * @description Implements the deduplicate method for this service or adapter.
+   * @param {readonly SourceVerifiedOperationalObligation[]} obligations - Input value for obligations.
+   * @returns {readonly SourceVerifiedOperationalObligation[]} Result of the deduplicate operation.
+   */
   deduplicate(
     obligations: readonly SourceVerifiedOperationalObligation[],
   ): readonly SourceVerifiedOperationalObligation[] {
@@ -566,20 +677,36 @@ export class ObligationDeduplicator {
   }
 }
 
+/**
+ * @description Performs the same party helper operation for this module.
+ * @param {PartyResolution | null} left - Input value for left.
+ * @param {PartyResolution | null} right - Input value for right.
+ * @returns {boolean} Result of the same party operation.
+ */
 function sameParty(left: PartyResolution | null, right: PartyResolution | null): boolean {
-  return normalizeKeyText(left?.canonicalName ?? null) === normalizeKeyText(right?.canonicalName ?? null);
+  return (
+    normalizeKeyText(left?.canonicalName ?? null) === normalizeKeyText(right?.canonicalName ?? null)
+  );
 }
 
-function sameSection(
-  left: readonly string[],
-  right: readonly string[],
-): boolean {
+/**
+ * @description Performs the same section helper operation for this module.
+ * @param {readonly string[]} left - Input value for left.
+ * @param {readonly string[]} right - Input value for right.
+ * @returns {boolean} Result of the same section operation.
+ */
+function sameSection(left: readonly string[], right: readonly string[]): boolean {
   return (
     left.length === right.length &&
     left.every((value, index) => normalizeKeyText(value) === normalizeKeyText(right[index] ?? ""))
   );
 }
 
+/**
+ * @description Performs the evidence bounds helper operation for this module.
+ * @param {SourceVerifiedOperationalObligation} obligation - Input value for obligation.
+ * @returns {{ readonly start: number; readonly end: number; }} Result of the evidence bounds operation.
+ */
 function evidenceBounds(obligation: SourceVerifiedOperationalObligation): {
   readonly start: number;
   readonly end: number;
@@ -592,6 +719,12 @@ function evidenceBounds(obligation: SourceVerifiedOperationalObligation): {
   };
 }
 
+/**
+ * @description Performs the evidence adjacent or overlapping helper operation for this module.
+ * @param {SourceVerifiedOperationalObligation} left - Input value for left.
+ * @param {SourceVerifiedOperationalObligation} right - Input value for right.
+ * @returns {boolean} Result of the evidence adjacent or overlapping operation.
+ */
 function evidenceAdjacentOrOverlapping(
   left: SourceVerifiedOperationalObligation,
   right: SourceVerifiedOperationalObligation,
@@ -601,6 +734,12 @@ function evidenceAdjacentOrOverlapping(
   return leftBounds.start <= rightBounds.end + 1 && rightBounds.start <= leftBounds.end + 1;
 }
 
+/**
+ * @description Performs the should consolidate helper operation for this module.
+ * @param {SourceVerifiedOperationalObligation} left - Input value for left.
+ * @param {SourceVerifiedOperationalObligation} right - Input value for right.
+ * @returns {boolean} Result of the should consolidate operation.
+ */
 function shouldConsolidate(
   left: SourceVerifiedOperationalObligation,
   right: SourceVerifiedOperationalObligation,
@@ -615,6 +754,12 @@ function shouldConsolidate(
   );
 }
 
+/**
+ * @description Performs the combined status helper operation for this module.
+ * @param {SourceVerifiedOperationalObligation} left - Input value for left.
+ * @param {SourceVerifiedOperationalObligation} right - Input value for right.
+ * @returns {ExtractionReviewStatus} Result of the combined status operation.
+ */
 function combinedStatus(
   left: SourceVerifiedOperationalObligation,
   right: SourceVerifiedOperationalObligation,
@@ -624,6 +769,12 @@ function combinedStatus(
     : "CONFIRMED";
 }
 
+/**
+ * @description Performs the combine obligations helper operation for this module.
+ * @param {SourceVerifiedOperationalObligation} left - Input value for left.
+ * @param {SourceVerifiedOperationalObligation} right - Input value for right.
+ * @returns {SourceVerifiedOperationalObligation} Result of the combine obligations operation.
+ */
 function combineObligations(
   left: SourceVerifiedOperationalObligation,
   right: SourceVerifiedOperationalObligation,
@@ -631,8 +782,7 @@ function combineObligations(
   const sourceEvidence = uniqueEvidence([...left.sourceEvidence, ...right.sourceEvidence]);
   const combined = {
     ...left,
-    timingType:
-      left.timingType === "NO_EXPLICIT_DEADLINE" ? right.timingType : left.timingType,
+    timingType: left.timingType === "NO_EXPLICIT_DEADLINE" ? right.timingType : left.timingType,
     explicitDueDate: left.explicitDueDate ?? right.explicitDueDate,
     triggerEvent: left.triggerEvent ?? right.triggerEvent,
     referenceDateLabel: left.referenceDateLabel ?? right.referenceDateLabel,
@@ -651,10 +801,7 @@ function combineObligations(
     confidence: Math.min(left.confidence, right.confidence),
     reviewStatus: combinedStatus(left, right),
     reviewReasons: sortedUnique([...left.reviewReasons, ...right.reviewReasons]),
-    sourceCandidateKeys: sortedUnique([
-      ...left.sourceCandidateKeys,
-      ...right.sourceCandidateKeys,
-    ]),
+    sourceCandidateKeys: sortedUnique([...left.sourceCandidateKeys, ...right.sourceCandidateKeys]),
   } satisfies Omit<SourceVerifiedOperationalObligation, "stableObligationId">;
 
   return {
@@ -664,6 +811,11 @@ function combineObligations(
 }
 
 export class ObligationConsolidator {
+  /**
+   * @description Implements the consolidate method for this service or adapter.
+   * @param {readonly SourceVerifiedOperationalObligation[]} obligations - Input value for obligations.
+   * @returns {readonly SourceVerifiedOperationalObligation[]} Result of the consolidate operation.
+   */
   consolidate(
     obligations: readonly SourceVerifiedOperationalObligation[],
   ): readonly SourceVerifiedOperationalObligation[] {

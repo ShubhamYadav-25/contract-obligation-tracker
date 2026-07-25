@@ -1,3 +1,6 @@
+/**
+ * @file Contains automated tests that verify contract tracker behavior.
+ */
 import { describe, expect, it } from "vitest";
 
 import { FakeStructuredLlmClient } from "../../src/infrastructure/llm/fake-structured-llm-client.js";
@@ -9,6 +12,10 @@ import {
   type ContractSourceLineInput,
 } from "../../src/modules/extraction/reference-aware/index.js";
 
+/**
+ * @description Performs the source index helper operation for this module.
+ * @returns {ContractSourceIndex} Result of the source index operation.
+ */
 function sourceIndex(): ContractSourceIndex {
   const lines: readonly ContractSourceLineInput[] = [
     {
@@ -22,8 +29,7 @@ function sourceIndex(): ContractSourceIndex {
       globalLineNumber: 2,
       pageNumber: 1,
       pageLocalLineNumber: 2,
-      text:
-        'This Master Services Agreement is effective as of January 1, 2026 (the "Effective Date") by and between Acme Network Corporation, a Delaware corporation ("Acme", "Network"), and Beta Affiliate LLC ("Customer", "Affiliate").',
+      text: 'This Master Services Agreement is effective as of January 1, 2026 (the "Effective Date") by and between Acme Network Corporation, a Delaware corporation ("Acme", "Network"), and Beta Affiliate LLC ("Customer", "Affiliate").',
       sourceMethod: "PDF_TEXT",
     },
     {
@@ -38,8 +44,7 @@ function sourceIndex(): ContractSourceIndex {
       globalLineNumber: 4,
       pageNumber: 1,
       pageLocalLineNumber: 4,
-      text:
-        '"Affiliate" means any entity controlling, controlled by, or under common control with a party.',
+      text: '"Affiliate" means any entity controlling, controlled by, or under common control with a party.',
       sourceMethod: "PDF_TEXT",
       sectionPath: ["Definitions"],
     },
@@ -71,8 +76,7 @@ function sourceIndex(): ContractSourceIndex {
       globalLineNumber: 8,
       pageNumber: 1,
       pageLocalLineNumber: 8,
-      text:
-        'The Initial Term commences on February 1, 2026 (the "Commencement Date") and renews on each anniversary (each, a "Renewal Date").',
+      text: 'The Initial Term commences on February 1, 2026 (the "Commencement Date") and renews on each anniversary (each, a "Renewal Date").',
       sourceMethod: "PDF_TEXT",
       sectionPath: ["Term and Renewal"],
     },
@@ -120,6 +124,11 @@ function sourceIndex(): ContractSourceIndex {
   return new ContractSourceIndex(lines);
 }
 
+/**
+ * @description Performs the raw context helper operation for this module.
+ * @param {Record<string, unknown>} overrides - Input value for overrides.
+ * @returns {Record<string, unknown>} Result of the raw context operation.
+ */
 function rawContext(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     parties: [
@@ -139,8 +148,7 @@ function rawContext(overrides: Record<string, unknown> = {}): Record<string, unk
     definedTerms: [
       {
         term: "Affiliate",
-        definition:
-          "any entity controlling, controlled by, or under common control with a party",
+        definition: "any entity controlling, controlled by, or under common control with a party",
         referencedSection: null,
         referencedExhibit: null,
         resolutionStatus: "RESOLVED",
@@ -188,6 +196,12 @@ function rawContext(overrides: Record<string, unknown> = {}): Record<string, unk
   };
 }
 
+/**
+ * @description Performs the extract context helper operation for this module.
+ * @param {unknown} index - Input value for index.
+ * @param {unknown} response - Input value for response.
+ * @returns {Promise<unknown>} Result of the extract context operation.
+ */
 async function extractContext(index = sourceIndex(), response = rawContext()) {
   const llm = new FakeStructuredLlmClient();
   llm.queueResponse("contract_context_extraction", response);
@@ -305,9 +319,7 @@ describe("ContractContextExtractor", () => {
       sourceIndex: index,
     });
 
-    expect(selection.parties.map((party) => party.canonicalName)).toEqual([
-      "Beta Affiliate LLC",
-    ]);
+    expect(selection.parties.map((party) => party.canonicalName)).toEqual(["Beta Affiliate LLC"]);
   });
 
   it("does not send the whole document in one context request", async () => {

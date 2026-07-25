@@ -1,8 +1,15 @@
+/**
+ * @file Defines backend extraction module contracts, services, routes, or persistence logic.
+ */
 import { Router } from "express";
 import { requireAuthContext } from "../auth/request-context.js";
 import { asyncRoute } from "../../shared/middleware/async-route.js";
 import { ExtractionController } from "./extraction.controller.js";
 
+/**
+ * @description Executes the create extraction router operation used by the application workflow.
+ * @returns {Router} Result of the create extraction router operation.
+ */
 export function createExtractionRouter(): Router {
   const router = Router();
   const controller = new ExtractionController();

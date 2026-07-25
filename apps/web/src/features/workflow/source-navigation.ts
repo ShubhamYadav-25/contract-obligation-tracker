@@ -1,3 +1,6 @@
+/**
+ * @file Defines feature-level web application code for the contract tracker.
+ */
 import type { PdfSourceNavigationCommand } from "@/components/features/pdf-reader/pdf-source-navigation.js";
 
 import type { ObligationSourceAnchor } from "../obligations/types/obligation.js";
@@ -9,6 +12,11 @@ export interface ContractWorkspaceLocationState {
   readonly sourceCommand?: PdfSourceNavigationCommand;
 }
 
+/**
+ * @description Performs the source command from anchor helper operation for this module.
+ * @param {ObligationSourceAnchor | undefined} anchor - Input value for anchor.
+ * @returns {PdfSourceNavigationCommand | null} Result of the source command from anchor operation.
+ */
 export function sourceCommandFromAnchor(
   anchor: ObligationSourceAnchor | undefined,
 ): PdfSourceNavigationCommand | null {
@@ -25,6 +33,12 @@ export function sourceCommandFromAnchor(
   };
 }
 
+/**
+ * @description Performs the source link state helper operation for this module.
+ * @param {ObligationSourceAnchor | undefined} anchor - Input value for anchor.
+ * @param {string} obligationId - Input value for obligation id.
+ * @returns {ContractWorkspaceLocationState} Result of the source link state operation.
+ */
 export function sourceLinkState(
   anchor: ObligationSourceAnchor | undefined,
   obligationId?: string,
@@ -37,6 +51,12 @@ export function sourceLinkState(
   };
 }
 
+/**
+ * @description Performs the source anchor label helper operation for this module.
+ * @param {ObligationSourceAnchor} anchor - Input value for anchor.
+ * @param {number} index - Input value for index.
+ * @returns {string} Result of the source anchor label operation.
+ */
 export function sourceAnchorLabel(anchor: ObligationSourceAnchor, index: number): string {
   const role = anchor.evidenceRole ? `${formatStatusLabel(anchor.evidenceRole)} ` : "";
   const lines =

@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend audit module contracts, services, routes, or persistence logic.
+ */
 export type { AuditRepository } from "./audit.repository.js";
 export { PostgresAuditRepository } from "./postgres-audit.repository.js";
 export { AuditService } from "./audit.service.js";

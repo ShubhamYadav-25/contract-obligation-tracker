@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend obligations module contracts, services, routes, or persistence logic.
+ */
 export type ObligationStatus = "UPCOMING" | "DUE" | "MET" | "MISSED";
 
 export interface ObligationRecord {

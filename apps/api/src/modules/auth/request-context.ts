@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend auth module contracts, services, routes, or persistence logic.
+ */
 import type { RequestHandler } from "express";
 import { z } from "zod";
 
@@ -21,6 +24,13 @@ const contextSchema = z.object({
   organizationId: z.uuid(),
 });
 
+/**
+ * @description Performs the require auth context helper operation for this module.
+ * @param {unknown} request - Input value for request.
+ * @param {unknown} _response - Input value for response.
+ * @param {unknown} next - Input value for next.
+ * @returns {unknown} Result of the require auth context operation.
+ */
 export const requireAuthContext: RequestHandler = (request, _response, next) => {
   const parsed = contextSchema.safeParse({
     userId: request.header("x-user-id"),

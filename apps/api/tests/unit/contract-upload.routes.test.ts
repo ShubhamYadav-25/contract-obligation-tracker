@@ -1,3 +1,6 @@
+/**
+ * @file Contains automated tests that verify contract tracker behavior.
+ */
 import express from "express";
 import { Readable } from "node:stream";
 import request from "supertest";
@@ -17,6 +20,11 @@ const organizationId = "00000000-0000-4000-8000-000000000001";
 const userId = "00000000-0000-4000-8000-000000000002";
 const validPdf = Buffer.from("%PDF-1.4\n1 0 obj\n<< /Type /Page >>\nendobj\n%%EOF");
 
+/**
+ * @description Executes the create upload result operation used by the application workflow.
+ * @param {Partial<ContractTrackingResult>} overrides - Input value for overrides.
+ * @returns {ContractTrackingResult} Result of the create upload result operation.
+ */
 function createUploadResult(
   overrides: Partial<ContractTrackingResult> = {},
 ): ContractTrackingResult {
@@ -37,6 +45,11 @@ function createUploadResult(
   };
 }
 
+/**
+ * @description Executes the create test app operation used by the application workflow.
+ * @param {object} service - Input value for service.
+ * @returns {unknown} Result of the create test app operation.
+ */
 function createTestApp(service: object) {
   const app = express();
   app.use(requestCorrelationMiddleware);
@@ -48,6 +61,10 @@ function createTestApp(service: object) {
   return app;
 }
 
+/**
+ * @description Executes the create workspace record operation used by the application workflow.
+ * @returns {ContractWorkspaceRecord} Result of the create workspace record operation.
+ */
 function createWorkspaceRecord(): ContractWorkspaceRecord {
   const createdAt = new Date("2026-07-21T00:00:00.000Z");
   const contractId = "00000000-0000-4000-8000-000000000003";
@@ -111,6 +128,10 @@ function createWorkspaceRecord(): ContractWorkspaceRecord {
   };
 }
 
+/**
+ * @description Executes the create text page record operation used by the application workflow.
+ * @returns {DocumentTextPageRecord} Result of the create text page record operation.
+ */
 function createTextPageRecord(): DocumentTextPageRecord {
   return {
     organizationId,

@@ -1,5 +1,13 @@
+/**
+ * @file Defines reusable layout components for the web shell.
+ */
 import type { PropsWithChildren, ReactNode } from "react";
 
+/**
+ * @description Renders the page header component for the contract tracker UI.
+ * @param {PropsWithChildren<{ readonly title: string; readonly description?: string; readonly actions?: ReactNode; }>} { actions, children, description, title, } - Input value for { actions, children, description, title, }.
+ * @returns {JSX.Element} Result of the page header operation.
+ */
 export function PageHeader({
   actions,
   children,

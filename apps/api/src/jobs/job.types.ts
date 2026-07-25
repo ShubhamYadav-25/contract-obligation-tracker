@@ -1,3 +1,6 @@
+/**
+ * @file Defines background job scheduling, processing, recovery, or producer logic.
+ */
 export const supportedJobTypes = ["PROCESS_CONTRACT", "DELIVER_REMINDER"] as const;
 
 export type SupportedJobType = (typeof supportedJobTypes)[number];

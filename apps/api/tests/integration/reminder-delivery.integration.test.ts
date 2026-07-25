@@ -1,3 +1,6 @@
+/**
+ * @file Contains automated tests that verify contract tracker behavior.
+ */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -8,10 +11,16 @@ import { PgPoolClient } from "../../src/infrastructure/database/postgres-client.
 import { PgTransactionManager } from "../../src/infrastructure/database/transaction-manager.js";
 import { ReminderDeliveryProcessor } from "../../src/jobs/processors/reminder-delivery.processor.js";
 import type { BackgroundJob } from "../../src/jobs/job.types.js";
+import type { NotificationProvider } from "../../src/modules/notifications/notifications.types.js";
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
 const describeWithDatabase = testDatabaseUrl ? describe : describe.skip;
 
+/**
+ * @description Executes the create job operation used by the application workflow.
+ * @param {{ reminderId: string; occurrenceKey: string }} payload - Input value for payload.
+ * @returns {BackgroundJob} Result of the create job operation.
+ */
 function createJob(payload: { reminderId: string; occurrenceKey: string }): BackgroundJob {
   return {
     id: "job-1",
@@ -46,6 +55,20 @@ describeWithDatabase("ReminderDeliveryProcessor integration", () => {
       ),
       "utf8",
     );
+    const contractsMigration = await readFile(
+      path.resolve(
+        process.cwd(),
+        "../../packages/database/migrations/202607210001_contract_ingestion.up.sql",
+      ),
+      "utf8",
+    );
+    const obligationsMigration = await readFile(
+      path.resolve(
+        process.cwd(),
+        "../../packages/database/migrations/202607220001_obligations.up.sql",
+      ),
+      "utf8",
+    );
     const inboxMigration = await readFile(
       path.resolve(
         process.cwd(),
@@ -54,10 +77,12 @@ describeWithDatabase("ReminderDeliveryProcessor integration", () => {
       "utf8",
     );
 
+    await pool.query(contractsMigration);
+    await pool.query(obligationsMigration);
     await pool.query(jobsMigration);
     await pool.query(inboxMigration);
     await pool.query(
-      "TRUNCATE background_jobs, reminders, reminder_delivery_attempts, inbox_entries, audit_events",
+      "TRUNCATE background_jobs, reminders, reminder_delivery_attempts, inbox_entries, obligations, contracts, audit_events",
     );
 
     database = new PgPoolClient({
@@ -67,7 +92,21 @@ describeWithDatabase("ReminderDeliveryProcessor integration", () => {
       connectionTimeoutMilliseconds: 5_000,
       idleTimeoutMilliseconds: 30_000,
     });
-    processor = new ReminderDeliveryProcessor(database, new PgTransactionManager(database.pool));
+    const notifications: NotificationProvider = {
+      send: async () => ({ status: "accepted", providerMessageId: "message-1" }),
+    };
+    processor = new ReminderDeliveryProcessor(
+      database,
+      new PgTransactionManager(database.pool),
+      notifications,
+      {
+        providerName: "TEST",
+        appName: "Contract Obligation Tracker",
+        appBaseUrl: "http://localhost:5173",
+        defaultRecipient: "reviewer@example.com",
+        now: () => new Date("2026-07-24T00:00:00.000Z"),
+      },
+    );
   });
 
   afterAll(async () => {
@@ -78,8 +117,25 @@ describeWithDatabase("ReminderDeliveryProcessor integration", () => {
   it("creates a sandbox inbox entry and only delivers once for repeated runs", async () => {
     const reminderId = "11111111-1111-1111-1111-111111111111";
     const obligationId = "22222222-2222-2222-2222-222222222222";
+    const contractId = "33333333-3333-3333-3333-333333333333";
+    const organizationId = "44444444-4444-4444-8444-444444444444";
+    const userId = "55555555-5555-4555-8555-555555555555";
     const occurrenceKey = "occurrence:alpha";
 
+    await pool.query(
+      `INSERT INTO contracts (id, organization_id, uploaded_by, display_name)
+       VALUES ($1, $2, $3, 'Test Agreement')`,
+      [contractId, organizationId, userId],
+    );
+    await pool.query(
+      `INSERT INTO obligations (id, contract_id, title, description, due_at, anchors)
+       VALUES ($1, $2, 'Test obligation', 'Confirm payment compliance.', '2026-07-28T00:00:00.000Z', $3::jsonb)`,
+      [
+        obligationId,
+        contractId,
+        JSON.stringify([{ obligatedParty: "Network", obligationType: "PAYMENT" }]),
+      ],
+    );
     await pool.query(
       `INSERT INTO reminders (id, obligation_id, scheduled_for, occurrence_key, status, version)
        VALUES ($1, $2, NOW(), $3, 'PENDING', 0)`,
@@ -110,7 +166,14 @@ describeWithDatabase("ReminderDeliveryProcessor integration", () => {
     );
     expect(inboxEntries.rows).toHaveLength(1);
     expect(inboxEntries.rows[0].obligation_id).toBe(obligationId);
-    expect(inboxEntries.rows[0].payload).toMatchObject({ reminderId, occurrenceKey });
+    expect(inboxEntries.rows[0].payload).toMatchObject({
+      reminderId,
+      occurrenceKey,
+      channel: "email",
+      provider: "TEST",
+      providerMessageId: "message-1",
+      recipient: "reviewer@example.com",
+    });
 
     await processor.process(createJob({ reminderId, occurrenceKey }));
 

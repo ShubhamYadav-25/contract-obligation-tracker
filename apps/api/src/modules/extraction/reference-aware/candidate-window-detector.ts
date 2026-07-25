@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend extraction module contracts, services, routes, or persistence logic.
+ */
 import type {
   CandidateWindowSourceMethod,
   SourceLineRange,
@@ -67,10 +70,7 @@ const dutyCuePatterns: readonly [string, RegExp][] = [
     "recurrence",
     /\b(?:daily|weekly|monthly|quarterly|annually|annual|yearly|recurring|each\s+(?:day|week|month|quarter|year))\b/i,
   ],
-  [
-    "operational_action",
-    /\b(?:notify|deliver|submit|report|maintain|pay|return|provide)\b/i,
-  ],
+  ["operational_action", /\b(?:notify|deliver|submit|report|maintain|pay|return|provide)\b/i],
   ["renewal_termination_notice", /\b(?:renewal|renew|termination|terminate|notice)\b/i],
   [
     "expiration_termination",
@@ -81,10 +81,20 @@ const dutyCuePatterns: readonly [string, RegExp][] = [
 const matchingDutyCuePattern =
   /\b(?:shall|must|required\s+to|agrees?\s+to|payable|due|no\s+later\s+than|within\s+(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|thirty|sixty|ninety)|notify|deliver|submit|report|maintain|pay|return|provide)\b/i;
 
+/**
+ * @description Performs the is definition only line helper operation for this module.
+ * @param {string} text - Input value for text.
+ * @returns {boolean} Result of the is definition only line operation.
+ */
 function isDefinitionOnlyLine(text: string): boolean {
   return /\bshall\s+mean\b/i.test(text) || /^["'A-Z][^.;:]{0,120}\bmeans\b/i.test(text);
 }
 
+/**
+ * @description Performs the is section heading helper operation for this module.
+ * @param {string} text - Input value for text.
+ * @returns {boolean} Result of the is section heading operation.
+ */
 function isSectionHeading(text: string): boolean {
   if (text.length > 120 || /[.;]$/.test(text)) {
     return false;
@@ -94,24 +104,49 @@ function isSectionHeading(text: string): boolean {
   );
 }
 
+/**
+ * @description Performs the is table of contents entry helper operation for this module.
+ * @param {string} text - Input value for text.
+ * @returns {boolean} Result of the is table of contents entry operation.
+ */
 function isTableOfContentsEntry(text: string): boolean {
   return /\btable\s+of\s+contents\b/i.test(text) || /\.{3,}\s*\d+\s*$/.test(text);
 }
 
+/**
+ * @description Performs the is recital helper operation for this module.
+ * @param {string} text - Input value for text.
+ * @returns {boolean} Result of the is recital operation.
+ */
 function isRecital(text: string): boolean {
   return /^(?:recitals?|whereas)\b/i.test(text);
 }
 
+/**
+ * @description Performs the is interpretation boilerplate helper operation for this module.
+ * @param {string} text - Input value for text.
+ * @returns {boolean} Result of the is interpretation boilerplate operation.
+ */
 function isInterpretationBoilerplate(text: string): boolean {
   return /\b(?:unless\s+the\s+context\s+otherwise\s+requires|including\s+without\s+limitation|references\s+to\s+sections?|headings\s+are\s+for\s+convenience)\b/i.test(
     text,
   );
 }
 
+/**
+ * @description Performs the is standalone may right helper operation for this module.
+ * @param {string} text - Input value for text.
+ * @returns {boolean} Result of the is standalone may right operation.
+ */
 function isStandaloneMayRight(text: string): boolean {
   return /\bmay\b/i.test(text) && !matchingDutyCuePattern.test(text);
 }
 
+/**
+ * @description Performs the is excluded target helper operation for this module.
+ * @param {string} text - Input value for text.
+ * @returns {boolean} Result of the is excluded target operation.
+ */
 function isExcludedTarget(text: string): boolean {
   return (
     isDefinitionOnlyLine(text) ||
@@ -123,6 +158,11 @@ function isExcludedTarget(text: string): boolean {
   );
 }
 
+/**
+ * @description Performs the find cue types helper operation for this module.
+ * @param {ContractSourceLine} line - Input value for line.
+ * @returns {readonly string[]} Result of the find cue types operation.
+ */
 function findCueTypes(line: ContractSourceLine): readonly string[] {
   if (isExcludedTarget(line.normalizedText)) {
     return [];
@@ -132,14 +172,30 @@ function findCueTypes(line: ContractSourceLine): readonly string[] {
     .map(([cueType]) => cueType);
 }
 
+/**
+ * @description Performs the sorted unique numbers helper operation for this module.
+ * @param {Iterable<number>} values - Input value for values.
+ * @returns {readonly number[]} Result of the sorted unique numbers operation.
+ */
 function sortedUniqueNumbers(values: Iterable<number>): readonly number[] {
   return [...new Set(values)].sort((left, right) => left - right);
 }
 
+/**
+ * @description Performs the sorted unique strings helper operation for this module.
+ * @param {Iterable<string>} values - Input value for values.
+ * @returns {readonly string[]} Result of the sorted unique strings operation.
+ */
 function sortedUniqueStrings(values: Iterable<string>): readonly string[] {
   return [...new Set(values)].sort((left, right) => left.localeCompare(right));
 }
 
+/**
+ * @description Performs the same section helper operation for this module.
+ * @param {readonly string[]} leftSectionPath - Input value for left section path.
+ * @param {readonly string[]} rightSectionPath - Input value for right section path.
+ * @returns {boolean} Result of the same section operation.
+ */
 function sameSection(
   leftSectionPath: readonly string[],
   rightSectionPath: readonly string[],
@@ -151,6 +207,13 @@ function sameSection(
   );
 }
 
+/**
+ * @description Performs the should merge windows helper operation for this module.
+ * @param {MutableWindowDraft} current - Input value for current.
+ * @param {MutableWindowDraft} next - Input value for next.
+ * @param {CandidateWindowDetectionConfig} config - Input value for config.
+ * @returns {boolean} Result of the should merge windows operation.
+ */
 function shouldMergeWindows(
   current: MutableWindowDraft,
   next: MutableWindowDraft,
@@ -169,11 +232,16 @@ function shouldMergeWindows(
     return true;
   }
   return (
-    sameSection(current.sectionPath, next.sectionPath) &&
-    targetGap <= config.mergeGapLineCount
+    sameSection(current.sectionPath, next.sectionPath) && targetGap <= config.mergeGapLineCount
   );
 }
 
+/**
+ * @description Performs the merge drafts helper operation for this module.
+ * @param {MutableWindowDraft} left - Input value for left.
+ * @param {MutableWindowDraft} right - Input value for right.
+ * @returns {MutableWindowDraft} Result of the merge drafts operation.
+ */
 function mergeDrafts(left: MutableWindowDraft, right: MutableWindowDraft): MutableWindowDraft {
   return {
     startLine: Math.min(left.startLine, right.startLine),
@@ -184,14 +252,35 @@ function mergeDrafts(left: MutableWindowDraft, right: MutableWindowDraft): Mutab
   };
 }
 
+/**
+ * @description Performs the find line index helper operation for this module.
+ * @param {readonly ContractSourceLine[]} lines - Input value for lines.
+ * @param {number} globalLineNumber - Input value for global line number.
+ * @returns {number} Result of the find line index operation.
+ */
 function findLineIndex(lines: readonly ContractSourceLine[], globalLineNumber: number): number {
   return lines.findIndex((line) => line.globalLineNumber === globalLineNumber);
 }
 
+/**
+ * @description Performs the character count helper operation for this module.
+ * @param {readonly ContractSourceLine[]} lines - Input value for lines.
+ * @returns {number} Result of the character count operation.
+ */
 function characterCount(lines: readonly ContractSourceLine[]): number {
-  return lines.reduce((count, line, index) => count + line.normalizedText.length + (index > 0 ? 1 : 0), 0);
+  return lines.reduce(
+    (count, line, index) => count + line.normalizedText.length + (index > 0 ? 1 : 0),
+    0,
+  );
 }
 
+/**
+ * @description Performs the clamp draft to bounds helper operation for this module.
+ * @param {MutableWindowDraft} draft - Input value for draft.
+ * @param {readonly ContractSourceLine[]} lines - Input value for lines.
+ * @param {CandidateWindowDetectionConfig} config - Input value for config.
+ * @returns {MutableWindowDraft} Result of the clamp draft to bounds operation.
+ */
 function clampDraftToBounds(
   draft: MutableWindowDraft,
   lines: readonly ContractSourceLine[],
@@ -203,6 +292,10 @@ function clampDraftToBounds(
   let startLine = draft.startLine;
   let endLine = draft.endLine;
 
+  /**
+   * @description Performs the window lines helper operation for this module.
+   * @returns {unknown} Result of the window lines operation.
+   */
   function windowLines() {
     return lines.filter(
       (line) => line.globalLineNumber >= startLine && line.globalLineNumber <= endLine,
@@ -229,6 +322,11 @@ function clampDraftToBounds(
   };
 }
 
+/**
+ * @description Performs the to source line ranges helper operation for this module.
+ * @param {readonly ContractSourceLine[]} lines - Input value for lines.
+ * @returns {readonly SourceLineRange[]} Result of the to source line ranges operation.
+ */
 function toSourceLineRanges(lines: readonly ContractSourceLine[]): readonly SourceLineRange[] {
   const sortedLines = [...lines].sort(
     (left, right) =>
@@ -258,6 +356,11 @@ function toSourceLineRanges(lines: readonly ContractSourceLine[]): readonly Sour
   return ranges;
 }
 
+/**
+ * @description Performs the stable hash helper operation for this module.
+ * @param {string} value - Input value for value.
+ * @returns {string} Result of the stable hash operation.
+ */
 function stableHash(value: string): string {
   let hash = 2_166_136_261;
   for (let index = 0; index < value.length; index += 1) {
@@ -267,6 +370,11 @@ function stableHash(value: string): string {
   return (hash >>> 0).toString(36);
 }
 
+/**
+ * @description Performs the to window id helper operation for this module.
+ * @param {{ readonly startLine: number; readonly endLine: number; readonly targetGlobalLines: readonly number[]; readonly cueTypes: readonly string[]; readonly sectionPath: readonly string[]; }} input - Input value for input.
+ * @returns {string} Result of the to window id operation.
+ */
 function toWindowId(input: {
   readonly startLine: number;
   readonly endLine: number;
@@ -274,11 +382,15 @@ function toWindowId(input: {
   readonly cueTypes: readonly string[];
   readonly sectionPath: readonly string[];
 }): string {
-  return `cw_${input.startLine}_${input.endLine}_${stableHash(
-    JSON.stringify(input),
-  )}`;
+  return `cw_${input.startLine}_${input.endLine}_${stableHash(JSON.stringify(input))}`;
 }
 
+/**
+ * @description Performs the source method for window helper operation for this module.
+ * @param {readonly ContractSourceLine[]} targetLines - Input value for target lines.
+ * @param {readonly ContractSourceLine[]} sourceLines - Input value for source lines.
+ * @returns {CandidateWindowSourceMethod} Result of the source method for window operation.
+ */
 function sourceMethodForWindow(
   targetLines: readonly ContractSourceLine[],
   sourceLines: readonly ContractSourceLine[],
@@ -286,6 +398,13 @@ function sourceMethodForWindow(
   return (targetLines[0] ?? sourceLines[0])?.sourceMethod ?? "PDF_TEXT";
 }
 
+/**
+ * @description Performs the to detected window helper operation for this module.
+ * @param {MutableWindowDraft} draft - Input value for draft.
+ * @param {readonly ContractSourceLine[]} lines - Input value for lines.
+ * @param {CandidateWindowDetectionConfig} config - Input value for config.
+ * @returns {DetectedCandidateWindow} Result of the to detected window operation.
+ */
 function toDetectedWindow(
   draft: MutableWindowDraft,
   lines: readonly ContractSourceLine[],
@@ -327,6 +446,11 @@ function toDetectedWindow(
   };
 }
 
+/**
+ * @description Performs the detect candidate window cue helper operation for this module.
+ * @param {ContractSourceLine} line - Input value for line.
+ * @returns {CandidateWindowCueMatch | null} Result of the detect candidate window cue operation.
+ */
 export function detectCandidateWindowCue(line: ContractSourceLine): CandidateWindowCueMatch | null {
   const cueTypes = findCueTypes(line);
   return cueTypes.length > 0
@@ -337,6 +461,12 @@ export function detectCandidateWindowCue(line: ContractSourceLine): CandidateWin
     : null;
 }
 
+/**
+ * @description Performs the detect candidate windows helper operation for this module.
+ * @param {ContractSourceIndex} sourceIndex - Input value for source index.
+ * @param {Partial<CandidateWindowDetectionConfig>} overrideConfig - Input value for override config.
+ * @returns {readonly DetectedCandidateWindow[]} Result of the detect candidate windows operation.
+ */
 export function detectCandidateWindows(
   sourceIndex: ContractSourceIndex,
   overrideConfig: Partial<CandidateWindowDetectionConfig> = {},
@@ -382,6 +512,11 @@ export function detectCandidateWindows(
   return mergedDrafts.map((draft) => toDetectedWindow(draft, lines, config));
 }
 
+/**
+ * @description Performs the render candidate window for llm helper operation for this module.
+ * @param {DetectedCandidateWindow} window - Input value for window.
+ * @returns {string} Result of the render candidate window for llm operation.
+ */
 export function renderCandidateWindowForLlm(window: DetectedCandidateWindow): string {
   return window.sourceLines
     .map((line) => {

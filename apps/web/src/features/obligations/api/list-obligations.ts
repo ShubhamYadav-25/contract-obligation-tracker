@@ -1,3 +1,6 @@
+/**
+ * @file Defines frontend API client calls for a contract tracker feature.
+ */
 import { z } from "zod";
 
 import { apiRequest } from "@/services/api-client.js";
@@ -66,6 +69,12 @@ const obligationListSchema = z.object({
   statusCounts: obligationStatusCountsSchema,
 });
 
+/**
+ * @description Executes the list obligations operation used by the application workflow.
+ * @param {{ readonly contractId?: string; readonly search?: string; readonly status?: ObligationStatus; readonly reminderStatus?: ObligationReminderFilter; readonly dueDateRange?: ObligationDueDateRangeFilter; readonly limit?: number; readonly offset?: number; }} input - Input value for input.
+ * @param {AbortSignal} signal - Input value for signal.
+ * @returns {unknown} Result of the list obligations operation.
+ */
 export function listObligations(
   input: {
     readonly contractId?: string;

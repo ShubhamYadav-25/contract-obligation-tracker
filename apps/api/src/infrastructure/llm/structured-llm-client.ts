@@ -1,3 +1,6 @@
+/**
+ * @file Defines LLM infrastructure clients and structured response helpers.
+ */
 import type { ZodType } from "zod";
 
 import { ExternalServiceError } from "../../shared/errors/external-service-error.js";
@@ -36,6 +39,13 @@ export interface StructuredLlmRequestBudgetProvider {
   resetRequestBudgetScope(): void;
 }
 
+/**
+ * @description Performs the parse structured json helper operation for this module.
+ * @param {string} text - Input value for text.
+ * @param {string} operationName - Input value for operation name.
+ * @returns {unknown} Result of the parse structured json operation.
+ * @throws {Error} When validation, I/O, or downstream service operations fail.
+ */
 export function parseStructuredJson(text: string, operationName: string): unknown {
   try {
     return JSON.parse(text);
@@ -48,6 +58,14 @@ export function parseStructuredJson(text: string, operationName: string): unknow
   }
 }
 
+/**
+ * @description Performs the validate structured data helper operation for this module.
+ * @param {unknown} value - Input value for value.
+ * @param {ZodType<T>} validator - Input value for validator.
+ * @param {string} operationName - Input value for operation name.
+ * @returns {T} Result of the validate structured data operation.
+ * @throws {Error} When validation, I/O, or downstream service operations fail.
+ */
 export function validateStructuredData<T>(
   value: unknown,
   validator: ZodType<T>,

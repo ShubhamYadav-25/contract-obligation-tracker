@@ -1,8 +1,16 @@
+/**
+ * @file Contains automated tests that verify contract tracker behavior.
+ */
 import { describe, expect, it } from "vitest";
 
 import type { ParsedDocumentPage } from "../../src/modules/document-processing/document-processing.types.js";
 import { ContractSourceIndex } from "../../src/modules/extraction/reference-aware/index.js";
 
+/**
+ * @description Performs the page helper operation for this module.
+ * @param {{ readonly pageNumber: number; readonly lines: readonly string[]; readonly extractionMethod?: "PDF_TEXT" | "TESSERACT" | "GEMINI_VISION"; }} input - Input value for input.
+ * @returns {ParsedDocumentPage} Result of the page operation.
+ */
 function page(input: {
   readonly pageNumber: number;
   readonly lines: readonly string[];

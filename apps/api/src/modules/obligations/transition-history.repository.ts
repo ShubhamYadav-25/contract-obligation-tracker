@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend obligations module contracts, services, routes, or persistence logic.
+ */
 import type { ObligationStatus } from "./obligations.types.js";
 
 export interface ObligationTransitionHistoryRepository {

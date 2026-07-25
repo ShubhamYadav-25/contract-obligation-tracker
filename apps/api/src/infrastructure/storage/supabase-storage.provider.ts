@@ -1,3 +1,6 @@
+/**
+ * @file Defines object storage infrastructure contracts and adapters.
+ */
 import { createClient } from "@supabase/supabase-js";
 import { Readable } from "node:stream";
 
@@ -14,10 +17,20 @@ import type {
 
 const allowedMimeTypes = new Set(["application/pdf"]);
 
+/**
+ * @description Performs the encode object path helper operation for this module.
+ * @param {string} objectKey - Input value for object key.
+ * @returns {string} Result of the encode object path operation.
+ */
 function encodeObjectPath(objectKey: string): string {
   return objectKey.split("/").map(encodeURIComponent).join("/");
 }
 
+/**
+ * @description Performs the parse content length helper operation for this module.
+ * @param {string | null} value - Input value for value.
+ * @returns {number | undefined} Result of the parse content length operation.
+ */
 function parseContentLength(value: string | null): number | undefined {
   if (!value) return undefined;
   const parsed = Number.parseInt(value, 10);
@@ -27,6 +40,12 @@ function parseContentLength(value: string | null): number | undefined {
 export class SupabaseStorageProvider implements StorageProvider {
   private readonly client;
 
+  /**
+   * @description Implements the constructor method for this service or adapter.
+   * @param {StorageConfig} config - Input value for config.
+   * @returns {unknown} Result of the constructor operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   constructor(private readonly config: StorageConfig) {
     if (!config.supabaseUrl || !config.serviceRoleKey) {
       throw new ExternalServiceError("Supabase URL and service role key are required for storage");
@@ -40,6 +59,12 @@ export class SupabaseStorageProvider implements StorageProvider {
     });
   }
 
+  /**
+   * @description Executes the upload operation used by the application workflow.
+   * @param {UploadObjectInput} input - Input value for input.
+   * @returns {Promise<StoredObjectReference>} Result of the upload operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   async upload(input: UploadObjectInput): Promise<StoredObjectReference> {
     const contentType = input.contentType ?? input.mimeType;
     if (!contentType || !allowedMimeTypes.has(contentType)) {
@@ -83,6 +108,12 @@ export class SupabaseStorageProvider implements StorageProvider {
     };
   }
 
+  /**
+   * @description Implements the download method for this service or adapter.
+   * @param {string} objectKey - Input value for object key.
+   * @returns {Promise<Buffer>} Result of the download operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   async download(objectKey: string): Promise<Buffer> {
     const result = await this.client.storage.from(this.config.bucket).download(objectKey);
     if (result.error) {
@@ -95,6 +126,12 @@ export class SupabaseStorageProvider implements StorageProvider {
     return Buffer.from(await result.data.arrayBuffer());
   }
 
+  /**
+   * @description Implements the download stream method for this service or adapter.
+   * @param {DownloadObjectStreamInput} input - Input value for input.
+   * @returns {Promise<DownloadObjectStreamResult>} Result of the download stream operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   async downloadStream(input: DownloadObjectStreamInput): Promise<DownloadObjectStreamResult> {
     const objectUrl = `${this.config.supabaseUrl}/storage/v1/object/${encodeURIComponent(
       this.config.bucket,
@@ -139,6 +176,12 @@ export class SupabaseStorageProvider implements StorageProvider {
     };
   }
 
+  /**
+   * @description Implements the remove method for this service or adapter.
+   * @param {string} objectKey - Input value for object key.
+   * @returns {Promise<void>} Result of the remove operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   async remove(objectKey: string): Promise<void> {
     const result = await this.client.storage.from(this.config.bucket).remove([objectKey]);
     if (result.error) {
@@ -149,10 +192,22 @@ export class SupabaseStorageProvider implements StorageProvider {
     }
   }
 
+  /**
+   * @description Executes the delete operation used by the application workflow.
+   * @param {string} objectKey - Input value for object key.
+   * @returns {Promise<void>} Result of the delete operation.
+   */
   delete(objectKey: string): Promise<void> {
     return this.remove(objectKey);
   }
 
+  /**
+   * @description Executes the create signed url operation used by the application workflow.
+   * @param {string} objectKey - Input value for object key.
+   * @param {number} expiresInSeconds - Input value for expires in seconds.
+   * @returns {Promise<string>} Result of the create signed url operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   async createSignedUrl(objectKey: string, expiresInSeconds: number): Promise<string> {
     const result = await this.client.storage
       .from(this.config.bucket)
@@ -166,6 +221,12 @@ export class SupabaseStorageProvider implements StorageProvider {
     return result.data.signedUrl;
   }
 
+  /**
+   * @description Executes the create signed download url operation used by the application workflow.
+   * @param {string} objectKey - Input value for object key.
+   * @param {number} expiresInSeconds - Input value for expires in seconds.
+   * @returns {Promise<string>} Result of the create signed download url operation.
+   */
   createSignedDownloadUrl(objectKey: string, expiresInSeconds: number): Promise<string> {
     return this.createSignedUrl(objectKey, expiresInSeconds);
   }

@@ -1,3 +1,6 @@
+/**
+ * @file Contains automated tests that verify contract tracker behavior.
+ */
 import { describe, expect, it, vi } from "vitest";
 
 import type { Logger } from "../../src/config/logger.js";
@@ -17,6 +20,10 @@ const context = {
   processingRunId: "00000000-0000-4000-8000-000000000004",
 };
 
+/**
+ * @description Performs the logger helper operation for this module.
+ * @returns {Logger} Result of the logger operation.
+ */
 function logger(): Logger {
   return {
     info: vi.fn(),
@@ -25,12 +32,19 @@ function logger(): Logger {
   };
 }
 
-function pages(lines: readonly string[] = [
-  'This Agreement is between Acme Network Corporation ("Provider") and Beta Affiliate LLC ("Customer").',
-  "Section 2. Payment",
-  "Customer shall pay the Fees.",
-  "Payment is due within thirty (30) days after receipt of invoice.",
-]) {
+/**
+ * @description Performs the pages helper operation for this module.
+ * @param {readonly string[]} lines - Input value for lines.
+ * @returns {unknown} Result of the pages operation.
+ */
+function pages(
+  lines: readonly string[] = [
+    'This Agreement is between Acme Network Corporation ("Provider") and Beta Affiliate LLC ("Customer").',
+    "Section 2. Payment",
+    "Customer shall pay the Fees.",
+    "Payment is due within thirty (30) days after receipt of invoice.",
+  ],
+) {
   return [
     {
       pageNumber: 1,
@@ -39,6 +53,11 @@ function pages(lines: readonly string[] = [
   ];
 }
 
+/**
+ * @description Performs the queue context helper operation for this module.
+ * @param {FakeStructuredLlmClient} llm - Input value for llm.
+ * @returns {void} Result of the queue context operation.
+ */
 function queueContext(llm: FakeStructuredLlmClient): void {
   llm.queueResponse("contract_context_extraction", {
     parties: [
@@ -70,6 +89,11 @@ function queueContext(llm: FakeStructuredLlmClient): void {
   });
 }
 
+/**
+ * @description Performs the raw payment candidate helper operation for this module.
+ * @param {Record<string, unknown>} overrides - Input value for overrides.
+ * @returns {unknown} Result of the raw payment candidate operation.
+ */
 function rawPaymentCandidate(overrides: Record<string, unknown> = {}) {
   return {
     businessType: "PAYMENT",
@@ -109,6 +133,12 @@ function rawPaymentCandidate(overrides: Record<string, unknown> = {}) {
   };
 }
 
+/**
+ * @description Performs the queue payment candidate helper operation for this module.
+ * @param {FakeStructuredLlmClient} llm - Input value for llm.
+ * @param {Record<string, unknown>} overrides - Input value for overrides.
+ * @returns {void} Result of the queue payment candidate operation.
+ */
 function queuePaymentCandidate(
   llm: FakeStructuredLlmClient,
   overrides: Record<string, unknown> = {},
@@ -118,20 +148,41 @@ function queuePaymentCandidate(
   });
 }
 
+/**
+ * @description Performs the queue candidates helper operation for this module.
+ * @param {FakeStructuredLlmClient} llm - Input value for llm.
+ * @param {readonly unknown[]} candidates - Input value for candidates.
+ * @returns {void} Result of the queue candidates operation.
+ */
 function queueCandidates(llm: FakeStructuredLlmClient, candidates: readonly unknown[]): void {
   llm.queueResponse("obligation_candidate_extraction", { candidates });
 }
 
 class MetricsStructuredLlmClient implements StructuredLlmClient, StructuredLlmMetricsProvider {
+  /**
+   * @description Implements the constructor method for this service or adapter.
+   * @param {FakeStructuredLlmClient} delegate - Input value for delegate.
+   * @param {number} retryCount - Input value for retry count.
+   * @returns {unknown} Result of the constructor operation.
+   */
   constructor(
     private readonly delegate: FakeStructuredLlmClient,
     private readonly retryCount: number,
   ) {}
 
+  /**
+   * @description Implements the generate structured method for this service or adapter.
+   * @param {StructuredLlmRequest<T>} request - Input value for request.
+   * @returns {Promise<T>} Result of the generate structured operation.
+   */
   generateStructured<T>(request: StructuredLlmRequest<T>): Promise<T> {
     return this.delegate.generateStructured(request);
   }
 
+  /**
+   * @description Executes the get metrics snapshot operation used by the application workflow.
+   * @returns {unknown} Result of the get metrics snapshot operation.
+   */
   getMetricsSnapshot() {
     return { retryCount: this.delegate.prompts.length > 0 ? this.retryCount : 0 };
   }
@@ -142,17 +193,36 @@ class BudgetedStructuredLlmClient
 {
   resetCount = 0;
 
+  /**
+   * @description Implements the constructor method for this service or adapter.
+   * @param {FakeStructuredLlmClient} delegate - Input value for delegate.
+   * @returns {unknown} Result of the constructor operation.
+   */
   constructor(private readonly delegate: FakeStructuredLlmClient) {}
 
+  /**
+   * @description Implements the generate structured method for this service or adapter.
+   * @param {StructuredLlmRequest<T>} request - Input value for request.
+   * @returns {Promise<T>} Result of the generate structured operation.
+   */
   generateStructured<T>(request: StructuredLlmRequest<T>): Promise<T> {
     return this.delegate.generateStructured(request);
   }
 
+  /**
+   * @description Implements the reset request budget scope method for this service or adapter.
+   * @returns {void} Result of the reset request budget scope operation.
+   */
   resetRequestBudgetScope(): void {
     this.resetCount += 1;
   }
 }
 
+/**
+ * @description Performs the extract helper operation for this module.
+ * @param {{ readonly llm: StructuredLlmClient; readonly sourcePages?: ReturnType<typeof pages>; }} input - Input value for input.
+ * @returns {Promise<unknown>} Result of the extract operation.
+ */
 async function extract(input: {
   readonly llm: StructuredLlmClient;
   readonly sourcePages?: ReturnType<typeof pages>;
@@ -319,6 +389,10 @@ describe("ReferenceAwareObligationExtractor", () => {
   });
 
   it("returns stable output when processing the same source and candidates twice", async () => {
+    /**
+     * @description Performs the run helper operation for this module.
+     * @returns {Promise<unknown>} Result of the run operation.
+     */
     const run = async () => {
       const llm = new FakeStructuredLlmClient();
       queueContext(llm);

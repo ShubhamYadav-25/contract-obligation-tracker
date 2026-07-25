@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend contracts module contracts, services, routes, or persistence logic.
+ */
 import type { Logger } from "../../config/logger.js";
 import { ApplicationError } from "../../shared/errors/application-error.js";
 import type { OcrProvider, OcrResult } from "../../infrastructure/ocr/ocr-provider.js";
@@ -70,10 +73,20 @@ export interface DocumentTextProcessingPipelineDependencies {
   readonly config: DocumentTextProcessingConfig;
 }
 
+/**
+ * @description Performs the safe message helper operation for this module.
+ * @param {unknown} error - Input value for error.
+ * @returns {string} Result of the safe message operation.
+ */
 function safeMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+/**
+ * @description Performs the is retryable extraction error helper operation for this module.
+ * @param {unknown} error - Input value for error.
+ * @returns {boolean} Result of the is retryable extraction error operation.
+ */
 function isRetryableExtractionError(error: unknown): boolean {
   if (error instanceof ApplicationError && typeof error.details.retryable === "boolean") {
     return error.details.retryable;
@@ -81,6 +94,11 @@ function isRetryableExtractionError(error: unknown): boolean {
   return true;
 }
 
+/**
+ * @description Performs the parse failure code helper operation for this module.
+ * @param {string} message - Input value for message.
+ * @returns {string} Result of the parse failure code operation.
+ */
 function parseFailureCode(message: string): string {
   const normalized = message.toLowerCase();
   if (normalized.includes("password") || normalized.includes("encrypted")) {
@@ -92,6 +110,12 @@ function parseFailureCode(message: string): string {
   return "PDF_PARSE_FAILED";
 }
 
+/**
+ * @description Performs the with timeout helper operation for this module.
+ * @param {Promise<T>} work - Input value for work.
+ * @param {number} timeoutMilliseconds - Input value for timeout milliseconds.
+ * @returns {Promise<T>} Result of the with timeout operation.
+ */
 function withTimeout<T>(work: Promise<T>, timeoutMilliseconds: number): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timeout = setTimeout(() => {
@@ -102,6 +126,13 @@ function withTimeout<T>(work: Promise<T>, timeoutMilliseconds: number): Promise<
   });
 }
 
+/**
+ * @description Performs the page from ocr result helper operation for this module.
+ * @param {ParsedDocumentPage} basePage - Input value for base page.
+ * @param {OcrResult} result - Input value for result.
+ * @param {DocumentTextQualityConfig} qualityConfig - Input value for quality config.
+ * @returns {ParsedDocumentPage} Result of the page from ocr result operation.
+ */
 function pageFromOcrResult(
   basePage: ParsedDocumentPage,
   result: OcrResult,
@@ -125,6 +156,11 @@ function pageFromOcrResult(
   };
 }
 
+/**
+ * @description Performs the to persistence page helper operation for this module.
+ * @param {SegmentedDocumentPage} page - Input value for page.
+ * @returns {unknown} Result of the to persistence page operation.
+ */
 function toPersistencePage(page: SegmentedDocumentPage) {
   return {
     pageNumber: page.pageNumber,
@@ -143,16 +179,32 @@ function toPersistencePage(page: SegmentedDocumentPage) {
   };
 }
 
+/**
+ * @description Performs the normalize obligation text helper operation for this module.
+ * @param {string} text - Input value for text.
+ * @returns {string} Result of the normalize obligation text operation.
+ */
 function normalizeObligationText(text: string): string {
   return text.replace(/\s+/g, " ").trim();
 }
 
+/**
+ * @description Performs the to obligation title helper operation for this module.
+ * @param {string} text - Input value for text.
+ * @param {number} index - Input value for index.
+ * @returns {string} Result of the to obligation title operation.
+ */
 function toObligationTitle(text: string, index: number): string {
   const normalized = normalizeObligationText(text);
   if (!normalized) return `Extracted obligation ${index + 1}`;
   return normalized.length > 180 ? `${normalized.slice(0, 177)}...` : normalized;
 }
 
+/**
+ * @description Performs the to anchor record helper operation for this module.
+ * @param {Anchor} anchor - Input value for anchor.
+ * @returns {Record<string, unknown>} Result of the to anchor record operation.
+ */
 function toAnchorRecord(anchor: Anchor): Record<string, unknown> {
   const lineOffset = Math.max(0, anchor.line_offset);
   const startLineOffset = Math.max(0, (anchor.start_line ?? lineOffset + 1) - 1);
@@ -178,7 +230,9 @@ function toAnchorRecord(anchor: Anchor): Record<string, unknown> {
     quotedText: anchor.quoted_text,
     ...(anchor.obligation_type ? { obligationType: anchor.obligation_type } : {}),
     ...(anchor.obligated_party !== undefined ? { obligatedParty: anchor.obligated_party } : {}),
-    ...(anchor.beneficiary_party !== undefined ? { beneficiaryParty: anchor.beneficiary_party } : {}),
+    ...(anchor.beneficiary_party !== undefined
+      ? { beneficiaryParty: anchor.beneficiary_party }
+      : {}),
     ...(anchor.action ? { action: anchor.action } : {}),
     ...(anchor.deliverable !== undefined ? { deliverable: anchor.deliverable } : {}),
     ...(anchor.timing ? { timing: anchor.timing } : {}),
@@ -196,6 +250,11 @@ function toAnchorRecord(anchor: Anchor): Record<string, unknown> {
   };
 }
 
+/**
+ * @description Performs the parse explicit due date helper operation for this module.
+ * @param {string} text - Input value for text.
+ * @returns {Date | undefined} Result of the parse explicit due date operation.
+ */
 function parseExplicitDueDate(text: string): Date | undefined {
   const isoMatch = text.match(/\b(20\d{2})[-/](0?[1-9]|1[0-2])[-/](0?[1-9]|[12]\d|3[01])\b/);
   if (isoMatch?.[1] && isoMatch[2] && isoMatch[3]) {
@@ -210,6 +269,13 @@ function parseExplicitDueDate(text: string): Date | undefined {
   return undefined;
 }
 
+/**
+ * @description Performs the to valid date helper operation for this module.
+ * @param {number} year - Input value for year.
+ * @param {number} month - Input value for month.
+ * @param {number} day - Input value for day.
+ * @returns {Date | undefined} Result of the to valid date operation.
+ */
 function toValidDate(year: number, month: number, day: number): Date | undefined {
   const date = new Date(Date.UTC(year, month - 1, day));
   if (
@@ -222,6 +288,11 @@ function toValidDate(year: number, month: number, day: number): Date | undefined
   return date;
 }
 
+/**
+ * @description Performs the parse anchor due date helper operation for this module.
+ * @param {Anchor} anchor - Input value for anchor.
+ * @returns {Date | undefined} Result of the parse anchor due date operation.
+ */
 function parseAnchorDueDate(anchor: Anchor): Date | undefined {
   const explicitDueDate =
     anchor.timing && typeof anchor.timing.explicitDueDate === "string"
@@ -230,6 +301,11 @@ function parseAnchorDueDate(anchor: Anchor): Date | undefined {
   return explicitDueDate ? parseExplicitDueDate(explicitDueDate) : undefined;
 }
 
+/**
+ * @description Performs the to extracted obligations helper operation for this module.
+ * @param {readonly FieldAnchor[] | undefined} obligations - Input value for obligations.
+ * @returns {readonly ExtractedObligationInput[]} Result of the to extracted obligations operation.
+ */
 function toExtractedObligations(
   obligations: readonly FieldAnchor[] | undefined,
 ): readonly ExtractedObligationInput[] {
@@ -246,8 +322,19 @@ function toExtractedObligations(
 }
 
 export class DocumentTextProcessingPipeline implements ContractProcessingPipeline {
+  /**
+   * @description Implements the constructor method for this service or adapter.
+   * @param {DocumentTextProcessingPipelineDependencies} dependencies - Input value for dependencies.
+   * @returns {unknown} Result of the constructor operation.
+   */
   constructor(private readonly dependencies: DocumentTextProcessingPipelineDependencies) {}
 
+  /**
+   * @description Implements the run method for this service or adapter.
+   * @param {ProcessContractJobPayload} input - Input value for input.
+   * @returns {Promise<ContractProcessingPipelineResult>} Result of the run operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   async run(input: ProcessContractJobPayload): Promise<ContractProcessingPipelineResult> {
     const document = await this.dependencies.documents.findStoredForProcessing(input);
     if (!document) {
@@ -473,6 +560,11 @@ export class DocumentTextProcessingPipeline implements ContractProcessingPipelin
     };
   }
 
+  /**
+   * @description Implements the ocr pages method for this service or adapter.
+   * @param {{ readonly input: ProcessContractJobPayload; readonly fileBytes: Buffer; readonly pages: readonly ParsedDocumentPage[]; readonly pagesRequiringOcr: readonly ParsedDocumentPage[]; }} input - Input value for input.
+   * @returns {Promise<readonly ParsedDocumentPage[]>} Result of the ocr pages operation.
+   */
   private async ocrPages(input: {
     readonly input: ProcessContractJobPayload;
     readonly fileBytes: Buffer;
@@ -495,6 +587,12 @@ export class DocumentTextProcessingPipeline implements ContractProcessingPipelin
     return input.pages.map((page) => ocrByPage.get(page.pageNumber) ?? page);
   }
 
+  /**
+   * @description Implements the ocr page method for this service or adapter.
+   * @param {{ readonly input: ProcessContractJobPayload; readonly fileBytes: Buffer; readonly page: ParsedDocumentPage; }} input - Input value for input.
+   * @returns {Promise<ParsedDocumentPage>} Result of the ocr page operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   private async ocrPage(input: {
     readonly input: ProcessContractJobPayload;
     readonly fileBytes: Buffer;
@@ -548,6 +646,13 @@ export class DocumentTextProcessingPipeline implements ContractProcessingPipelin
     });
   }
 
+  /**
+   * @description Implements the run ocr provider method for this service or adapter.
+   * @param {DocumentTextExtractionMethod} provider - Input value for provider.
+   * @param {OcrProvider} ocr - Input value for ocr.
+   * @param {{ readonly input: ProcessContractJobPayload; readonly fileBytes: Buffer; readonly pageImageBytes: Uint8Array; readonly pageImageMimeType: "image/png"; readonly page: ParsedDocumentPage; }} input - Input value for input.
+   * @returns {Promise<ParsedDocumentPage | null>} Result of the run ocr provider operation.
+   */
   private async runOcrProvider(
     provider: DocumentTextExtractionMethod,
     ocr: OcrProvider,

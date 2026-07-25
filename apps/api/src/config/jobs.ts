@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend runtime configuration and environment helpers.
+ */
 import type { ApiEnv } from "./env.js";
 
 export interface JobConfig {
@@ -10,6 +13,11 @@ export interface JobConfig {
   readonly retryMaxDelayMilliseconds: number;
 }
 
+/**
+ * @description Executes the create job config operation used by the application workflow.
+ * @param {ApiEnv} env - Input value for env.
+ * @returns {JobConfig} Result of the create job config operation.
+ */
 export function createJobConfig(env: ApiEnv): JobConfig {
   return {
     workerId: env.WORKER_ID,

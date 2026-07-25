@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend extraction module contracts, services, routes, or persistence logic.
+ */
 import { z } from "zod";
 
 import type { StructuredLlmClient } from "../../../infrastructure/llm/structured-llm-client.js";
@@ -66,10 +69,7 @@ export interface VerifiedContractSectionHeading {
 }
 
 export type ContractContextRejectedItemType =
-  | "party"
-  | "defined_term"
-  | "key_date"
-  | "section_heading";
+  "party" | "defined_term" | "key_date" | "section_heading";
 
 export interface ContractContextRejectedItem {
   readonly type: ContractContextRejectedItemType;
@@ -287,6 +287,12 @@ const contractContextJsonSchema = {
   required: ["parties", "definedTerms", "keyDates", "sectionHeadings"],
 } satisfies Record<string, unknown>;
 
+/**
+ * @description Performs the selected lines from source helper operation for this module.
+ * @param {ContractContextExtractorInput} input - Input value for input.
+ * @param {ContractContextExtractorConfig} config - Input value for config.
+ * @returns {readonly ContractSourceLine[]} Result of the selected lines from source operation.
+ */
 function selectedLinesFromSource(
   input: ContractContextExtractorInput,
   config: ContractContextExtractorConfig,
@@ -320,7 +326,11 @@ function selectedLinesFromSource(
     if (section.reliable && !config.includeSectionStructureWhenReliable) {
       continue;
     }
-    for (let lineNumber = section.startGlobalLine; lineNumber <= section.endGlobalLine; lineNumber += 1) {
+    for (
+      let lineNumber = section.startGlobalLine;
+      lineNumber <= section.endGlobalLine;
+      lineNumber += 1
+    ) {
       const line = input.sourceIndex.getLine(lineNumber);
       if (line) {
         selected.set(lineNumber, line);
@@ -348,8 +358,11 @@ function selectedLinesFromSource(
 
   const bounded: ContractSourceLine[] = [];
   let characterCount = 0;
-  for (const line of [...selected.values()].sort((left, right) => left.globalLineNumber - right.globalLineNumber)) {
-    const nextCharacterCount = characterCount + line.normalizedText.length + (bounded.length > 0 ? 1 : 0);
+  for (const line of [...selected.values()].sort(
+    (left, right) => left.globalLineNumber - right.globalLineNumber,
+  )) {
+    const nextCharacterCount =
+      characterCount + line.normalizedText.length + (bounded.length > 0 ? 1 : 0);
     if (
       bounded.length >= config.maxPromptLineCount ||
       nextCharacterCount > config.maxPromptCharacters
@@ -363,6 +376,11 @@ function selectedLinesFromSource(
   return bounded;
 }
 
+/**
+ * @description Performs the has reliable structure helper operation for this module.
+ * @param {ContractContextExtractorInput} input - Input value for input.
+ * @returns {boolean} Result of the has reliable structure operation.
+ */
 function hasReliableStructure(input: ContractContextExtractorInput): boolean {
   return (
     (input.sectionHints?.some((section) => section.reliable) ?? false) ||
@@ -370,18 +388,29 @@ function hasReliableStructure(input: ContractContextExtractorInput): boolean {
   );
 }
 
+/**
+ * @description Performs the render source lines for prompt helper operation for this module.
+ * @param {readonly ContractSourceLine[]} lines - Input value for lines.
+ * @returns {string} Result of the render source lines for prompt operation.
+ */
 function renderSourceLinesForPrompt(lines: readonly ContractSourceLine[]): string {
   return lines
     .map((line) => {
       const pageLocalLine =
         line.pageLocalLineNumber !== null ? `L${line.pageLocalLineNumber}` : "L?";
-      const sectionPath =
-        line.sectionPath.length > 0 ? ` [${line.sectionPath.join(" > ")}]` : "";
+      const sectionPath = line.sectionPath.length > 0 ? ` [${line.sectionPath.join(" > ")}]` : "";
       return `G${line.globalLineNumber} P${line.pageNumber}:${pageLocalLine}${sectionPath} ${line.normalizedText}`;
     })
     .join("\n");
 }
 
+/**
+ * @description Performs the to verified source helper operation for this module.
+ * @param {ContractSourceIndex} sourceIndex - Input value for source index.
+ * @param {number} startLine - Input value for start line.
+ * @param {number} endLine - Input value for end line.
+ * @returns {VerifiedContextSource | null} Result of the to verified source operation.
+ */
 function toVerifiedSource(
   sourceIndex: ContractSourceIndex,
   startLine: number,
@@ -410,10 +439,20 @@ function toVerifiedSource(
   };
 }
 
+/**
+ * @description Performs the has invalid span helper operation for this module.
+ * @param {ResolvedEvidenceSpan} resolved - Input value for resolved.
+ * @returns {boolean} Result of the has invalid span operation.
+ */
 function hasInvalidSpan(resolved: ResolvedEvidenceSpan): boolean {
   return resolved.verificationErrors.length > 0 || resolved.exactQuote.length === 0;
 }
 
+/**
+ * @description Executes the rejected item operation used by the application workflow.
+ * @param {{ readonly sourceIndex: ContractSourceIndex; readonly type: ContractContextRejectedItemType; readonly label: string; readonly startLine: number; readonly endLine: number; }} input - Input value for input.
+ * @returns {ContractContextRejectedItem} Result of the rejected item operation.
+ */
 function rejectedItem(input: {
   readonly sourceIndex: ContractSourceIndex;
   readonly type: ContractContextRejectedItemType;
@@ -426,16 +465,29 @@ function rejectedItem(input: {
     label: input.label,
     startLine: input.startLine,
     endLine: input.endLine,
-    errors: input.sourceIndex.resolveEvidenceSpan(input.startLine, input.endLine).verificationErrors,
+    errors: input.sourceIndex.resolveEvidenceSpan(input.startLine, input.endLine)
+      .verificationErrors,
   };
 }
 
+/**
+ * @description Performs the normalize aliases helper operation for this module.
+ * @param {readonly string[]} aliases - Input value for aliases.
+ * @param {string} canonicalName - Input value for canonical name.
+ * @returns {string[]} Result of the normalize aliases operation.
+ */
 function normalizeAliases(aliases: readonly string[], canonicalName: string): string[] {
   return [...new Set(aliases.filter((alias) => alias !== canonicalName))].sort((left, right) =>
     left.localeCompare(right),
   );
 }
 
+/**
+ * @description Performs the contains term helper operation for this module.
+ * @param {string} text - Input value for text.
+ * @param {string} term - Input value for term.
+ * @returns {boolean} Result of the contains term operation.
+ */
 function containsTerm(text: string, term: string): boolean {
   const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return new RegExp(`(^|[^A-Za-z0-9])${escaped}([^A-Za-z0-9]|$)`, "i").test(text);
@@ -445,6 +497,11 @@ export class ContractContextExtractor {
   private readonly llm: StructuredLlmClient;
   private readonly config: ContractContextExtractorConfig;
 
+  /**
+   * @description Implements the constructor method for this service or adapter.
+   * @param {{ readonly llm: StructuredLlmClient; readonly config?: Partial<ContractContextExtractorConfig>; }} input - Input value for input.
+   * @returns {unknown} Result of the constructor operation.
+   */
   constructor(input: {
     readonly llm: StructuredLlmClient;
     readonly config?: Partial<ContractContextExtractorConfig>;
@@ -453,6 +510,11 @@ export class ContractContextExtractor {
     this.config = { ...defaultContextExtractorConfig, ...input.config };
   }
 
+  /**
+   * @description Implements the extract method for this service or adapter.
+   * @param {ContractContextExtractorInput} input - Input value for input.
+   * @returns {Promise<ContractContextExtractionResult>} Result of the extract operation.
+   */
   async extract(input: ContractContextExtractorInput): Promise<ContractContextExtractionResult> {
     const scopedLines = selectedLinesFromSource(input, this.config);
     const raw = await this.llm.generateStructured<RawContractContextExtraction>({
@@ -475,6 +537,13 @@ export class ContractContextExtractor {
     return this.verifyRawContext(input.sourceIndex, raw, !hasReliableStructure(input));
   }
 
+  /**
+   * @description Implements the verify raw context method for this service or adapter.
+   * @param {ContractSourceIndex} sourceIndex - Input value for source index.
+   * @param {RawContractContextExtraction} raw - Input value for raw.
+   * @param {boolean} acceptSectionHeadings - Input value for accept section headings.
+   * @returns {ContractContextExtractionResult} Result of the verify raw context operation.
+   */
   private verifyRawContext(
     sourceIndex: ContractSourceIndex,
     raw: RawContractContextExtraction,
@@ -605,7 +674,14 @@ export class ContractContextExtractor {
           source,
         })),
         definedTerms: definedTerms.map(
-          ({ term, definition, referencedSection, referencedExhibit, resolutionStatus, source }) => ({
+          ({
+            term,
+            definition,
+            referencedSection,
+            referencedExhibit,
+            resolutionStatus,
+            source,
+          }) => ({
             term,
             definition,
             referencedSection,
@@ -633,10 +709,20 @@ export class ContractContextExtractor {
 export class RelevantContextSelector {
   private readonly config: RelevantContextSelectorConfig;
 
+  /**
+   * @description Implements the constructor method for this service or adapter.
+   * @param {Partial<RelevantContextSelectorConfig>} config - Input value for config.
+   * @returns {unknown} Result of the constructor operation.
+   */
   constructor(config: Partial<RelevantContextSelectorConfig> = {}) {
     this.config = { ...defaultRelevantContextConfig, ...config };
   }
 
+  /**
+   * @description Implements the select method for this service or adapter.
+   * @param {{ readonly window: DetectedCandidateWindow; readonly context: ContractContextExtractionResult; readonly sourceIndex: ContractSourceIndex; }} input - Input value for input.
+   * @returns {RelevantContextSelection} Result of the select operation.
+   */
   select(input: {
     readonly window: DetectedCandidateWindow;
     readonly context: ContractContextExtractionResult;
@@ -651,8 +737,8 @@ export class RelevantContextSelector {
     const definedTerms = input.context.definedTerms.filter((term) =>
       containsTerm(nearbyText, term.term),
     );
-    const keyDates = input.context.keyDates.filter((date) =>
-      containsTerm(nearbyText, date.label) || containsTerm(nearbyText, date.rawValue),
+    const keyDates = input.context.keyDates.filter(
+      (date) => containsTerm(nearbyText, date.label) || containsTerm(nearbyText, date.rawValue),
     );
 
     return {
@@ -667,6 +753,12 @@ export class RelevantContextSelector {
     };
   }
 
+  /**
+   * @description Implements the nearby text method for this service or adapter.
+   * @param {DetectedCandidateWindow} window - Input value for window.
+   * @param {ContractSourceIndex} sourceIndex - Input value for source index.
+   * @returns {string} Result of the nearby text operation.
+   */
   private nearbyText(window: DetectedCandidateWindow, sourceIndex: ContractSourceIndex): string {
     const startLine = Math.max(1, window.globalStartLine - this.config.nearbyLineCount);
     const endLine = window.globalEndLine + this.config.nearbyLineCount;

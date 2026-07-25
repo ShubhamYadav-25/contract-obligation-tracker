@@ -1,3 +1,6 @@
+/**
+ * @file Defines ambient frontend TypeScript declarations.
+ */
 declare module "pdfjs-dist/build/pdf.mjs" {
   export const GlobalWorkerOptions: {
     workerSrc: string;

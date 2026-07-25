@@ -1,3 +1,6 @@
+/**
+ * @file Contains automated tests that verify contract tracker behavior.
+ */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 

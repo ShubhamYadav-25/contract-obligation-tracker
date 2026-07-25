@@ -1,3 +1,6 @@
+/**
+ * @file Defines a backend operational script for local maintenance or diagnostics.
+ */
 import { createClient } from "@supabase/supabase-js";
 import pg from "pg";
 
@@ -19,6 +22,11 @@ interface CheckResult {
   readonly error?: CheckError;
 }
 
+/**
+ * @description Runs the clean error script step for local operations.
+ * @param {unknown} error - Input value for error.
+ * @returns {CheckError} Result of the clean error operation.
+ */
 function cleanError(error: unknown): CheckError {
   return {
     name: error instanceof Error ? error.name : "UnknownError",
@@ -29,6 +37,10 @@ function cleanError(error: unknown): CheckError {
   };
 }
 
+/**
+ * @description Runs the check database script step for local operations.
+ * @returns {Promise<CheckResult>} Result of the check database operation.
+ */
 async function checkDatabase(): Promise<CheckResult> {
   const env = loadEnv();
   const database = createDatabaseConfig(env);
@@ -71,6 +83,11 @@ async function checkDatabase(): Promise<CheckResult> {
   }
 }
 
+/**
+ * @description Runs the check supabase storage script step for local operations.
+ * @returns {Promise<CheckResult>} Result of the check supabase storage operation.
+ * @throws {Error} When validation, I/O, or downstream service operations fail.
+ */
 async function checkSupabaseStorage(): Promise<CheckResult> {
   const env = loadEnv();
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -125,6 +142,10 @@ async function checkSupabaseStorage(): Promise<CheckResult> {
   }
 }
 
+/**
+ * @description Runs the main script step for local operations.
+ * @returns {Promise<void>} Result of the main operation.
+ */
 async function main(): Promise<void> {
   loadDotEnvFile();
 

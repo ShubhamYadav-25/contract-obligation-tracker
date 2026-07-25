@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend extraction module contracts, services, routes, or persistence logic.
+ */
 import type { ExtractionCandidate } from "./extraction.types.js";
 
 export interface ExtractionCandidateRepository {

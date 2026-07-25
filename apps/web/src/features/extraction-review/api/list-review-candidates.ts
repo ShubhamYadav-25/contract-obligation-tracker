@@ -1,3 +1,6 @@
+/**
+ * @file Defines frontend API client calls for a contract tracker feature.
+ */
 import { z } from "zod";
 
 import { apiRequest } from "@/services/api-client.js";
@@ -21,6 +24,11 @@ const reviewCandidateSchema = z.object({
 
 export const reviewCandidateListSchema = z.array(reviewCandidateSchema);
 
+/**
+ * @description Executes the list review candidates operation used by the application workflow.
+ * @param {AbortSignal} signal - Input value for signal.
+ * @returns {unknown} Result of the list review candidates operation.
+ */
 export function listReviewCandidates(signal?: AbortSignal) {
   return apiRequest("/api/reviews", {
     signal,

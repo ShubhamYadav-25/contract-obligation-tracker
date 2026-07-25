@@ -1,3 +1,6 @@
+/**
+ * @file Defines background job scheduling, processing, recovery, or producer logic.
+ */
 import type { PostgreSqlClient } from "../infrastructure/database/postgres-client.js";
 import type { TransactionManager } from "../infrastructure/database/transaction-manager.js";
 import type {
@@ -27,6 +30,11 @@ interface BackgroundJobRow {
   readonly updated_at: Date;
 }
 
+/**
+ * @description Performs the map job helper operation for this module.
+ * @param {BackgroundJobRow} row - Input value for row.
+ * @returns {BackgroundJob} Result of the map job operation.
+ */
 function mapJob(row: BackgroundJobRow): BackgroundJob {
   return {
     id: row.id,
@@ -57,11 +65,23 @@ export interface JobRepository {
 }
 
 export class PostgresJobRepository implements JobRepository {
+  /**
+   * @description Implements the constructor method for this service or adapter.
+   * @param {PostgreSqlClient} database - Input value for database.
+   * @param {TransactionManager} transactions - Input value for transactions.
+   * @returns {unknown} Result of the constructor operation.
+   */
   constructor(
     private readonly database: PostgreSqlClient,
     private readonly transactions: TransactionManager,
   ) {}
 
+  /**
+   * @description Executes the create job operation used by the application workflow.
+   * @param {CreateBackgroundJobInput} input - Input value for input.
+   * @returns {Promise<BackgroundJob>} Result of the create job operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   async createJob(input: CreateBackgroundJobInput): Promise<BackgroundJob> {
     const result = await this.database.query<BackgroundJobRow>(
       `
@@ -95,6 +115,11 @@ export class PostgresJobRepository implements JobRepository {
     return mapJob(row);
   }
 
+  /**
+   * @description Implements the claim jobs method for this service or adapter.
+   * @param {ClaimJobsInput} input - Input value for input.
+   * @returns {Promise<readonly BackgroundJob[]>} Result of the claim jobs operation.
+   */
   async claimJobs(input: ClaimJobsInput): Promise<readonly BackgroundJob[]> {
     return this.transactions.inTransaction(async ({ client }) => {
       const result = await client.query<BackgroundJobRow>(
@@ -127,6 +152,11 @@ export class PostgresJobRepository implements JobRepository {
     });
   }
 
+  /**
+   * @description Implements the mark completed method for this service or adapter.
+   * @param {CompleteJobInput} input - Input value for input.
+   * @returns {Promise<void>} Result of the mark completed operation.
+   */
   async markCompleted(input: CompleteJobInput): Promise<void> {
     await this.database.query(
       `
@@ -146,6 +176,11 @@ export class PostgresJobRepository implements JobRepository {
     );
   }
 
+  /**
+   * @description Implements the mark failed method for this service or adapter.
+   * @param {FailJobInput} input - Input value for input.
+   * @returns {Promise<void>} Result of the mark failed operation.
+   */
   async markFailed(input: FailJobInput): Promise<void> {
     await this.database.query(
       `
@@ -178,6 +213,11 @@ export class PostgresJobRepository implements JobRepository {
     );
   }
 
+  /**
+   * @description Implements the recover expired jobs method for this service or adapter.
+   * @param {Date} now - Input value for now.
+   * @returns {Promise<readonly BackgroundJob[]>} Result of the recover expired jobs operation.
+   */
   async recoverExpiredJobs(now: Date): Promise<readonly BackgroundJob[]> {
     const result = await this.database.query<BackgroundJobRow>(
       `

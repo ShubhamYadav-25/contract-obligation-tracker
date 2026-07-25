@@ -1,3 +1,6 @@
+/**
+ * @file Contains automated tests that verify contract tracker behavior.
+ */
 import express from "express";
 import request from "supertest";
 import { describe, expect, it, vi } from "vitest";
@@ -18,6 +21,11 @@ const userId = "00000000-0000-4000-8000-000000000002";
 const contractId = "00000000-0000-4000-8000-000000000003";
 const obligationId = "00000000-0000-4000-8000-000000000004";
 
+/**
+ * @description Executes the create test app operation used by the application workflow.
+ * @param {{ readonly obligations: ObligationRepository; readonly reminders: ReminderReadRepository; readonly messages?: MessageReadRepository; }} input - Input value for input.
+ * @returns {unknown} Result of the create test app operation.
+ */
 function createTestApp(input: {
   readonly obligations: ObligationRepository;
   readonly reminders: ReminderReadRepository;

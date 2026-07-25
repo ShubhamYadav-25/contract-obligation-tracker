@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend obligations module contracts, services, routes, or persistence logic.
+ */
 import type { Request, Response } from "express";
 import { z } from "zod";
 import { ApplicationError } from "../../shared/errors/application-error.js";
@@ -43,6 +46,11 @@ const listQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).default(0),
 });
 
+/**
+ * @description Performs the serialize obligation helper operation for this module.
+ * @param {ObligationRecord} record - Input value for record.
+ * @returns {unknown} Result of the serialize obligation operation.
+ */
 function serializeObligation(record: ObligationRecord) {
   return {
     id: record.id,
@@ -70,6 +78,11 @@ function serializeObligation(record: ObligationRecord) {
   };
 }
 
+/**
+ * @description Performs the serialize obligation detail helper operation for this module.
+ * @param {ObligationDetailRecord} record - Input value for record.
+ * @returns {unknown} Result of the serialize obligation detail operation.
+ */
 function serializeObligationDetail(record: ObligationDetailRecord) {
   return {
     ...serializeObligation(record),
@@ -84,11 +97,24 @@ function serializeObligationDetail(record: ObligationDetailRecord) {
 }
 
 export class ObligationController {
+  /**
+   * @description Implements the constructor method for this service or adapter.
+   * @param {ObligationService} service - Input value for service.
+   * @param {ObligationRepository} repository - Input value for repository.
+   * @returns {unknown} Result of the constructor operation.
+   */
   constructor(
     private readonly service?: ObligationService,
     private readonly repository?: ObligationRepository,
   ) {}
 
+  /**
+   * @description Executes the list operation used by the application workflow.
+   * @param {Request} request - Input value for request.
+   * @param {Response} response - Input value for response.
+   * @returns {Promise<void>} Result of the list operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   async list(request: Request, response: Response): Promise<void> {
     if (!this.repository) {
       throw new ApplicationError({
@@ -139,6 +165,13 @@ export class ObligationController {
     });
   }
 
+  /**
+   * @description Implements the transition method for this service or adapter.
+   * @param {Request} request - Input value for request.
+   * @param {Response} response - Input value for response.
+   * @returns {Promise<void>} Result of the transition operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   async transition(request: Request, response: Response): Promise<void> {
     if (!this.service || !this.repository) {
       throw new ApplicationError({
@@ -187,6 +220,13 @@ export class ObligationController {
     }
   }
 
+  /**
+   * @description Executes the update operation used by the application workflow.
+   * @param {Request} request - Input value for request.
+   * @param {Response} response - Input value for response.
+   * @returns {Promise<void>} Result of the update operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   async update(request: Request, response: Response): Promise<void> {
     if (!this.repository) {
       throw new ApplicationError({
@@ -299,6 +339,13 @@ export class ObligationController {
     response.status(200).json({ success: true, data: serializeObligation(updated) });
   }
 
+  /**
+   * @description Implements the detail method for this service or adapter.
+   * @param {Request} request - Input value for request.
+   * @param {Response} response - Input value for response.
+   * @returns {Promise<void>} Result of the detail operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   async detail(request: Request, response: Response): Promise<void> {
     if (!this.repository) {
       throw new ApplicationError({

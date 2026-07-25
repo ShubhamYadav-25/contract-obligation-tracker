@@ -1,3 +1,6 @@
+/**
+ * @file Defines feature-level web application code for the contract tracker.
+ */
 export type KpiStatus = "PASS" | "WARN" | "FAIL" | "NOT_MEASURED";
 
 export interface KpiMetric {

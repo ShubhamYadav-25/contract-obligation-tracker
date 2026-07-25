@@ -1,3 +1,6 @@
+/**
+ * @file Defines a backend operational script for local maintenance or diagnostics.
+ */
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -10,12 +13,13 @@ import { PdfJsPageRendererAdapter } from "../infrastructure/pdf/pdfjs-page-rende
 import { NativePdfTextExtractorAdapter } from "../infrastructure/pdf/native-pdf-text-extractor.adapter.js";
 import { TesseractOcrAdapter } from "../infrastructure/ocr/tesseract.adapter.js";
 import type { OcrProvider, OcrResult } from "../infrastructure/ocr/ocr-provider.js";
-import type {
-  ParsedDocumentPage,
-} from "../modules/document-processing/document-processing.types.js";
+import type { ParsedDocumentPage } from "../modules/document-processing/document-processing.types.js";
 import { evaluateTextQuality } from "../modules/document-processing/document-quality.js";
 import { segmentDocumentPages } from "../modules/document-processing/text-segmentation.js";
-import { normalizeExtractedText, splitPageLines } from "../modules/document-processing/text-normalizer.js";
+import {
+  normalizeExtractedText,
+  splitPageLines,
+} from "../modules/document-processing/text-normalizer.js";
 import {
   ContractContextExtractor,
   ContractSourceIndex,
@@ -98,6 +102,12 @@ const smokeDocumentId = "00000000-0000-4000-8000-000000000102";
 const smokeProcessingRunId = "00000000-0000-4000-8000-000000000103";
 const smokeOrganizationId = "00000000-0000-4000-8000-000000000104";
 
+/**
+ * @description Runs the parse args script step for local operations.
+ * @param {readonly string[]} argv - Input value for argv.
+ * @returns {CliOptions} Result of the parse args operation.
+ * @throws {Error} When validation, I/O, or downstream service operations fail.
+ */
 function parseArgs(argv: readonly string[]): CliOptions {
   let pdfPath = defaultPdfPath;
   let outDir = join("dev-output", "reference-aware-smoke");
@@ -157,6 +167,11 @@ function parseArgs(argv: readonly string[]): CliOptions {
   };
 }
 
+/**
+ * @description Runs the sanitize value script step for local operations.
+ * @param {unknown} value - Input value for value.
+ * @returns {unknown} Result of the sanitize value operation.
+ */
 function sanitizeValue(value: unknown): unknown {
   if (typeof value === "string") {
     return value.length > 240 ? `${value.slice(0, 237)}...` : value;
@@ -185,18 +200,41 @@ function sanitizeValue(value: unknown): unknown {
 class SmokeLogger implements Logger {
   readonly events: SmokeLogEvent[] = [];
 
+  /**
+   * @description Runs the info script step for local operations.
+   * @param {string} message - Input value for message.
+   * @param {Record<string, unknown>} details - Input value for details.
+   * @returns {void} Result of the info operation.
+   */
   info(message: string, details: Record<string, unknown> = {}): void {
     this.record("info", message, details);
   }
 
+  /**
+   * @description Runs the warn script step for local operations.
+   * @param {string} message - Input value for message.
+   * @param {Record<string, unknown>} details - Input value for details.
+   * @returns {void} Result of the warn operation.
+   */
   warn(message: string, details: Record<string, unknown> = {}): void {
     this.record("warn", message, details);
   }
 
+  /**
+   * @description Runs the error script step for local operations.
+   * @param {string} message - Input value for message.
+   * @param {Record<string, unknown>} details - Input value for details.
+   * @returns {void} Result of the error operation.
+   */
   error(message: string, details: Record<string, unknown> = {}): void {
     this.record("error", message, details);
   }
 
+  /**
+   * @description Runs the count requests script step for local operations.
+   * @param {string} operationName - Input value for operation name.
+   * @returns {number} Result of the count requests operation.
+   */
   countRequests(operationName?: string): number {
     return this.events.filter(
       (event) =>
@@ -205,6 +243,13 @@ class SmokeLogger implements Logger {
     ).length;
   }
 
+  /**
+   * @description Runs the record script step for local operations.
+   * @param {"info" | "warn" | "error"} level - Input value for level.
+   * @param {string} message - Input value for message.
+   * @param {Record<string, unknown>} details - Input value for details.
+   * @returns {void} Result of the record operation.
+   */
   private record(
     level: "info" | "warn" | "error",
     message: string,
@@ -218,6 +263,13 @@ class SmokeLogger implements Logger {
   }
 }
 
+/**
+ * @description Runs the page from ocr result script step for local operations.
+ * @param {ParsedDocumentPage} basePage - Input value for base page.
+ * @param {OcrResult} result - Input value for result.
+ * @param {Parameters<typeof evaluateTextQuality>[1]} qualityConfig - Input value for quality config.
+ * @returns {ParsedDocumentPage} Result of the page from ocr result operation.
+ */
 function pageFromOcrResult(
   basePage: ParsedDocumentPage,
   result: OcrResult,
@@ -241,6 +293,12 @@ function pageFromOcrResult(
   };
 }
 
+/**
+ * @description Runs the with timeout script step for local operations.
+ * @param {Promise<T>} work - Input value for work.
+ * @param {number} timeoutMilliseconds - Input value for timeout milliseconds.
+ * @returns {Promise<T>} Result of the with timeout operation.
+ */
 async function withTimeout<T>(work: Promise<T>, timeoutMilliseconds: number): Promise<T> {
   return await new Promise<T>((resolvePromise, reject) => {
     const timeout = setTimeout(() => {
@@ -250,6 +308,12 @@ async function withTimeout<T>(work: Promise<T>, timeoutMilliseconds: number): Pr
   });
 }
 
+/**
+ * @description Runs the apply ocr fallback script step for local operations.
+ * @param {{ readonly fileBytes: Buffer; readonly parsedPages: readonly ParsedDocumentPage[]; readonly env: ReturnType<typeof loadEnv>; readonly logger: Logger; }} input - Input value for input.
+ * @returns {Promise<readonly ParsedDocumentPage[]>} Result of the apply ocr fallback operation.
+ * @throws {Error} When validation, I/O, or downstream service operations fail.
+ */
 async function applyOcrFallback(input: {
   readonly fileBytes: Buffer;
   readonly parsedPages: readonly ParsedDocumentPage[];
@@ -315,6 +379,11 @@ async function applyOcrFallback(input: {
   return input.parsedPages.map((page) => replacedPages.get(page.pageNumber) ?? page);
 }
 
+/**
+ * @description Runs the summary text script step for local operations.
+ * @param {string | null | undefined} value - Input value for value.
+ * @returns {string | null} Result of the summary text operation.
+ */
 function summaryText(value: string | null | undefined): string | null {
   if (!value) {
     return null;
@@ -323,6 +392,11 @@ function summaryText(value: string | null | undefined): string | null {
   return normalized.length > 240 ? `${normalized.slice(0, 237)}...` : normalized;
 }
 
+/**
+ * @description Runs the summarize context script step for local operations.
+ * @param {ContractContextExtractionResult} context - Input value for context.
+ * @returns {unknown} Result of the summarize context operation.
+ */
 function summarizeContext(context: ContractContextExtractionResult) {
   return {
     parties: context.parties.map((party) => ({
@@ -359,6 +433,11 @@ function summarizeContext(context: ContractContextExtractionResult) {
   };
 }
 
+/**
+ * @description Runs the summarize obligation script step for local operations.
+ * @param {SourceVerifiedOperationalObligation} obligation - Input value for obligation.
+ * @returns {unknown} Result of the summarize obligation operation.
+ */
 function summarizeObligation(obligation: SourceVerifiedOperationalObligation) {
   return {
     stableObligationId: obligation.stableObligationId,
@@ -409,6 +488,11 @@ function summarizeObligation(obligation: SourceVerifiedOperationalObligation) {
   };
 }
 
+/**
+ * @description Runs the validate confirmed obligations script step for local operations.
+ * @param {{ readonly obligations: readonly SourceVerifiedOperationalObligation[]; readonly sourceIndex: ContractSourceIndex; readonly windows: readonly DetectedCandidateWindow[]; }} input - Input value for input.
+ * @returns {unknown} Result of the validate confirmed obligations operation.
+ */
 function validateConfirmedObligations(input: {
   readonly obligations: readonly SourceVerifiedOperationalObligation[];
   readonly sourceIndex: ContractSourceIndex;
@@ -434,7 +518,9 @@ function validateConfirmedObligations(input: {
       failures.push(`${obligation.stableObligationId}: originating candidate window is missing`);
     }
     if (obligation.reviewStatus !== "CONFIRMED") {
-      failures.push(`${obligation.stableObligationId}: confirmed partition contains non-confirmed status`);
+      failures.push(
+        `${obligation.stableObligationId}: confirmed partition contains non-confirmed status`,
+      );
     }
     if (!obligation.responsibleParty.canonicalName) {
       failures.push(`${obligation.stableObligationId}: responsible party is unresolved`);
@@ -470,7 +556,9 @@ function validateConfirmedObligations(input: {
         );
       }
       if (resolved.exactQuote !== span.exactQuote) {
-        failures.push(`${obligation.stableObligationId}: exact quote was not reconstructed from source`);
+        failures.push(
+          `${obligation.stableObligationId}: exact quote was not reconstructed from source`,
+        );
       }
       if (
         !candidateWindows.some(
@@ -500,19 +588,33 @@ function validateConfirmedObligations(input: {
   };
 }
 
+/**
+ * @description Runs the summarize payment example script step for local operations.
+ * @param {readonly SourceVerifiedOperationalObligation[]} obligations - Input value for obligations.
+ * @returns {unknown} Result of the summarize payment example operation.
+ */
 function summarizePaymentExample(obligations: readonly SourceVerifiedOperationalObligation[]) {
   const records = obligations
-    .filter((obligation) => /affiliate\s+(?:advertising|transactional)\s+share/i.test(obligation.object))
+    .filter((obligation) =>
+      /affiliate\s+(?:advertising|transactional)\s+share/i.test(obligation.object),
+    )
     .map(summarizeObligation);
 
   return {
     foundAdvertisingShare: records.some((record) => /advertising/i.test(record.object)),
     foundTransactionalShare: records.some((record) => /transactional/i.test(record.object)),
-    remainSeparate: new Set(records.map((record) => record.stableObligationId)).size === records.length,
+    remainSeparate:
+      new Set(records.map((record) => record.stableObligationId)).size === records.length,
     records,
   };
 }
 
+/**
+ * @description Runs the assert required payment terms script step for local operations.
+ * @param {readonly ParsedDocumentPage[]} pages - Input value for pages.
+ * @returns {void} Result of the assert required payment terms operation.
+ * @throws {Error} When validation, I/O, or downstream service operations fail.
+ */
 function assertRequiredPaymentTerms(pages: readonly ParsedDocumentPage[]): void {
   const text = pages.map((page) => page.normalizedText).join("\n");
   const hasAdvertisingShare = /Affiliate Advertising Share/i.test(text);
@@ -522,6 +624,11 @@ function assertRequiredPaymentTerms(pages: readonly ParsedDocumentPage[]): void 
   }
 }
 
+/**
+ * @description Runs the normalized comparable script step for local operations.
+ * @param {SmokeRunResult} run - Input value for run.
+ * @returns {unknown} Result of the normalized comparable operation.
+ */
 function normalizedComparable(run: SmokeRunResult): unknown {
   return {
     context: run.context,
@@ -542,10 +649,20 @@ function normalizedComparable(run: SmokeRunResult): unknown {
   };
 }
 
+/**
+ * @description Runs the hash comparable script step for local operations.
+ * @param {unknown} value - Input value for value.
+ * @returns {string} Result of the hash comparable operation.
+ */
 function hashComparable(value: unknown): string {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
 }
 
+/**
+ * @description Runs the build request plan script step for local operations.
+ * @param {{ readonly selectedModelAlreadyCached: boolean; readonly batches: readonly CandidateWindowBatch[]; readonly maxRequestsPerContract: number; }} input - Input value for input.
+ * @returns {unknown} Result of the build request plan operation.
+ */
 function buildRequestPlan(input: {
   readonly selectedModelAlreadyCached: boolean;
   readonly batches: readonly CandidateWindowBatch[];
@@ -580,6 +697,12 @@ function buildRequestPlan(input: {
   };
 }
 
+/**
+ * @description Runs the run smoke once script step for local operations.
+ * @param {{ readonly runIndex: number; readonly pdfPath: string; readonly env: ReturnType<typeof loadEnv>; }} input - Input value for input.
+ * @returns {Promise<SmokeRunResult>} Result of the run smoke once operation.
+ * @throws {Error} When validation, I/O, or downstream service operations fail.
+ */
 async function runSmokeOnce(input: {
   readonly runIndex: number;
   readonly pdfPath: string;
@@ -658,9 +781,15 @@ async function runSmokeOnce(input: {
   const deduplicator = new ObligationDeduplicator();
   const consolidator = new ObligationConsolidator();
   const rawCandidates: unknown[] = [];
-  const extractorRejected: { readonly stableCandidateKey: string; readonly summary: string; readonly reviewReasons: readonly string[] }[] = [];
+  const extractorRejected: {
+    readonly stableCandidateKey: string;
+    readonly summary: string;
+    readonly reviewReasons: readonly string[];
+  }[] = [];
   const verificationItems: {
-    readonly candidate: Awaited<ReturnType<ObligationCandidateExtractor["extract"]>>["verifiedCandidates"][number];
+    readonly candidate: Awaited<
+      ReturnType<ObligationCandidateExtractor["extract"]>
+    >["verifiedCandidates"][number];
     readonly window: DetectedCandidateWindow;
   }[] = [];
 
@@ -690,9 +819,7 @@ async function runSmokeOnce(input: {
   });
   const deduplicated = deduplicator.deduplicate(sourceVerified.verified);
   const consolidated = consolidator.consolidate(deduplicated);
-  const confirmed = consolidated.filter(
-    (obligation) => obligation.reviewStatus === "CONFIRMED",
-  );
+  const confirmed = consolidated.filter((obligation) => obligation.reviewStatus === "CONFIRMED");
   const reviewRequired = consolidated.filter(
     (obligation) => obligation.reviewStatus === "REVIEW_REQUIRED",
   );
@@ -748,6 +875,11 @@ async function runSmokeOnce(input: {
   };
 }
 
+/**
+ * @description Runs the main script step for local operations.
+ * @returns {Promise<void>} Result of the main operation.
+ * @throws {Error} When validation, I/O, or downstream service operations fail.
+ */
 async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
   if (!existsSync(options.pdfPath)) {
@@ -757,7 +889,9 @@ async function main(): Promise<void> {
     throw new Error(`PDF path must point to a .pdf file: ${options.pdfPath}`);
   }
   if (options.persist) {
-    throw new Error("Persistence mode is not implemented in this smoke script; use --persist false");
+    throw new Error(
+      "Persistence mode is not implemented in this smoke script; use --persist false",
+    );
   }
   const env = loadEnv();
   if (env.OBLIGATION_EXTRACTOR_MODE !== "reference-aware-gemini") {
@@ -811,7 +945,8 @@ async function main(): Promise<void> {
     },
     persistence: {
       attempted: false,
-      reason: "Smoke script default is non-persisting; no isolated development database flag was used.",
+      reason:
+        "Smoke script default is non-persisting; no isolated development database flag was used.",
     },
     runs,
     idempotency,

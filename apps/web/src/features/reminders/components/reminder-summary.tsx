@@ -1,3 +1,6 @@
+/**
+ * @file Defines feature-specific React UI components for the contract tracker.
+ */
 import { RotateCcw } from "lucide-react";
 
 import { Button } from "@/components/ui/button.js";
@@ -13,6 +16,11 @@ export interface ReminderSummaryItem {
   readonly deliveryAttempts: number;
 }
 
+/**
+ * @description Renders the reminder summary component for the contract tracker UI.
+ * @param {{ readonly reminder: ReminderSummaryItem }} { reminder } - Input value for { reminder }.
+ * @returns {JSX.Element} Result of the reminder summary operation.
+ */
 export function ReminderSummary({ reminder }: { readonly reminder: ReminderSummaryItem }) {
   return (
     <div className="rounded-md border border-border bg-white p-4">

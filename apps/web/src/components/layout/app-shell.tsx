@@ -1,3 +1,6 @@
+/**
+ * @file Defines reusable layout components for the web shell.
+ */
 import {
   Bell,
   ChevronRight,
@@ -22,6 +25,11 @@ const navigation = [
   { label: "Messages", to: routePaths.messages, icon: Inbox },
 ];
 
+/**
+ * @description Renders the sidebar component for the contract tracker UI.
+ * @param {{ readonly onNavigate?: () => void }} { onNavigate } - Input value for { on navigate }.
+ * @returns {JSX.Element} Result of the sidebar operation.
+ */
 function Sidebar({ onNavigate }: { readonly onNavigate?: () => void }) {
   const { session } = useAuthSession();
 
@@ -89,6 +97,10 @@ function Sidebar({ onNavigate }: { readonly onNavigate?: () => void }) {
   );
 }
 
+/**
+ * @description Renders the app shell component for the contract tracker UI.
+ * @returns {JSX.Element} Result of the app shell operation.
+ */
 export function AppShell() {
   const [mobileOpen, setMobileOpen] = useState(false);
 

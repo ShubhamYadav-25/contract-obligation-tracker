@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend reminders module contracts, services, routes, or persistence logic.
+ */
 import type { Request, Response } from "express";
 import { z } from "zod";
 
@@ -11,6 +14,11 @@ const listQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).default(0),
 });
 
+/**
+ * @description Performs the serialize reminder helper operation for this module.
+ * @param {ReminderRecord} record - Input value for record.
+ * @returns {unknown} Result of the serialize reminder operation.
+ */
 function serializeReminder(record: ReminderRecord) {
   return {
     id: record.id,
@@ -27,8 +35,20 @@ function serializeReminder(record: ReminderRecord) {
 }
 
 export class ReminderController {
+  /**
+   * @description Implements the constructor method for this service or adapter.
+   * @param {ReminderReadRepository} reminders - Input value for reminders.
+   * @returns {unknown} Result of the constructor operation.
+   */
   constructor(private readonly reminders: ReminderReadRepository) {}
 
+  /**
+   * @description Executes the list operation used by the application workflow.
+   * @param {Request} request - Input value for request.
+   * @param {Response} response - Input value for response.
+   * @returns {Promise<void>} Result of the list operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   async list(request: Request, response: Response): Promise<void> {
     if (!request.authContext) {
       throw new ApplicationError({

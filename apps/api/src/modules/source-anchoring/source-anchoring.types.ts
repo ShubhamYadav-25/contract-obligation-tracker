@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend source anchoring module contracts, services, routes, or persistence logic.
+ */
 import type { ParsedDocument } from "../document-processing/document-processing.types.js";
 
 export interface SourceAnchor {

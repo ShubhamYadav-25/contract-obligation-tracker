@@ -1,7 +1,15 @@
+/**
+ * @file Defines a backend operational script for local maintenance or diagnostics.
+ */
 import { createDatabaseConfig } from "../config/database.js";
 import { loadEnv } from "../config/env.js";
 import { PgPoolClient } from "../infrastructure/database/postgres-client.js";
 
+/**
+ * @description Runs the read contract ids script step for local operations.
+ * @returns {readonly string[]} Result of the read contract ids operation.
+ * @throws {Error} When validation, I/O, or downstream service operations fail.
+ */
 function readContractIds(): readonly string[] {
   const value = process.env.CHECK_CONTRACT_IDS;
   if (!value) {
@@ -13,6 +21,10 @@ function readContractIds(): readonly string[] {
     .filter(Boolean);
 }
 
+/**
+ * @description Runs the main script step for local operations.
+ * @returns {Promise<void>} Result of the main operation.
+ */
 async function main(): Promise<void> {
   const database = new PgPoolClient(createDatabaseConfig(loadEnv()));
   const contractIds = readContractIds();

@@ -1,3 +1,6 @@
+/**
+ * @file Defines frontend API client calls for a contract tracker feature.
+ */
 import { z } from "zod";
 
 import { apiRequest } from "@/services/api-client.js";
@@ -25,6 +28,12 @@ export interface ListMessagesInput {
   readonly offset?: number;
 }
 
+/**
+ * @description Executes the list messages operation used by the application workflow.
+ * @param {ListMessagesInput} input - Input value for input.
+ * @param {AbortSignal} signal - Input value for signal.
+ * @returns {unknown} Result of the list messages operation.
+ */
 export function listMessages(input: ListMessagesInput = {}, signal?: AbortSignal) {
   const query = new URLSearchParams();
   if (input.obligationId) {

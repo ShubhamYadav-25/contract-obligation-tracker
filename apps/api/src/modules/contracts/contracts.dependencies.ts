@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend contracts module contracts, services, routes, or persistence logic.
+ */
 import { createDatabaseConfig } from "../../config/database.js";
 import { loadEnv } from "../../config/env.js";
 import { createLogger } from "../../config/logger.js";
@@ -19,6 +22,10 @@ import {
 
 let cachedService: ContractIngestionService | null = null;
 
+/**
+ * @description Executes the create contract ingestion service operation used by the application workflow.
+ * @returns {ContractIngestionService} Result of the create contract ingestion service operation.
+ */
 export function createContractIngestionService(): ContractIngestionService {
   if (cachedService) {
     return cachedService;

@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend obligations module contracts, services, routes, or persistence logic.
+ */
 import { z } from "zod";
 
 export const obligationStatusSchema = z.enum(["UPCOMING", "DUE", "MET", "MISSED"]);

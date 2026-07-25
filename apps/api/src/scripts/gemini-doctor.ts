@@ -1,3 +1,6 @@
+/**
+ * @file Defines a backend operational script for local maintenance or diagnostics.
+ */
 import { mkdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -41,6 +44,11 @@ export interface GeminiDoctorReport {
   } | null;
 }
 
+/**
+ * @description Runs the build gemini configuration diagnostic script step for local operations.
+ * @param {ApiEnv} env - Input value for env.
+ * @returns {{ readonly extractorMode: ApiEnv["OBLIGATION_EXTRACTOR_MODE"]; readonly apiKeyConfigured: boolean; readonly configuredModel: string | "automatic"; readonly timeoutMilliseconds: number; readonly maxAttempts: number; readonly minRequestIntervalMilliseconds: number; readonly credentialSourceName: "GEMINI_API_KEY" | null; readonly googleApiKeyAlsoPresent: boolean; }} Result of the build gemini configuration diagnostic operation.
+ */
 export function buildGeminiConfigurationDiagnostic(env: ApiEnv): {
   readonly extractorMode: ApiEnv["OBLIGATION_EXTRACTOR_MODE"];
   readonly apiKeyConfigured: boolean;
@@ -63,6 +71,11 @@ export function buildGeminiConfigurationDiagnostic(env: ApiEnv): {
   };
 }
 
+/**
+ * @description Runs the error message for script step for local operations.
+ * @param {GeminiDoctorErrorCode} code - Input value for code.
+ * @returns {string} Result of the error message for operation.
+ */
 function errorMessageFor(code: GeminiDoctorErrorCode): string {
   if (code === "AUTHENTICATION_ERROR") {
     return "Gemini authentication failed. Replace the local GEMINI_API_KEY and revoke the invalid or exposed key.";
@@ -85,6 +98,11 @@ function errorMessageFor(code: GeminiDoctorErrorCode): string {
   return "Gemini diagnostic failed with an unknown error.";
 }
 
+/**
+ * @description Runs the failed selection details script step for local operations.
+ * @param {unknown} error - Input value for error.
+ * @returns {{ readonly attemptedModels: readonly ModelSelectionAttempt[]; readonly listedModels: readonly string[]; readonly generateContentCapableModels: readonly string[]; }} Result of the failed selection details operation.
+ */
 function failedSelectionDetails(error: unknown): {
   readonly attemptedModels: readonly ModelSelectionAttempt[];
   readonly listedModels: readonly string[];
@@ -111,11 +129,28 @@ function failedSelectionDetails(error: unknown): {
 }
 
 const quietLogger: Logger = {
+  /**
+   * @description Runs the info script step for local operations.
+   * @returns {unknown} Result of the info operation.
+   */
   info() {},
-  warn() {},
-  error() {},
+
+  /**
+   * @description Runs the warn script step for local operations.
+   * @returns {unknown} Result of the warn operation.
+   */ warn() {},
+
+  /**
+   * @description Runs the error script step for local operations.
+   * @returns {unknown} Result of the error operation.
+   */ error() {},
 };
 
+/**
+ * @description Runs the run gemini doctor script step for local operations.
+ * @param {{ readonly env: ApiEnv; readonly sdkLoader?: GeminiSdkLoader; readonly logger?: Logger; readonly now?: () => Date; }} input - Input value for input.
+ * @returns {Promise<GeminiDoctorReport>} Result of the run gemini doctor operation.
+ */
 export async function runGeminiDoctor(input: {
   readonly env: ApiEnv;
   readonly sdkLoader?: GeminiSdkLoader;
@@ -180,12 +215,20 @@ export async function runGeminiDoctor(input: {
   }
 }
 
+/**
+ * @description Runs the main script step for local operations.
+ * @returns {Promise<void>} Result of the main operation.
+ */
 async function main(): Promise<void> {
   const env = loadEnv();
   const report = await runGeminiDoctor({ env });
   const outDir = resolve(join("..", "..", "dev-output", "reference-aware-working-app"));
   await mkdir(outDir, { recursive: true });
-  await writeFile(join(outDir, "gemini-doctor.json"), `${JSON.stringify(report, null, 2)}\n`, "utf8");
+  await writeFile(
+    join(outDir, "gemini-doctor.json"),
+    `${JSON.stringify(report, null, 2)}\n`,
+    "utf8",
+  );
   console.log(JSON.stringify(report, null, 2));
   if (report.status !== "passed") {
     process.exitCode = 1;

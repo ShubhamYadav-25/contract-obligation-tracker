@@ -1,3 +1,6 @@
+/**
+ * @file Defines shared package exports and cross-app domain utilities.
+ */
 export {
   assertObligationTransition,
   canTransitionObligation,

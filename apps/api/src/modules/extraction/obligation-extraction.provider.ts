@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend extraction module contracts, services, routes, or persistence logic.
+ */
 import { z } from "zod";
 
 import type { Logger } from "../../config/logger.js";
@@ -68,6 +71,11 @@ export interface ObligationExtractionProvider {
 }
 
 export class HeuristicObligationExtractionProvider implements ObligationExtractionProvider {
+  /**
+   * @description Implements the extract method for this service or adapter.
+   * @param {ObligationExtractionInput} input - Input value for input.
+   * @returns {Promise<ObligationExtractionResult>} Result of the extract operation.
+   */
   async extract(input: ObligationExtractionInput): Promise<ObligationExtractionResult> {
     const result = extractFieldsFromPages([...input.pages]);
     return {
@@ -177,10 +185,20 @@ const obligationCandidatePattern =
 const timingOrMoneyPattern =
   /\b(\d+\s*(?:day|days|month|months|year|years)|within\s+\d+|by\s+\d{1,2}\/\d{1,2}\/\d{2,4}|[$£€]\s*\d)/i;
 
+/**
+ * @description Performs the normalize whitespace helper operation for this module.
+ * @param {string} value - Input value for value.
+ * @returns {string} Result of the normalize whitespace operation.
+ */
 function normalizeWhitespace(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
 
+/**
+ * @description Performs the to numbered pages helper operation for this module.
+ * @param {readonly Page[]} pages - Input value for pages.
+ * @returns {readonly NumberedPage[]} Result of the to numbered pages operation.
+ */
 function toNumberedPages(pages: readonly Page[]): readonly NumberedPage[] {
   return pages.map((page) => {
     const lines: {
@@ -214,6 +232,11 @@ function toNumberedPages(pages: readonly Page[]): readonly NumberedPage[] {
   });
 }
 
+/**
+ * @description Performs the score line helper operation for this module.
+ * @param {NumberedLine} line - Input value for line.
+ * @returns {number} Result of the score line operation.
+ */
 function scoreLine(line: NumberedLine): number {
   let score = 0;
   if (obligationCandidatePattern.test(line.text)) {
@@ -231,10 +254,20 @@ function scoreLine(line: NumberedLine): number {
   return score;
 }
 
+/**
+ * @description Performs the line prompt cost helper operation for this module.
+ * @param {NumberedLine} line - Input value for line.
+ * @returns {number} Result of the line prompt cost operation.
+ */
 function linePromptCost(line: NumberedLine): number {
   return line.text.length + 72;
 }
 
+/**
+ * @description Performs the select groq prompt pages helper operation for this module.
+ * @param {readonly NumberedPage[]} pages - Input value for pages.
+ * @returns {readonly NumberedPage[]} Result of the select groq prompt pages operation.
+ */
 function selectGroqPromptPages(pages: readonly NumberedPage[]): readonly NumberedPage[] {
   const allLines = pages.flatMap((page) =>
     page.lines.map((line) => ({
@@ -256,6 +289,11 @@ function selectGroqPromptPages(pages: readonly NumberedPage[]): readonly Numbere
   const selected = new Map<string, NumberedLine>();
   let sourceCharacters = 0;
 
+  /**
+   * @description Performs the try select helper operation for this module.
+   * @param {NumberedLine | undefined} line - Input value for line.
+   * @returns {void} Result of the try select operation.
+   */
   function trySelect(line: NumberedLine | undefined): void {
     if (!line || selected.size >= maxGroqSourceLines) {
       return;
@@ -321,6 +359,11 @@ function selectGroqPromptPages(pages: readonly NumberedPage[]): readonly Numbere
     .filter((page) => page.lines.length > 0);
 }
 
+/**
+ * @description Performs the build prompt helper operation for this module.
+ * @param {readonly NumberedPage[]} pages - Input value for pages.
+ * @returns {string} Result of the build prompt operation.
+ */
 function buildPrompt(pages: readonly NumberedPage[]): string {
   const pageText = pages
     .map((page) => {
@@ -347,6 +390,11 @@ function buildPrompt(pages: readonly NumberedPage[]): string {
   ].join("\n");
 }
 
+/**
+ * @description Performs the is retryable error helper operation for this module.
+ * @param {unknown} error - Input value for error.
+ * @returns {boolean} Result of the is retryable error operation.
+ */
 function isRetryableError(error: unknown): boolean {
   if (error instanceof ApplicationError) {
     return error.details.retryable === true;
@@ -354,6 +402,11 @@ function isRetryableError(error: unknown): boolean {
   return true;
 }
 
+/**
+ * @description Performs the error details helper operation for this module.
+ * @param {unknown} error - Input value for error.
+ * @returns {Record<string, unknown> | undefined} Result of the error details operation.
+ */
 function errorDetails(error: unknown): Record<string, unknown> | undefined {
   if (error instanceof ApplicationError) {
     return error.details;
@@ -361,15 +414,32 @@ function errorDetails(error: unknown): Record<string, unknown> | undefined {
   return undefined;
 }
 
+/**
+ * @description Performs the delay helper operation for this module.
+ * @param {number} milliseconds - Input value for milliseconds.
+ * @returns {Promise<void>} Result of the delay operation.
+ */
 function delay(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
+/**
+ * @description Performs the to retry delay helper operation for this module.
+ * @param {number} attemptIndex - Input value for attempt index.
+ * @param {GroqObligationExtractionConfig} config - Input value for config.
+ * @returns {number} Result of the to retry delay operation.
+ */
 function toRetryDelay(attemptIndex: number, config: GroqObligationExtractionConfig): number {
   const computed = config.retryBaseDelayMilliseconds * 2 ** attemptIndex;
   return Math.min(computed, config.retryMaxDelayMilliseconds);
 }
 
+/**
+ * @description Performs the verify obligation helper operation for this module.
+ * @param {GroqObligation} obligation - Input value for obligation.
+ * @param {ReadonlyMap<number, NumberedPage>} pagesByNumber - Input value for pages by number.
+ * @returns {FieldAnchor | null} Result of the verify obligation operation.
+ */
 function verifyObligation(
   obligation: GroqObligation,
   pagesByNumber: ReadonlyMap<number, NumberedPage>,
@@ -448,8 +518,18 @@ function verifyObligation(
 }
 
 export class GroqObligationExtractionProvider implements ObligationExtractionProvider {
+  /**
+   * @description Implements the constructor method for this service or adapter.
+   * @param {GroqObligationExtractionDependencies} dependencies - Input value for dependencies.
+   * @returns {unknown} Result of the constructor operation.
+   */
   constructor(private readonly dependencies: GroqObligationExtractionDependencies) {}
 
+  /**
+   * @description Implements the extract method for this service or adapter.
+   * @param {ObligationExtractionInput} input - Input value for input.
+   * @returns {Promise<ObligationExtractionResult>} Result of the extract operation.
+   */
   async extract(input: ObligationExtractionInput): Promise<ObligationExtractionResult> {
     const numberedPages = toNumberedPages(input.pages);
     const promptPages = selectGroqPromptPages(numberedPages);
@@ -532,6 +612,11 @@ export class GroqObligationExtractionProvider implements ObligationExtractionPro
     return this.runFallback(input);
   }
 
+  /**
+   * @description Implements the run fallback method for this service or adapter.
+   * @param {ObligationExtractionInput} input - Input value for input.
+   * @returns {Promise<ObligationExtractionResult>} Result of the run fallback operation.
+   */
   private async runFallback(input: ObligationExtractionInput): Promise<ObligationExtractionResult> {
     const fallback = await this.dependencies.fallback.extract(input);
     this.dependencies.logger.warn("groq_obligation_extraction_fell_back_to_heuristics", {

@@ -1,3 +1,6 @@
+/**
+ * @file Defines a backend operational script for local maintenance or diagnostics.
+ */
 import { createDatabaseConfig } from "../config/database.js";
 import { loadEnv } from "../config/env.js";
 import { PgPoolClient } from "../infrastructure/database/postgres-client.js";
@@ -13,6 +16,11 @@ interface PendingProcessingRunRow {
   readonly status: string;
 }
 
+/**
+ * @description Runs the read limit script step for local operations.
+ * @returns {number} Result of the read limit operation.
+ * @throws {Error} When validation, I/O, or downstream service operations fail.
+ */
 function readLimit(): number {
   const value = process.env.CONTRACT_PROCESSING_BACKFILL_LIMIT;
   if (!value) return 100;
@@ -24,15 +32,30 @@ function readLimit(): number {
   return parsed;
 }
 
+/**
+ * @description Runs the read reprocess completed script step for local operations.
+ * @returns {boolean} Result of the read reprocess completed operation.
+ */
 function readReprocessCompleted(): boolean {
   const value = process.env.CONTRACT_PROCESSING_REPROCESS_COMPLETED;
   return value === "true" || value === "1";
 }
 
+/**
+ * @description Runs the queue key script step for local operations.
+ * @param {PendingProcessingRunRow} row - Input value for row.
+ * @param {string} batchId - Input value for batch id.
+ * @param {number} index - Input value for index.
+ * @returns {string} Result of the queue key operation.
+ */
 function queueKey(row: PendingProcessingRunRow, batchId: string, index: number): string {
   return `contract-processing:${row.document_id}:backfill:${batchId}:${index + 1}`;
 }
 
+/**
+ * @description Runs the main script step for local operations.
+ * @returns {Promise<void>} Result of the main operation.
+ */
 async function main(): Promise<void> {
   const env = loadEnv();
   const database = new PgPoolClient(createDatabaseConfig(env));

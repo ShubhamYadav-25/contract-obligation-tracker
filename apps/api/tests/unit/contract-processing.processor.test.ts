@@ -1,3 +1,6 @@
+/**
+ * @file Contains automated tests that verify contract tracker behavior.
+ */
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -16,6 +19,11 @@ const payload = {
   processingRunId: "00000000-0000-4000-8000-000000000004",
 };
 
+/**
+ * @description Performs the job helper operation for this module.
+ * @param {Partial<BackgroundJob>} overrides - Input value for overrides.
+ * @returns {BackgroundJob} Result of the job operation.
+ */
 function job(overrides: Partial<BackgroundJob> = {}): BackgroundJob {
   return {
     id: "job-1",

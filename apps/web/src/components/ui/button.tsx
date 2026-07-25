@@ -1,3 +1,6 @@
+/**
+ * @file Defines reusable atomic UI primitives for the web app.
+ */
 import type { ButtonHTMLAttributes, PropsWithChildren } from "react";
 
 import { cx } from "@/utils/cx.js";
@@ -15,6 +18,11 @@ const variants: Record<ButtonVariant, string> = {
   ghost: "text-slate-700 hover:bg-slate-100",
 };
 
+/**
+ * @description Renders the button component for the contract tracker UI.
+ * @param {PropsWithChildren<ButtonProps>} { children, className, variant = "primary", ...props } - Input value for { children, class name, variant = "primary", ...props }.
+ * @returns {JSX.Element} Result of the button operation.
+ */
 export function Button({
   children,
   className,

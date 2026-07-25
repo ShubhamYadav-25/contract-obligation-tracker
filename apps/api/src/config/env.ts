@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend runtime configuration and environment helpers.
+ */
 import { z } from "zod";
 
 import { loadDotEnvFile } from "./dotenv.js";
@@ -8,6 +11,11 @@ const booleanFromEnv = z
   .transform((value) => value === "true" || value === "1");
 const placeholderValues = new Set(["your_api_key", "replace-me", "undefined", "change_me"]);
 
+/**
+ * @description Performs the trimmed optional string helper operation for this module.
+ * @param {unknown} value - Input value for value.
+ * @returns {string | undefined} Result of the trimmed optional string operation.
+ */
 function trimmedOptionalString(value: unknown): string | undefined {
   if (typeof value !== "string") {
     return undefined;
@@ -17,6 +25,11 @@ function trimmedOptionalString(value: unknown): string | undefined {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
+/**
+ * @description Performs the is placeholder value helper operation for this module.
+ * @param {string | undefined} value - Input value for value.
+ * @returns {boolean} Result of the is placeholder value operation.
+ */
 function isPlaceholderValue(value: string | undefined): boolean {
   if (!value) {
     return false;
@@ -89,8 +102,11 @@ export const envSchema = z
     OCR_MIN_CONFIDENCE: z.coerce.number().min(0).max(100).default(40),
     OCR_RENDER_SCALE: z.coerce.number().positive().default(2),
     GEMINI_OCR_FALLBACK_ENABLED: booleanFromEnv.default(false),
-    EMAIL_PROVIDER: z.enum(["console", "mailtrap", "resend", "smtp"]).default("console"),
-    EMAIL_FROM: optionalTrimmedString,
+    EMAIL_PROVIDER: z.enum(["console", "brevo", "mailtrap", "resend", "smtp"]).default("console"),
+    EMAIL_FROM_ADDRESS: optionalTrimmedString,
+    EMAIL_FROM_NAME: optionalTrimmedString,
+    REMINDER_RECIPIENT_EMAIL: optionalTrimmedString,
+    BREVO_API_KEY: optionalTrimmedString,
     SMTP_HOST: optionalTrimmedString,
     SMTP_PORT: integerFromEnv.default(587),
     SMTP_USER: optionalTrimmedString,
@@ -175,19 +191,51 @@ export const envSchema = z
         });
       }
     }
+    if (value.EMAIL_PROVIDER === "brevo" || value.EMAIL_PROVIDER === "smtp") {
+      if (!value.EMAIL_FROM_ADDRESS) {
+        context.addIssue({
+          code: "custom",
+          path: ["EMAIL_FROM_ADDRESS"],
+          message: "EMAIL_FROM_ADDRESS is required when Brevo email delivery is enabled",
+        });
+      }
+      if (!value.BREVO_API_KEY) {
+        context.addIssue({
+          code: "custom",
+          path: ["BREVO_API_KEY"],
+          message: "BREVO_API_KEY is required when Brevo email delivery is enabled",
+        });
+      }
+    }
   });
 
 export type ApiEnv = z.infer<typeof envSchema>;
 
+/**
+ * @description Performs the parse env helper operation for this module.
+ * @param {NodeJS.ProcessEnv} source - Input value for source.
+ * @returns {ApiEnv} Result of the parse env operation.
+ */
 export function parseEnv(source: NodeJS.ProcessEnv): ApiEnv {
-  return envSchema.parse(source);
+  return envSchema.parse({
+    ...source,
+    API_PORT: source.API_PORT ?? source.PORT,
+  });
 }
 
+/**
+ * @description Performs the load env helper operation for this module.
+ * @returns {ApiEnv} Result of the load env operation.
+ */
 export function loadEnv(): ApiEnv {
   loadDotEnvFile();
   return parseEnv(process.env);
 }
 
+/**
+ * @description Executes the get cors origin operation used by the application workflow.
+ * @returns {string} Result of the get cors origin operation.
+ */
 export function getCorsOrigin(): string {
   return process.env.CORS_ORIGIN ?? "http://localhost:5173";
 }

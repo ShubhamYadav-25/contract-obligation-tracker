@@ -1,3 +1,6 @@
+/**
+ * @file Contains automated tests that verify contract tracker behavior.
+ */
 import { describe, expect, it } from "vitest";
 
 import { ContractIngestionError } from "../../src/modules/contracts/contract-ingestion.errors.js";
@@ -14,6 +17,11 @@ const validation = {
   maxPageCount: 10,
 };
 
+/**
+ * @description Performs the file helper operation for this module.
+ * @param {Partial<Parameters<typeof validateContractPdfFile>[0]>} overrides - Input value for overrides.
+ * @returns {unknown} Result of the file operation.
+ */
 function file(overrides: Partial<Parameters<typeof validateContractPdfFile>[0]> = {}) {
   return {
     originalFilename: "vendor-contract.pdf",
@@ -24,6 +32,13 @@ function file(overrides: Partial<Parameters<typeof validateContractPdfFile>[0]> 
   };
 }
 
+/**
+ * @description Performs the expect code helper operation for this module.
+ * @param {() => unknown} work - Input value for work.
+ * @param {string} code - Input value for code.
+ * @returns {unknown} Result of the expect code operation.
+ * @throws {Error} When validation, I/O, or downstream service operations fail.
+ */
 function expectCode(work: () => unknown, code: string) {
   try {
     work();

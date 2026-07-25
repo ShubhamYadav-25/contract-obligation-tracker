@@ -1,3 +1,6 @@
+/**
+ * @file Defines object storage infrastructure contracts and adapters.
+ */
 import type { Readable } from "node:stream";
 
 export interface StoredObjectReference {

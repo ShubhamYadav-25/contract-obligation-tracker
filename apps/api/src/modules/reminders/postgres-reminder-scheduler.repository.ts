@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend reminders module contracts, services, routes, or persistence logic.
+ */
 import type { TransactionManager } from "../../infrastructure/database/transaction-manager.js";
 import { createReminderDeliveryJobKey } from "../../jobs/job-keys.js";
 import type { ReminderSchedulerRepository } from "./reminders.repository.js";
@@ -8,8 +11,18 @@ interface ReminderRow {
 }
 
 export class PostgresReminderSchedulerRepository implements ReminderSchedulerRepository {
+  /**
+   * @description Implements the constructor method for this service or adapter.
+   * @param {TransactionManager} transactions - Input value for transactions.
+   * @returns {unknown} Result of the constructor operation.
+   */
   constructor(private readonly transactions: TransactionManager) {}
 
+  /**
+   * @description Implements the enqueue due reminders method for this service or adapter.
+   * @param {{ readonly now: Date; readonly lookaheadUntil: Date; readonly limit: number; }} input - Input value for input.
+   * @returns {Promise<{ readonly remindersClaimed: number; readonly jobsCreated: number }>} Result of the enqueue due reminders operation.
+   */
   async enqueueDueReminders(input: {
     readonly now: Date;
     readonly lookaheadUntil: Date;

@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend messages module contracts, services, routes, or persistence logic.
+ */
 import type { TransactionManager } from "../../infrastructure/database/transaction-manager.js";
 import type { MessageReadRepository } from "./messages.repository.js";
 import type { MessageRecord } from "./messages.types.js";
@@ -15,10 +18,20 @@ interface MessageRow {
   readonly created_at: Date | string;
 }
 
+/**
+ * @description Performs the to date helper operation for this module.
+ * @param {Date | string} value - Input value for value.
+ * @returns {Date} Result of the to date operation.
+ */
 function toDate(value: Date | string): Date {
   return value instanceof Date ? value : new Date(value);
 }
 
+/**
+ * @description Performs the map message helper operation for this module.
+ * @param {MessageRow} row - Input value for row.
+ * @returns {MessageRecord} Result of the map message operation.
+ */
 function mapMessage(row: MessageRow): MessageRecord {
   return {
     id: row.id,
@@ -35,8 +48,18 @@ function mapMessage(row: MessageRow): MessageRecord {
 }
 
 export class PostgresMessageRepository implements MessageReadRepository {
+  /**
+   * @description Implements the constructor method for this service or adapter.
+   * @param {TransactionManager} transactions - Input value for transactions.
+   * @returns {unknown} Result of the constructor operation.
+   */
   constructor(private readonly transactions: TransactionManager) {}
 
+  /**
+   * @description Executes the list by organization operation used by the application workflow.
+   * @param {{ readonly organizationId: string; readonly obligationId?: string; readonly reminderId?: string; readonly limit: number; readonly offset: number; }} input - Input value for input.
+   * @returns {Promise<readonly MessageRecord[]>} Result of the list by organization operation.
+   */
   async listByOrganization(input: {
     readonly organizationId: string;
     readonly obligationId?: string;

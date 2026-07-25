@@ -1,3 +1,6 @@
+/**
+ * @file Defines a backend operational script for local maintenance or diagnostics.
+ */
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
@@ -79,6 +82,11 @@ interface SeededContract {
   readonly sampleText: string;
 }
 
+/**
+ * @description Runs the require reset confirmation script step for local operations.
+ * @returns {void} Result of the require reset confirmation operation.
+ * @throws {Error} When validation, I/O, or downstream service operations fail.
+ */
 function requireResetConfirmation(): void {
   if (process.env.CONFIRM_DEV_DATA_RESET !== resetConfirmation) {
     throw new Error(
@@ -87,6 +95,10 @@ function requireResetConfirmation(): void {
   }
 }
 
+/**
+ * @description Runs the parse seed limit script step for local operations.
+ * @returns {number} Result of the parse seed limit operation.
+ */
 function parseSeedLimit(): number {
   const parsed = Number.parseInt(process.env.SEED_CONTRACT_LIMIT ?? "5", 10);
   if (!Number.isFinite(parsed) || parsed < 1) {
@@ -95,15 +107,31 @@ function parseSeedLimit(): number {
   return Math.min(parsed, 25);
 }
 
+/**
+ * @description Runs the count words script step for local operations.
+ * @param {string} text - Input value for text.
+ * @returns {number} Result of the count words operation.
+ */
 function countWords(text: string): number {
   const matches = text.trim().match(/\S+/g);
   return matches ? matches.length : 0;
 }
 
+/**
+ * @description Runs the add days script step for local operations.
+ * @param {Date} base - Input value for base.
+ * @param {number} days - Input value for days.
+ * @returns {Date} Result of the add days operation.
+ */
 function addDays(base: Date, days: number): Date {
   return new Date(base.getTime() + days * 24 * 60 * 60 * 1000);
 }
 
+/**
+ * @description Executes the create runtime operation used by the application workflow.
+ * @returns {Runtime} Result of the create runtime operation.
+ * @throws {Error} When validation, I/O, or downstream service operations fail.
+ */
 function createRuntime(): Runtime {
   const env = loadEnv();
   if (env.NODE_ENV === "production" && process.env.ALLOW_PRODUCTION_RESET !== "true") {
@@ -156,6 +184,11 @@ function createRuntime(): Runtime {
   };
 }
 
+/**
+ * @description Runs the read fixtures script step for local operations.
+ * @param {string} repositoryRoot - Input value for repository root.
+ * @returns {Promise<readonly ContractFixture[]>} Result of the read fixtures operation.
+ */
 async function readFixtures(repositoryRoot: string): Promise<readonly ContractFixture[]> {
   const fixturesPath = resolve(repositoryRoot, "datasets/contracts/25_contracts.jsonl");
   if (!existsSync(fixturesPath)) {
@@ -169,6 +202,12 @@ async function readFixtures(repositoryRoot: string): Promise<readonly ContractFi
     .map((line) => JSON.parse(line) as ContractFixture);
 }
 
+/**
+ * @description Executes the list storage object keys operation used by the application workflow.
+ * @param {{ readonly supabaseUrl: string; readonly serviceRoleKey: string; readonly bucket: string; readonly prefix?: string; }} input - Input value for input.
+ * @returns {Promise<readonly string[]>} Result of the list storage object keys operation.
+ * @throws {Error} When validation, I/O, or downstream service operations fail.
+ */
 async function listStorageObjectKeys(input: {
   readonly supabaseUrl: string;
   readonly serviceRoleKey: string;
@@ -224,6 +263,11 @@ async function listStorageObjectKeys(input: {
   return objectKeys;
 }
 
+/**
+ * @description Runs the truncate storage bucket script step for local operations.
+ * @returns {Promise<number>} Result of the truncate storage bucket operation.
+ * @throws {Error} When validation, I/O, or downstream service operations fail.
+ */
 async function truncateStorageBucket(): Promise<number> {
   const env = loadEnv();
   if (env.STORAGE_PROVIDER !== "supabase") {
@@ -258,6 +302,11 @@ async function truncateStorageBucket(): Promise<number> {
   return objectKeys.length;
 }
 
+/**
+ * @description Runs the truncate database script step for local operations.
+ * @param {PgPoolClient} database - Input value for database.
+ * @returns {Promise<readonly string[]>} Result of the truncate database operation.
+ */
 async function truncateDatabase(database: PgPoolClient): Promise<readonly string[]> {
   const tableResult = await database.query<{ readonly table_name: string }>(
     `
@@ -280,6 +329,11 @@ async function truncateDatabase(database: PgPoolClient): Promise<readonly string
   return existingTables;
 }
 
+/**
+ * @description Runs the apply required migrations script step for local operations.
+ * @param {{ readonly database: PgPoolClient; readonly repositoryRoot: string; }} input - Input value for input.
+ * @returns {Promise<readonly string[]>} Result of the apply required migrations operation.
+ */
 async function applyRequiredMigrations(input: {
   readonly database: PgPoolClient;
   readonly repositoryRoot: string;
@@ -310,6 +364,12 @@ async function applyRequiredMigrations(input: {
   return appliedMigrations;
 }
 
+/**
+ * @description Runs the seed contracts script step for local operations.
+ * @param {{ readonly runtime: Runtime; readonly repositoryRoot: string; readonly seedLimit: number; }} input - Input value for input.
+ * @returns {Promise<readonly SeededContract[]>} Result of the seed contracts operation.
+ * @throws {Error} When validation, I/O, or downstream service operations fail.
+ */
 async function seedContracts(input: {
   readonly runtime: Runtime;
   readonly repositoryRoot: string;
@@ -369,6 +429,11 @@ async function seedContracts(input: {
   return seeded;
 }
 
+/**
+ * @description Runs the seed workflow data script step for local operations.
+ * @param {{ readonly runtime: Runtime; readonly contracts: readonly SeededContract[]; }} input - Input value for input.
+ * @returns {Promise<{ readonly obligations: number; readonly reminders: number; readonly reviewCandidates: number; }>} Result of the seed workflow data operation.
+ */
 async function seedWorkflowData(input: {
   readonly runtime: Runtime;
   readonly contracts: readonly SeededContract[];
@@ -547,6 +612,14 @@ async function seedWorkflowData(input: {
   };
 }
 
+/**
+ * @description Runs the transition sample obligations script step for local operations.
+ * @param {Runtime} runtime - Input value for runtime.
+ * @param {readonly ObligationRecord[]} obligations - Input value for obligations.
+ * @param {number} contractIndex - Input value for contract index.
+ * @param {string} actorId - Input value for actor id.
+ * @returns {Promise<void>} Result of the transition sample obligations operation.
+ */
 async function transitionSampleObligations(
   runtime: Runtime,
   obligations: readonly ObligationRecord[],
@@ -581,6 +654,12 @@ async function transitionSampleObligations(
   });
 }
 
+/**
+ * @description Runs the seed reminders script step for local operations.
+ * @param {Runtime} runtime - Input value for runtime.
+ * @param {readonly ObligationRecord[]} obligations - Input value for obligations.
+ * @returns {Promise<number>} Result of the seed reminders operation.
+ */
 async function seedReminders(
   runtime: Runtime,
   obligations: readonly ObligationRecord[],
@@ -635,6 +714,10 @@ async function seedReminders(
   return inserted;
 }
 
+/**
+ * @description Runs the main script step for local operations.
+ * @returns {Promise<void>} Result of the main operation.
+ */
 async function main(): Promise<void> {
   requireResetConfirmation();
   const repositoryRoot = resolve(process.cwd(), "../..");

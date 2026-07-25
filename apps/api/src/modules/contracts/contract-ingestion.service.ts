@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend contracts module contracts, services, routes, or persistence logic.
+ */
 import { randomUUID } from "node:crypto";
 
 import type { Logger } from "../../config/logger.js";
@@ -70,6 +73,12 @@ export interface ContractDocumentStreamResult {
       };
 }
 
+/**
+ * @description Performs the is unsatisfiable range helper operation for this module.
+ * @param {string} range - Input value for range.
+ * @param {number} fileSizeBytes - Input value for file size bytes.
+ * @returns {boolean} Result of the is unsatisfiable range operation.
+ */
 function isUnsatisfiableRange(range: string, fileSizeBytes: number): boolean {
   const match = range.match(/^bytes=(\d*)-(\d*)$/);
   if (!match) {
@@ -94,6 +103,11 @@ function isUnsatisfiableRange(range: string, fileSizeBytes: number): boolean {
   );
 }
 
+/**
+ * @description Performs the duplicate result helper operation for this module.
+ * @param {ExistingContractDocument} existing - Input value for existing.
+ * @returns {ContractTrackingResult} Result of the duplicate result operation.
+ */
 function duplicateResult(existing: ExistingContractDocument): ContractTrackingResult {
   return {
     contractId: existing.contract.id,
@@ -111,13 +125,29 @@ function duplicateResult(existing: ExistingContractDocument): ContractTrackingRe
   };
 }
 
+/**
+ * @description Performs the safe error message helper operation for this module.
+ * @param {unknown} error - Input value for error.
+ * @returns {string} Result of the safe error message operation.
+ */
 function safeErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
 export class ContractIngestionService {
+  /**
+   * @description Implements the constructor method for this service or adapter.
+   * @param {ContractIngestionDependencies} dependencies - Input value for dependencies.
+   * @returns {unknown} Result of the constructor operation.
+   */
   constructor(private readonly dependencies: ContractIngestionDependencies) {}
 
+  /**
+   * @description Implements the ingest method for this service or adapter.
+   * @param {ContractIngestionInput} input - Input value for input.
+   * @returns {Promise<ContractTrackingResult>} Result of the ingest operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   async ingest(input: ContractIngestionInput): Promise<ContractTrackingResult> {
     const validatedFile = validateContractPdfFile(input.file, this.dependencies.validation);
     const fileHashSha256 = this.dependencies.fileHash.sha256(validatedFile.body);
@@ -270,10 +300,21 @@ export class ContractIngestionService {
     }
   }
 
+  /**
+   * @description Implements the find processing status method for this service or adapter.
+   * @param {{ readonly organizationId: string; readonly contractId: string }} input - Input value for input.
+   * @returns {unknown} Result of the find processing status operation.
+   */
   findProcessingStatus(input: { readonly organizationId: string; readonly contractId: string }) {
     return this.dependencies.processingRuns.findLatestByContractId(input);
   }
 
+  /**
+   * @description Executes the list contracts operation used by the application workflow.
+   * @param {{ readonly organizationId: string; readonly limit: number; readonly offset: number; }} input - Input value for input.
+   * @returns {unknown} Result of the list contracts operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   listContracts(input: {
     readonly organizationId: string;
     readonly limit: number;
@@ -285,6 +326,12 @@ export class ContractIngestionService {
     return this.dependencies.contractReads.listByOrganization(input);
   }
 
+  /**
+   * @description Implements the find contract method for this service or adapter.
+   * @param {{ readonly organizationId: string; readonly contractId: string }} input - Input value for input.
+   * @returns {unknown} Result of the find contract operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   findContract(input: { readonly organizationId: string; readonly contractId: string }) {
     if (!this.dependencies.contractReads) {
       throw new Error("Contract read repository is not configured");
@@ -292,6 +339,12 @@ export class ContractIngestionService {
     return this.dependencies.contractReads.findByOrganizationAndId(input);
   }
 
+  /**
+   * @description Executes the list document text pages operation used by the application workflow.
+   * @param {{ readonly organizationId: string; readonly contractId: string }} input - Input value for input.
+   * @returns {unknown} Result of the list document text pages operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   listDocumentTextPages(input: { readonly organizationId: string; readonly contractId: string }) {
     if (!this.dependencies.documentTextPages) {
       throw new Error("Document text page read repository is not configured");
@@ -299,6 +352,11 @@ export class ContractIngestionService {
     return this.dependencies.documentTextPages.listByContract(input);
   }
 
+  /**
+   * @description Executes the stream current document operation used by the application workflow.
+   * @param {{ readonly organizationId: string; readonly contractId: string; readonly range?: string; }} input - Input value for input.
+   * @returns {Promise<ContractDocumentStreamResult | null>} Result of the stream current document operation.
+   */
   async streamCurrentDocument(input: {
     readonly organizationId: string;
     readonly contractId: string;
@@ -330,6 +388,12 @@ export class ContractIngestionService {
     };
   }
 
+  /**
+   * @description Implements the queue processing method for this service or adapter.
+   * @param {{ readonly organizationId: string; readonly contractId: string; readonly documentId: string; readonly processingRunId: string; }} input - Input value for input.
+   * @returns {Promise<void>} Result of the queue processing operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   private async queueProcessing(input: {
     readonly organizationId: string;
     readonly contractId: string;
@@ -357,6 +421,11 @@ export class ContractIngestionService {
     }
   }
 
+  /**
+   * @description Executes the create pending metadata operation used by the application workflow.
+   * @param {{ readonly input: ContractIngestionInput; readonly contractId: string; readonly documentId: string; readonly displayName: string; readonly storageKey: string; readonly fileHashSha256: string; readonly originalFilename: string; readonly sizeBytes: number; }} input - Input value for input.
+   * @returns {Promise<void>} Result of the create pending metadata operation.
+   */
   private async createPendingMetadata(input: {
     readonly input: ContractIngestionInput;
     readonly contractId: string;
@@ -419,6 +488,11 @@ export class ContractIngestionService {
     });
   }
 
+  /**
+   * @description Implements the finalize stored metadata method for this service or adapter.
+   * @param {{ readonly input: ContractIngestionInput; readonly contractId: string; readonly documentId: string; readonly processingRunId: string; readonly fileHashSha256: string; readonly fileSizeBytes: number; }} input - Input value for input.
+   * @returns {Promise<unknown>} Result of the finalize stored metadata operation.
+   */
   private async finalizeStoredMetadata(input: {
     readonly input: ContractIngestionInput;
     readonly contractId: string;
@@ -468,6 +542,13 @@ export class ContractIngestionService {
     });
   }
 
+  /**
+   * @description Implements the record deduplicated upload method for this service or adapter.
+   * @param {ContractIngestionInput} input - Input value for input.
+   * @param {ExistingContractDocument} existing - Input value for existing.
+   * @param {string} fileHashSha256 - Input value for file hash sha256.
+   * @returns {Promise<void>} Result of the record deduplicated upload operation.
+   */
   private async recordDeduplicatedUpload(
     input: ContractIngestionInput,
     existing: ExistingContractDocument,
@@ -497,6 +578,11 @@ export class ContractIngestionService {
       });
   }
 
+  /**
+   * @description Implements the mark upload failed method for this service or adapter.
+   * @param {{ readonly actorId: string; readonly contractId: string; readonly documentId: string; readonly correlationId: string; readonly errorCode: string; readonly errorMessage: string; readonly fileHashSha256: string; readonly fileSizeBytes: number; }} input - Input value for input.
+   * @returns {Promise<void>} Result of the mark upload failed operation.
+   */
   private async markUploadFailed(input: {
     readonly actorId: string;
     readonly contractId: string;

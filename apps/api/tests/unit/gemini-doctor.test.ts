@@ -1,3 +1,6 @@
+/**
+ * @file Contains automated tests that verify contract tracker behavior.
+ */
 import { describe, expect, it, vi } from "vitest";
 
 import { parseEnv } from "../../src/config/env.js";
@@ -6,8 +9,17 @@ import {
   runGeminiDoctor,
 } from "../../src/scripts/gemini-doctor.js";
 
+/**
+ * @description Performs the now helper operation for this module.
+ * @returns {unknown} Result of the now operation.
+ */
 const now = () => new Date("2026-07-24T00:00:00.000Z");
 
+/**
+ * @description Performs the env helper operation for this module.
+ * @param {Record<string, string | undefined>} overrides - Input value for overrides.
+ * @returns {unknown} Result of the env operation.
+ */
 function env(overrides: Record<string, string | undefined> = {}) {
   return parseEnv({
     GEMINI_API_KEY: "test-gemini-key",
@@ -18,6 +30,11 @@ function env(overrides: Record<string, string | undefined> = {}) {
   });
 }
 
+/**
+ * @description Performs the sdk helper operation for this module.
+ * @param {{ readonly list?: ReturnType<typeof vi.fn>; readonly generateContent?: ReturnType<typeof vi.fn>; }} input - Input value for input.
+ * @returns {unknown} Result of the sdk operation.
+ */
 function sdk(input: {
   readonly list?: ReturnType<typeof vi.fn>;
   readonly generateContent?: ReturnType<typeof vi.fn>;

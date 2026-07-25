@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend extraction module contracts, services, routes, or persistence logic.
+ */
 import type { Request, Response } from "express";
 import { PgPoolClient } from "../../infrastructure/database/postgres-client.js";
 import { createDatabaseConfig } from "../../config/database.js";
@@ -6,6 +9,11 @@ import { PgTransactionManager } from "../../infrastructure/database/transaction-
 import { PostgresExtractionCandidateRepository } from "./postgres-extraction.repository.js";
 import type { ExtractionCandidate } from "./extraction.types.js";
 
+/**
+ * @description Performs the to review candidate helper operation for this module.
+ * @param {ExtractionCandidate} row - Input value for row.
+ * @returns {unknown} Result of the to review candidate operation.
+ */
 function toReviewCandidate(row: ExtractionCandidate) {
   const extracted = row.extractedJson as any;
   const anchors: any[] = [];
@@ -58,6 +66,12 @@ export class ExtractionController {
   private readonly transactions = new PgTransactionManager(this.database.pool);
   private readonly candidates = new PostgresExtractionCandidateRepository(this.transactions);
 
+  /**
+   * @description Executes the list by contract operation used by the application workflow.
+   * @param {Request} request - Input value for request.
+   * @param {Response} response - Input value for response.
+   * @returns {Promise<void>} Result of the list by contract operation.
+   */
   async listByContract(request: Request, response: Response): Promise<void> {
     const contractId = Array.isArray(request.params.contractId)
       ? request.params.contractId[0]
@@ -66,11 +80,23 @@ export class ExtractionController {
     response.json({ count: rows.length, items: rows });
   }
 
+  /**
+   * @description Executes the list all operation used by the application workflow.
+   * @param {Request} request - Input value for request.
+   * @param {Response} response - Input value for response.
+   * @returns {Promise<void>} Result of the list all operation.
+   */
   async listAll(request: Request, response: Response): Promise<void> {
     const rows = await this.candidates.listAll();
     response.json({ success: true, data: rows.map(toReviewCandidate) });
   }
 
+  /**
+   * @description Implements the detail method for this service or adapter.
+   * @param {Request} request - Input value for request.
+   * @param {Response} response - Input value for response.
+   * @returns {Promise<void>} Result of the detail operation.
+   */
   async detail(request: Request, response: Response): Promise<void> {
     const candidateId = Array.isArray(request.params.candidateId)
       ? request.params.candidateId[0]
@@ -92,6 +118,12 @@ export class ExtractionController {
     response.json({ success: true, data: toReviewCandidate(candidate) });
   }
 
+  /**
+   * @description Executes the approve candidate operation used by the application workflow.
+   * @param {Request} request - Input value for request.
+   * @param {Response} response - Input value for response.
+   * @returns {Promise<void>} Result of the approve candidate operation.
+   */
   async approveCandidate(request: Request, response: Response): Promise<void> {
     const candidateId = Array.isArray(request.params.candidateId)
       ? request.params.candidateId[0]
@@ -135,6 +167,12 @@ export class ExtractionController {
     response.status(200).json({ success: true, data: { id: candidateId, status: "APPROVED" } });
   }
 
+  /**
+   * @description Executes the reject candidate operation used by the application workflow.
+   * @param {Request} request - Input value for request.
+   * @param {Response} response - Input value for response.
+   * @returns {Promise<void>} Result of the reject candidate operation.
+   */
   async rejectCandidate(request: Request, response: Response): Promise<void> {
     const candidateId = Array.isArray(request.params.candidateId)
       ? request.params.candidateId[0]

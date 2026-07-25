@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend runtime configuration and environment helpers.
+ */
 import type { ApiEnv } from "./env.js";
 
 export interface DatabaseConfig {
@@ -8,6 +11,11 @@ export interface DatabaseConfig {
   readonly idleTimeoutMilliseconds: number;
 }
 
+/**
+ * @description Executes the create database config operation used by the application workflow.
+ * @param {ApiEnv} env - Input value for env.
+ * @returns {DatabaseConfig} Result of the create database config operation.
+ */
 export function createDatabaseConfig(env: ApiEnv): DatabaseConfig {
   const baseConfig = {
     ssl: env.DATABASE_SSL,

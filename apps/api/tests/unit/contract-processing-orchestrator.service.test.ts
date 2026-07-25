@@ -1,3 +1,6 @@
+/**
+ * @file Contains automated tests that verify contract tracker behavior.
+ */
 import { describe, expect, it, vi } from "vitest";
 
 import type { Logger } from "../../src/config/logger.js";
@@ -37,6 +40,11 @@ const command = {
 const transaction = {} as TransactionContext;
 
 class FakeTransactionManager implements TransactionManager {
+  /**
+   * @description Implements the in transaction method for this service or adapter.
+   * @param {(context: TransactionContext) => Promise<T>} work - Input value for work.
+   * @returns {Promise<T>} Result of the in transaction operation.
+   */
   inTransaction<T>(work: (context: TransactionContext) => Promise<T>): Promise<T> {
     return work(transaction);
   }
@@ -53,6 +61,11 @@ class FakeProcessingRepository implements ContractProcessingRepository {
     textSegmented: 0,
   };
 
+  /**
+   * @description Implements the constructor method for this service or adapter.
+   * @param {ContractProcessingRunStatus} status - Input value for status.
+   * @returns {unknown} Result of the constructor operation.
+   */
   constructor(status: ContractProcessingRunStatus = "QUEUED") {
     this.run = {
       id: command.processingRunId,
@@ -66,23 +79,44 @@ class FakeProcessingRepository implements ContractProcessingRepository {
     };
   }
 
+  /**
+   * @description Executes the create run operation used by the application workflow.
+   * @returns {Promise<ContractProcessingRunRecord>} Result of the create run operation.
+   */
   async createRun(): Promise<ContractProcessingRunRecord> {
     return this.run;
   }
 
+  /**
+   * @description Implements the mark queued method for this service or adapter.
+   * @returns {Promise<ContractProcessingRunRecord>} Result of the mark queued operation.
+   */
   async markQueued(): Promise<ContractProcessingRunRecord> {
     this.run = { ...this.run, status: "QUEUED" };
     return this.run;
   }
 
+  /**
+   * @description Implements the find latest by contract id method for this service or adapter.
+   * @returns {Promise<ContractProcessingRunRecord | null>} Result of the find latest by contract id operation.
+   */
   async findLatestByContractId(): Promise<ContractProcessingRunRecord | null> {
     return this.run;
   }
 
+  /**
+   * @description Implements the find by id method for this service or adapter.
+   * @returns {Promise<ContractProcessingRunRecord | null>} Result of the find by id operation.
+   */
   async findById(): Promise<ContractProcessingRunRecord | null> {
     return this.run;
   }
 
+  /**
+   * @description Implements the claim for processing method for this service or adapter.
+   * @param {ClaimContractProcessingRunInput} input - Input value for input.
+   * @returns {Promise<ContractProcessingRunRecord | null>} Result of the claim for processing operation.
+   */
   async claimForProcessing(
     input: ClaimContractProcessingRunInput,
   ): Promise<ContractProcessingRunRecord | null> {
@@ -103,6 +137,11 @@ class FakeProcessingRepository implements ContractProcessingRepository {
     return null;
   }
 
+  /**
+   * @description Implements the mark completed method for this service or adapter.
+   * @param {CompleteContractProcessingRunInput} _input - Input value for input.
+   * @returns {Promise<ContractProcessingRunRecord>} Result of the mark completed operation.
+   */
   async markCompleted(
     _input: CompleteContractProcessingRunInput,
   ): Promise<ContractProcessingRunRecord> {
@@ -111,6 +150,11 @@ class FakeProcessingRepository implements ContractProcessingRepository {
     return this.run;
   }
 
+  /**
+   * @description Implements the mark review required method for this service or adapter.
+   * @param {CompleteContractProcessingRunInput} _input - Input value for input.
+   * @returns {Promise<ContractProcessingRunRecord>} Result of the mark review required operation.
+   */
   async markReviewRequired(
     _input: CompleteContractProcessingRunInput,
   ): Promise<ContractProcessingRunRecord> {
@@ -119,6 +163,12 @@ class FakeProcessingRepository implements ContractProcessingRepository {
     return this.run;
   }
 
+  /**
+   * @description Implements the mark retryable failure method for this service or adapter.
+   * @param {FailContractProcessingRunInput} input - Input value for input.
+   * @returns {Promise<ContractProcessingRunRecord>} Result of the mark retryable failure operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   async markRetryableFailure(
     input: FailContractProcessingRunInput,
   ): Promise<ContractProcessingRunRecord> {
@@ -137,6 +187,12 @@ class FakeProcessingRepository implements ContractProcessingRepository {
     return this.run;
   }
 
+  /**
+   * @description Implements the mark failed method for this service or adapter.
+   * @param {FailContractProcessingRunInput} input - Input value for input.
+   * @returns {Promise<ContractProcessingRunRecord>} Result of the mark failed operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
   async markFailed(input: FailContractProcessingRunInput): Promise<ContractProcessingRunRecord> {
     this.calls.failed += 1;
     if (!["PROCESSING", "PARSING", "OCR_PROCESSING"].includes(this.run.status)) {
@@ -155,10 +211,19 @@ class FakeProcessingRepository implements ContractProcessingRepository {
     return this.run;
   }
 
+  /**
+   * @description Implements the mark stage method for this service or adapter.
+   * @returns {Promise<ContractProcessingRunRecord>} Result of the mark stage operation.
+   */
   async markStage(): Promise<ContractProcessingRunRecord> {
     return this.run;
   }
 
+  /**
+   * @description Implements the mark text segmented method for this service or adapter.
+   * @param {CompleteContractProcessingRunInput} _input - Input value for input.
+   * @returns {Promise<ContractProcessingRunRecord>} Result of the mark text segmented operation.
+   */
   async markTextSegmented(
     _input: CompleteContractProcessingRunInput,
   ): Promise<ContractProcessingRunRecord> {
@@ -168,6 +233,11 @@ class FakeProcessingRepository implements ContractProcessingRepository {
   }
 }
 
+/**
+ * @description Performs the setup helper operation for this module.
+ * @param {{ readonly status?: ContractProcessingRunStatus; readonly pipeline: ContractProcessingPipeline; }} input - Input value for input.
+ * @returns {unknown} Result of the setup operation.
+ */
 function setup(input: {
   readonly status?: ContractProcessingRunStatus;
   readonly pipeline: ContractProcessingPipeline;

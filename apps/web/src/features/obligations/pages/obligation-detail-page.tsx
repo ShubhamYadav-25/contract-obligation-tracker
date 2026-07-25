@@ -1,3 +1,6 @@
+/**
+ * @file Defines routed feature page components for the contract tracker.
+ */
 import { useParams } from "react-router-dom";
 
 import { InlineError } from "@/components/feedback/inline-error.js";
@@ -15,6 +18,10 @@ import { TransitionHistory } from "../components/transition-history.js";
 import { useObligation } from "../hooks/use-obligation.js";
 import { useUpdateObligationStatus } from "../hooks/use-update-obligation-status.js";
 
+/**
+ * @description Renders the obligation detail page component for the contract tracker UI.
+ * @returns {JSX.Element} Result of the obligation detail page operation.
+ */
 export function ObligationDetailPage() {
   const obligationId = useParams().obligationId ?? "";
   const obligation = useObligation(obligationId);

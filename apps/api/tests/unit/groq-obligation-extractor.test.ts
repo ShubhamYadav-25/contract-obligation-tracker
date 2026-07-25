@@ -1,3 +1,6 @@
+/**
+ * @file Contains automated tests that verify contract tracker behavior.
+ */
 import { describe, expect, it, vi } from "vitest";
 
 import type { Logger } from "../../src/config/logger.js";
@@ -25,6 +28,10 @@ const config: GroqObligationExtractionConfig = {
   retryMaxDelayMilliseconds: 1,
 };
 
+/**
+ * @description Performs the logger helper operation for this module.
+ * @returns {Logger} Result of the logger operation.
+ */
 function logger(): Logger {
   return {
     info: vi.fn(),
@@ -33,6 +40,12 @@ function logger(): Logger {
   };
 }
 
+/**
+ * @description Performs the setup helper operation for this module.
+ * @param {{ readonly parsedJson?: unknown; readonly rejectOnce?: unknown; readonly rejectAlways?: unknown; readonly fallback?: ObligationExtractionProvider; readonly overrideConfig?: Partial<GroqObligationExtractionConfig>; }} input - Input value for input.
+ * @returns {unknown} Result of the setup operation.
+ * @throws {Error} When validation, I/O, or downstream service operations fail.
+ */
 function setup(input: {
   readonly parsedJson?: unknown;
   readonly rejectOnce?: unknown;
@@ -86,6 +99,11 @@ function setup(input: {
   return { extractor, fallback, llm };
 }
 
+/**
+ * @description Performs the rich obligation helper operation for this module.
+ * @param {Partial<{ title: string; description: string; obligationType: string; obligatedParty: string | null; beneficiaryParty: string | null; action: string; deliverable: string | null; explicitDueDate: string | null; pageNumber: number; lineStart: number; lineEnd: number; startOffset: number; endOffset: number; sourceText: string; }>} overrides - Input value for overrides.
+ * @returns {unknown} Result of the rich obligation operation.
+ */
 function richObligation(
   overrides: Partial<{
     title: string;

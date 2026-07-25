@@ -1,3 +1,6 @@
+/**
+ * @file Defines shared frontend services for API requests, errors, or query keys.
+ */
 import type { ZodType } from "zod";
 
 import { ApiError } from "./api-error.js";
@@ -27,6 +30,12 @@ interface ApiErrorEnvelope {
   };
 }
 
+/**
+ * @description Executes the get api base url operation used by the application workflow.
+ * @param {unknown} rawValue - Input value for raw value.
+ * @returns {string} Result of the get api base url operation.
+ * @throws {Error} When validation, I/O, or downstream service operations fail.
+ */
 export function getApiBaseUrl(rawValue = import.meta.env.VITE_API_BASE_URL): string {
   const value = rawValue || "http://localhost:3000";
   try {
@@ -36,6 +45,10 @@ export function getApiBaseUrl(rawValue = import.meta.env.VITE_API_BASE_URL): str
   }
 }
 
+/**
+ * @description Executes the get dev auth headers operation used by the application workflow.
+ * @returns {Record<string, string>} Result of the get dev auth headers operation.
+ */
 export function getDevAuthHeaders(): Record<string, string> {
   return {
     ...(import.meta.env.VITE_DEV_USER_ID ? { "x-user-id": import.meta.env.VITE_DEV_USER_ID } : {}),
@@ -45,6 +58,11 @@ export function getDevAuthHeaders(): Record<string, string> {
   };
 }
 
+/**
+ * @description Performs the parse response body helper operation for this module.
+ * @param {Response} response - Input value for response.
+ * @returns {Promise<unknown>} Result of the parse response body operation.
+ */
 async function parseResponseBody(response: Response): Promise<unknown> {
   const text = await response.text();
   if (!text) {
@@ -53,6 +71,12 @@ async function parseResponseBody(response: Response): Promise<unknown> {
   return JSON.parse(text);
 }
 
+/**
+ * @description Performs the to api error helper operation for this module.
+ * @param {Response} response - Input value for response.
+ * @param {unknown} body - Input value for body.
+ * @returns {ApiError} Result of the to api error operation.
+ */
 function toApiError(response: Response, body: unknown): ApiError {
   const correlationId = response.headers.get("x-correlation-id") ?? undefined;
   const envelope = body as Partial<ApiErrorEnvelope>;
@@ -77,6 +101,13 @@ function toApiError(response: Response, body: unknown): ApiError {
   });
 }
 
+/**
+ * @description Performs the api request helper operation for this module.
+ * @param {string} path - Input value for path.
+ * @param {ApiRequestOptions<T>} options - Input value for options.
+ * @returns {Promise<T>} Result of the api request operation.
+ * @throws {Error} When validation, I/O, or downstream service operations fail.
+ */
 export async function apiRequest<T>(path: string, options: ApiRequestOptions<T> = {}): Promise<T> {
   const url = `${getApiBaseUrl()}${path}`;
   const headers = new Headers();
@@ -115,6 +146,13 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions<T> 
   return options.responseSchema ? options.responseSchema.parse(data) : data;
 }
 
+/**
+ * @description Executes the upload multipart operation used by the application workflow.
+ * @param {string} path - Input value for path.
+ * @param {FormData} formData - Input value for form data.
+ * @param {Omit<ApiRequestOptions<T>, "formData" | "body" | "method">} options - Input value for options.
+ * @returns {Promise<T>} Result of the upload multipart operation.
+ */
 export function uploadMultipart<T>(
   path: string,
   formData: FormData,

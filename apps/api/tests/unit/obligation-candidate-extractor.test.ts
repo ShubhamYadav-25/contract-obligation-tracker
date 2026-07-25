@@ -1,3 +1,6 @@
+/**
+ * @file Contains automated tests that verify contract tracker behavior.
+ */
 import { describe, expect, it } from "vitest";
 
 import { FakeStructuredLlmClient } from "../../src/infrastructure/llm/fake-structured-llm-client.js";
@@ -12,14 +15,17 @@ import {
   type DetectedCandidateWindow,
 } from "../../src/modules/extraction/reference-aware/index.js";
 
+/**
+ * @description Performs the source index helper operation for this module.
+ * @returns {ContractSourceIndex} Result of the source index operation.
+ */
 function sourceIndex(): ContractSourceIndex {
   const lines: readonly ContractSourceLineInput[] = [
     {
       globalLineNumber: 1,
       pageNumber: 1,
       pageLocalLineNumber: 1,
-      text:
-        'This Agreement is between Acme Network Corporation ("Provider", "Network") and Beta Affiliate LLC ("Customer", "Affiliate").',
+      text: 'This Agreement is between Acme Network Corporation ("Provider", "Network") and Beta Affiliate LLC ("Customer", "Affiliate").',
       sourceMethod: "PDF_TEXT",
     },
     {
@@ -90,8 +96,7 @@ function sourceIndex(): ContractSourceIndex {
       globalLineNumber: 10,
       pageNumber: 1,
       pageLocalLineNumber: 10,
-      text:
-        "It shall deliver the activation package within five (5) business days after kickoff.",
+      text: "It shall deliver the activation package within five (5) business days after kickoff.",
       sourceMethod: "PDF_TEXT",
       sectionPath: ["Onboarding"],
     },
@@ -140,6 +145,10 @@ function sourceIndex(): ContractSourceIndex {
   return new ContractSourceIndex(lines);
 }
 
+/**
+ * @description Performs the context helper operation for this module.
+ * @returns {ContractContextExtractionResult} Result of the context operation.
+ */
 function context(): ContractContextExtractionResult {
   return {
     context: {
@@ -263,6 +272,11 @@ function context(): ContractContextExtractionResult {
   };
 }
 
+/**
+ * @description Performs the candidate helper operation for this module.
+ * @param {Record<string, unknown>} overrides - Input value for overrides.
+ * @returns {unknown} Result of the candidate operation.
+ */
 function candidate(overrides: Record<string, unknown> = {}) {
   return {
     businessType: "PAYMENT",
@@ -301,6 +315,11 @@ function candidate(overrides: Record<string, unknown> = {}) {
   };
 }
 
+/**
+ * @description Performs the windows helper operation for this module.
+ * @param {ContractSourceIndex} index - Input value for index.
+ * @returns {readonly DetectedCandidateWindow[]} Result of the windows operation.
+ */
 function windows(index: ContractSourceIndex): readonly DetectedCandidateWindow[] {
   return detectCandidateWindows(index, {
     precedingContextLineCount: 1,
@@ -311,6 +330,13 @@ function windows(index: ContractSourceIndex): readonly DetectedCandidateWindow[]
   });
 }
 
+/**
+ * @description Performs the window for line helper operation for this module.
+ * @param {ContractSourceIndex} index - Input value for index.
+ * @param {number} globalLineNumber - Input value for global line number.
+ * @returns {DetectedCandidateWindow} Result of the window for line operation.
+ * @throws {Error} When validation, I/O, or downstream service operations fail.
+ */
 function windowForLine(
   index: ContractSourceIndex,
   globalLineNumber: number,
@@ -346,6 +372,11 @@ function windowForLine(
   };
 }
 
+/**
+ * @description Performs the extract helper operation for this module.
+ * @param {{ readonly selectedWindows: readonly DetectedCandidateWindow[]; readonly responses: readonly unknown[]; readonly selector?: RelevantContextSelector; }} input - Input value for input.
+ * @returns {Promise<unknown>} Result of the extract operation.
+ */
 async function extract(input: {
   readonly selectedWindows: readonly DetectedCandidateWindow[];
   readonly responses: readonly unknown[];
@@ -361,7 +392,12 @@ async function extract(input: {
     ) {
       const window = input.selectedWindows[index] ?? input.selectedWindows[0];
       llm.queueResponse("obligation_candidate_extraction", {
-        windowResults: [{ windowId: window?.id ?? "missing", obligations: (response as { candidates: unknown }).candidates }],
+        windowResults: [
+          {
+            windowId: window?.id ?? "missing",
+            obligations: (response as { candidates: unknown }).candidates,
+          },
+        ],
       });
       continue;
     }
@@ -431,9 +467,7 @@ describe("ObligationCandidateExtractor", () => {
                 roleLabel: null,
                 canonicalName: "Acme Network Corporation",
                 resolutionMethod: "INHERITED_FROM_ADJACENT_CONTEXT",
-                supportingEvidence: [
-                  { startLine: 9, endLine: 9, evidenceRole: "ACTOR" },
-                ],
+                supportingEvidence: [{ startLine: 9, endLine: 9, evidenceRole: "ACTOR" }],
                 confidence: 0.86,
                 reviewReasons: [],
               },
@@ -669,9 +703,7 @@ describe("ObligationCandidateExtractor", () => {
     });
 
     expect(result.verifiedCandidates).toEqual([]);
-    expect(result.rejected[0]?.label).toBe(
-      "Affiliate shall mean any entity under common control.",
-    );
+    expect(result.rejected[0]?.label).toBe("Affiliate shall mean any entity under common control.");
   });
 
   it("marks low-confidence results for review", async () => {
@@ -789,12 +821,8 @@ describe("ObligationCandidateExtractor", () => {
       ],
     });
 
-    const firstKeys = firstRun.result.confirmed
-      .map((item) => item.stableCandidateKey)
-      .sort();
-    const secondKeys = secondRun.result.confirmed
-      .map((item) => item.stableCandidateKey)
-      .sort();
+    const firstKeys = firstRun.result.confirmed.map((item) => item.stableCandidateKey).sort();
+    const secondKeys = secondRun.result.confirmed.map((item) => item.stableCandidateKey).sort();
 
     expect(secondKeys).toEqual(firstKeys);
     expect(new Set(firstKeys).size).toBe(2);

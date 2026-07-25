@@ -1,3 +1,6 @@
+/**
+ * @file Defines reusable test helpers, fixtures, and mock providers.
+ */
 export interface DatabaseTestContext {
   readonly connectionString: string;
   readonly schemaName?: string;

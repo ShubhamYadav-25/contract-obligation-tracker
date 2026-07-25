@@ -1,3 +1,6 @@
+/**
+ * @file Defines shared frontend services for API requests, errors, or query keys.
+ */
 export const queryKeys = {
   contracts: {
     all: ["contracts"] as const,

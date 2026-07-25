@@ -1,3 +1,6 @@
+/**
+ * @file Defines shared API errors, middleware, validation, or boundary types.
+ */
 import type { ErrorRequestHandler } from "express";
 import { ZodError } from "zod";
 
@@ -11,11 +14,21 @@ interface SerializedError {
   readonly cause?: unknown;
 }
 
+/**
+ * @description Executes the get correlation id operation used by the application workflow.
+ * @param {Record<string, unknown>} responseLocals - Input value for response locals.
+ * @returns {string} Result of the get correlation id operation.
+ */
 function getCorrelationId(responseLocals: Record<string, unknown>): string {
   const correlationId = responseLocals["correlationId"];
   return typeof correlationId === "string" ? correlationId : "unknown";
 }
 
+/**
+ * @description Performs the serialize error helper operation for this module.
+ * @param {unknown} error - Input value for error.
+ * @returns {SerializedError} Result of the serialize error operation.
+ */
 function serializeError(error: unknown): SerializedError {
   if (error instanceof Error) {
     return {
@@ -32,6 +45,11 @@ function serializeError(error: unknown): SerializedError {
   };
 }
 
+/**
+ * @description Performs the normalize error helper operation for this module.
+ * @param {unknown} error - Input value for error.
+ * @returns {ApplicationError} Result of the normalize error operation.
+ */
 function normalizeError(error: unknown): ApplicationError {
   if (error instanceof ApplicationError) {
     return error;
@@ -48,6 +66,14 @@ function normalizeError(error: unknown): ApplicationError {
   });
 }
 
+/**
+ * @description Performs the error middleware helper operation for this module.
+ * @param {unknown} error - Input value for error.
+ * @param {unknown} request - Input value for request.
+ * @param {unknown} response - Input value for response.
+ * @param {unknown} _next - Input value for next.
+ * @returns {unknown} Result of the error middleware operation.
+ */
 export const errorMiddleware: ErrorRequestHandler = (error, request, response, _next) => {
   const normalizedError = normalizeError(error);
   const correlationId = getCorrelationId(response.locals);

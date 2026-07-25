@@ -1,3 +1,6 @@
+/**
+ * @file Defines routed feature page components for the contract tracker.
+ */
 import { useMemo, useState } from "react";
 import { obligationStatuses } from "@contract-obligation-tracker/shared";
 import {
@@ -88,11 +91,21 @@ const dueDateRangeLabels: Record<ObligationDueDateRangeFilter, string> = {
   NEXT_30_DAYS: "Next 30 days",
 };
 
+/**
+ * @description Performs the days remaining helper operation for this module.
+ * @param {string | undefined} dueAt - Input value for due at.
+ * @returns {number | null} Result of the days remaining operation.
+ */
 function daysRemaining(dueAt: string | undefined): number | null {
   if (!dueAt) return null;
   return Math.ceil((Date.parse(dueAt) - Date.now()) / (1000 * 60 * 60 * 24));
 }
 
+/**
+ * @description Performs the days remaining class name helper operation for this module.
+ * @param {number | null} days - Input value for days.
+ * @returns {string} Result of the days remaining class name operation.
+ */
 function daysRemainingClassName(days: number | null): string {
   if (days === null) return "text-slate-400";
   if (days < 0) return "font-semibold text-rose-700";
@@ -100,6 +113,11 @@ function daysRemainingClassName(days: number | null): string {
   return "font-semibold text-emerald-700";
 }
 
+/**
+ * @description Renders the obligation mobile card component for the contract tracker UI.
+ * @param {{ readonly obligation: ObligationSummary; readonly selected: boolean; readonly onSelectedChange: (selected: boolean) => void; }} { obligation, selected, onSelectedChange, } - Input value for { obligation, selected, on selected change, }.
+ * @returns {JSX.Element} Result of the obligation mobile card operation.
+ */
 function ObligationMobileCard({
   obligation,
   selected,
@@ -179,6 +197,10 @@ function ObligationMobileCard({
   );
 }
 
+/**
+ * @description Renders the obligations page component for the contract tracker UI.
+ * @returns {JSX.Element} Result of the obligations page operation.
+ */
 export function ObligationsPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<ObligationStatus | undefined>();
@@ -208,6 +230,12 @@ export function ObligationsPage() {
     : null;
   const hasActiveFilters = Boolean(search.trim() || statusFilter || reminderFilter || dueDateRange);
 
+  /**
+   * @description Performs the set row selected helper operation for this module.
+   * @param {string} obligationId - Input value for obligation id.
+   * @param {boolean} selected - Input value for selected.
+   * @returns {void} Result of the set row selected operation.
+   */
   function setRowSelected(obligationId: string, selected: boolean): void {
     setSelectedIds((current) => {
       const next = new Set(current);
@@ -220,6 +248,11 @@ export function ObligationsPage() {
     });
   }
 
+  /**
+   * @description Performs the toggle visible rows helper operation for this module.
+   * @param {boolean} selected - Input value for selected.
+   * @returns {void} Result of the toggle visible rows operation.
+   */
   function toggleVisibleRows(selected: boolean): void {
     setSelectedIds((current) => {
       const next = new Set(current);
@@ -234,6 +267,10 @@ export function ObligationsPage() {
     });
   }
 
+  /**
+   * @description Performs the clear filters helper operation for this module.
+   * @returns {void} Result of the clear filters operation.
+   */
   function clearFilters(): void {
     setSearch("");
     setStatusFilter(undefined);
@@ -243,6 +280,10 @@ export function ObligationsPage() {
     setSelectedIds(new Set());
   }
 
+  /**
+   * @description Performs the export csv helper operation for this module.
+   * @returns {void} Result of the export csv operation.
+   */
   function exportCsv(): void {
     const header = [
       "Obligation",

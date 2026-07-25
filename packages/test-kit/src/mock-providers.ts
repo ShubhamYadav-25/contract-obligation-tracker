@@ -1,3 +1,6 @@
+/**
+ * @file Defines reusable test helpers, fixtures, and mock providers.
+ */
 export interface StorageProviderMock {
   putObject(key: string, body: Uint8Array): Promise<{ readonly key: string }>;
   getObject(key: string): Promise<Uint8Array>;

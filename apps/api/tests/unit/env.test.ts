@@ -1,3 +1,6 @@
+/**
+ * @file Contains automated tests that verify contract tracker behavior.
+ */
 import { describe, expect, it } from "vitest";
 
 import { parseEnv } from "../../src/config/env.js";
@@ -24,6 +27,23 @@ describe("environment validation", () => {
     expect(env.GEMINI_MAX_BATCH_OUTPUT_TOKENS).toBe(6_000);
   });
 
+  it("uses the Render PORT value when API_PORT is not set", () => {
+    const env = parseEnv({
+      PORT: "10000",
+    });
+
+    expect(env.API_PORT).toBe(10000);
+  });
+
+  it("keeps API_PORT precedence over PORT", () => {
+    const env = parseEnv({
+      API_PORT: "3001",
+      PORT: "10000",
+    });
+
+    expect(env.API_PORT).toBe(3001);
+  });
+
   it("parses the obligation extractor mode feature flag", () => {
     const env = parseEnv({
       OBLIGATION_EXTRACTOR_MODE: "reference-aware-gemini",
@@ -48,9 +68,7 @@ describe("environment validation", () => {
         OBLIGATION_EXTRACTOR_MODE: "reference-aware-gemini",
         GEMINI_MODEL: "gemini-test-model",
       }),
-    ).toThrow(
-      "GEMINI_API_KEY is required when OBLIGATION_EXTRACTOR_MODE=reference-aware-gemini",
-    );
+    ).toThrow("GEMINI_API_KEY is required when OBLIGATION_EXTRACTOR_MODE=reference-aware-gemini");
     const env = parseEnv({
       OBLIGATION_EXTRACTOR_MODE: "reference-aware-gemini",
       GEMINI_API_KEY: "test-key",
@@ -123,6 +141,25 @@ describe("environment validation", () => {
 
     expect(env.GEMINI_API_KEY).toBe("gemini-key");
     expect(env.GOOGLE_API_KEY).toBe("google-key");
+  });
+
+  it("requires Brevo sender and API key when Brevo delivery is selected", () => {
+    expect(() =>
+      parseEnv({
+        EMAIL_PROVIDER: "brevo",
+      }),
+    ).toThrow("EMAIL_FROM_ADDRESS is required when Brevo email delivery is enabled");
+
+    const env = parseEnv({
+      EMAIL_PROVIDER: "brevo",
+      EMAIL_FROM_ADDRESS: "sender@example.com",
+      EMAIL_FROM_NAME: "Contract Tracker",
+      BREVO_API_KEY: "test-key",
+    });
+    expect(env.EMAIL_PROVIDER).toBe("brevo");
+    expect(env.EMAIL_FROM_ADDRESS).toBe("sender@example.com");
+    expect(env.EMAIL_FROM_NAME).toBe("Contract Tracker");
+    expect(env.BREVO_API_KEY).toBe("test-key");
   });
 
   it("requires JWT_SECRET in production", () => {

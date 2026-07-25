@@ -1,3 +1,6 @@
+/**
+ * @file Defines OCR infrastructure contracts and adapters.
+ */
 export interface OcrInput {
   readonly contractId: string;
   readonly documentId: string;

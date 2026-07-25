@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend reminders module contracts, services, routes, or persistence logic.
+ */
 import type { TransactionManager } from "../../infrastructure/database/transaction-manager.js";
 import type { ReminderReadRepository } from "./reminders.repository.js";
 import type { ReminderRecord, ReminderStatus } from "./reminders.types.js";
@@ -15,10 +18,20 @@ interface ReminderRow {
   readonly version: number | string;
 }
 
+/**
+ * @description Performs the to date helper operation for this module.
+ * @param {Date | string} value - Input value for value.
+ * @returns {Date} Result of the to date operation.
+ */
 function toDate(value: Date | string): Date {
   return value instanceof Date ? value : new Date(value);
 }
 
+/**
+ * @description Performs the map reminder helper operation for this module.
+ * @param {ReminderRow} row - Input value for row.
+ * @returns {ReminderRecord} Result of the map reminder operation.
+ */
 function mapReminder(row: ReminderRow): ReminderRecord {
   return {
     id: row.id,
@@ -35,8 +48,18 @@ function mapReminder(row: ReminderRow): ReminderRecord {
 }
 
 export class PostgresReminderRepository implements ReminderReadRepository {
+  /**
+   * @description Implements the constructor method for this service or adapter.
+   * @param {TransactionManager} transactions - Input value for transactions.
+   * @returns {unknown} Result of the constructor operation.
+   */
   constructor(private readonly transactions: TransactionManager) {}
 
+  /**
+   * @description Executes the list by organization operation used by the application workflow.
+   * @param {{ readonly organizationId: string; readonly obligationId?: string; readonly limit: number; readonly offset: number; }} input - Input value for input.
+   * @returns {Promise<readonly ReminderRecord[]>} Result of the list by organization operation.
+   */
   async listByOrganization(input: {
     readonly organizationId: string;
     readonly obligationId?: string;

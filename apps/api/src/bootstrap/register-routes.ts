@@ -1,3 +1,6 @@
+/**
+ * @file Defines API bootstrap wiring for routes, workers, schedulers, or shutdown handling.
+ */
 import type express from "express";
 
 import { createContractRouter } from "../modules/contracts/contracts.routes.js";
@@ -8,6 +11,11 @@ import { createObligationRouter } from "../modules/obligations/obligations.route
 import { createReminderRouter } from "../modules/reminders/reminders.routes.js";
 import { createExtractionRouter } from "../modules/extraction/extraction.routes.js";
 
+/**
+ * @description Performs the register routes helper operation for this module.
+ * @param {express.Express} app - Input value for app.
+ * @returns {void} Result of the register routes operation.
+ */
 export function registerRoutes(app: express.Express): void {
   app.use("/health", createHealthRouter());
   app.use("/api/v1/contracts", createContractRouter());

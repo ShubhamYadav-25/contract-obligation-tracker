@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend contracts module contracts, services, routes, or persistence logic.
+ */
 import { extname } from "node:path";
 
 import { ContractIngestionError } from "./contract-ingestion.errors.js";
@@ -20,6 +23,11 @@ export interface ValidatedContractFile extends UploadedContractFile {
 
 const pdfMagicBytes = Buffer.from("%PDF-");
 
+/**
+ * @description Performs the sanitize display filename helper operation for this module.
+ * @param {string} input - Input value for input.
+ * @returns {string} Result of the sanitize display filename operation.
+ */
 export function sanitizeDisplayFilename(input: string): string {
   const withoutPath = input.replace(/\\/g, "/").split("/").at(-1) ?? "contract.pdf";
   const sanitized = withoutPath
@@ -30,12 +38,24 @@ export function sanitizeDisplayFilename(input: string): string {
   return sanitized.length > 0 ? sanitized.slice(0, 255) : "contract.pdf";
 }
 
+/**
+ * @description Performs the estimate page count helper operation for this module.
+ * @param {Buffer} buffer - Input value for buffer.
+ * @returns {number} Result of the estimate page count operation.
+ */
 function estimatePageCount(buffer: Buffer): number {
   const text = buffer.toString("latin1");
   const matches = text.match(/\/Type\s*\/Page\b/g);
   return matches?.length ?? 0;
 }
 
+/**
+ * @description Performs the validate contract pdf file helper operation for this module.
+ * @param {UploadedContractFile | undefined} file - Input value for file.
+ * @param {ContractFileValidationConfig} config - Input value for config.
+ * @returns {ValidatedContractFile} Result of the validate contract pdf file operation.
+ * @throws {Error} When validation, I/O, or downstream service operations fail.
+ */
 export function validateContractPdfFile(
   file: UploadedContractFile | undefined,
   config: ContractFileValidationConfig,

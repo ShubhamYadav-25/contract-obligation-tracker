@@ -1,3 +1,6 @@
+/**
+ * @file Defines feature-specific React UI components for the contract tracker.
+ */
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, UploadCloud } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -9,6 +12,11 @@ import { ApiError, isConflictError } from "@/services/api-error.js";
 import { uploadContractSchema } from "../schemas/upload-contract.schema.js";
 import type { UploadContractFormValues } from "../schemas/upload-contract.schema.js";
 
+/**
+ * @description Renders the upload form component for the contract tracker UI.
+ * @param {{ readonly error: unknown; readonly isSubmitting: boolean; readonly onSubmit: (file: File) => void; }} { error, isSubmitting, onSubmit, } - Input value for { error, is submitting, on submit, }.
+ * @returns {JSX.Element} Result of the upload form operation.
+ */
 export function UploadForm({
   error,
   isSubmitting,

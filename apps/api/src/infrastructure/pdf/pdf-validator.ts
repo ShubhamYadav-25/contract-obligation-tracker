@@ -1,3 +1,11 @@
+/**
+ * @file Defines PDF validation, text extraction, and rendering infrastructure.
+ */
+/**
+ * @description Performs the is probably pdf helper operation for this module.
+ * @param {Uint8Array} bytes - Input value for bytes.
+ * @returns {boolean} Result of the is probably pdf operation.
+ */
 export function isProbablyPdf(bytes: Uint8Array): boolean {
   if (bytes.length < 5) {
     return false;

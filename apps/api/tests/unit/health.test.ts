@@ -1,3 +1,6 @@
+/**
+ * @file Contains automated tests that verify contract tracker behavior.
+ */
 import request from "supertest";
 import { describe, expect, it } from "vitest";
 

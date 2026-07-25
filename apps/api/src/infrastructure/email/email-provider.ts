@@ -1,3 +1,6 @@
+/**
+ * @file Defines email delivery infrastructure contracts and adapters.
+ */
 import type {
   NotificationInput,
   NotificationProvider,

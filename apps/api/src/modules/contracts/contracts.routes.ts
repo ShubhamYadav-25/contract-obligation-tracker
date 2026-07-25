@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend contracts module contracts, services, routes, or persistence logic.
+ */
 import { Router, type RequestHandler } from "express";
 import multer, { MulterError } from "multer";
 
@@ -11,6 +14,11 @@ import {
 } from "./contracts.controller.js";
 import { createContractIngestionService } from "./contracts.dependencies.js";
 
+/**
+ * @description Executes the create contract router operation used by the application workflow.
+ * @param {ContractIngestionServiceFactory} createService - Input value for create service.
+ * @returns {Router} Result of the create contract router operation.
+ */
 export function createContractRouter(
   createService: ContractIngestionServiceFactory = createContractIngestionService,
 ): Router {
@@ -24,6 +32,14 @@ export function createContractRouter(
       files: 1,
     },
   });
+
+  /**
+   * @description Executes the upload single contract operation used by the application workflow.
+   * @param {unknown} request - Input value for request.
+   * @param {unknown} response - Input value for response.
+   * @param {unknown} next - Input value for next.
+   * @returns {unknown} Result of the upload single contract operation.
+   */
   const uploadSingleContract: RequestHandler = (request, response, next) => {
     upload.single("file")(request, response, (error: unknown) => {
       if (error instanceof MulterError && error.code === "LIMIT_FILE_SIZE") {
@@ -88,8 +104,8 @@ export function createContractRouter(
       const { DeterministicExtractor } = await import("../extraction/deterministic-extractor.js");
       const service = createContractIngestionService();
       const contractId = Array.isArray(request.params.contractId)
-        ? request.params.contractId[0] ?? ""
-        : request.params.contractId ?? "";
+        ? (request.params.contractId[0] ?? "")
+        : (request.params.contractId ?? "");
       const orgId = request.authContext?.organizationId;
       if (!orgId) {
         response.status(401).json({ error: "AUTHENTICATION_REQUIRED" });

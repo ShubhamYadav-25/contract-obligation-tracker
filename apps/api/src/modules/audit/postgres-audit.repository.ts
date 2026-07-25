@@ -1,11 +1,25 @@
+/**
+ * @file Defines backend audit module contracts, services, routes, or persistence logic.
+ */
 import type { PostgreSqlClient } from "../../infrastructure/database/postgres-client.js";
 import type { TransactionContext } from "../../infrastructure/database/transaction-manager.js";
 import type { AuditRepository } from "./audit.repository.js";
 import type { AuditRecordInput } from "./audit.types.js";
 
 export class PostgresAuditRepository implements AuditRepository {
+  /**
+   * @description Implements the constructor method for this service or adapter.
+   * @param {PostgreSqlClient} database - Input value for database.
+   * @returns {unknown} Result of the constructor operation.
+   */
   constructor(private readonly database: PostgreSqlClient) {}
 
+  /**
+   * @description Implements the append method for this service or adapter.
+   * @param {AuditRecordInput} input - Input value for input.
+   * @param {TransactionContext} transaction - Input value for transaction.
+   * @returns {Promise<void>} Result of the append operation.
+   */
   async append(input: AuditRecordInput, transaction?: TransactionContext): Promise<void> {
     const sql = `
       INSERT INTO audit_events (

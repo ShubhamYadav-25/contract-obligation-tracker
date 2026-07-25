@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend contracts module contracts, services, routes, or persistence logic.
+ */
 import { relative, resolve, sep } from "node:path";
 
 import { z } from "zod";
@@ -27,6 +30,13 @@ const manifestSchema = z.object({
   contracts: z.array(cuadManifestEntrySchema).length(25),
 });
 
+/**
+ * @description Performs the assert unique helper operation for this module.
+ * @param {readonly string[]} values - Input value for values.
+ * @param {string} label - Input value for label.
+ * @returns {void} Result of the assert unique operation.
+ * @throws {Error} When validation, I/O, or downstream service operations fail.
+ */
 function assertUnique(values: readonly string[], label: string): void {
   const seen = new Set<string>();
   const duplicates = new Set<string>();
@@ -43,6 +53,12 @@ function assertUnique(values: readonly string[], label: string): void {
   }
 }
 
+/**
+ * @description Performs the parse cuad manifest helper operation for this module.
+ * @param {unknown} input - Input value for input.
+ * @returns {CuadManifest} Result of the parse cuad manifest operation.
+ * @throws {Error} When validation, I/O, or downstream service operations fail.
+ */
 export function parseCuadManifest(input: unknown): CuadManifest {
   const parsed = manifestSchema.parse(input);
   const contractCount = parsed.contractCount ?? parsed.contracts.length;
@@ -75,6 +91,12 @@ export function parseCuadManifest(input: unknown): CuadManifest {
   return { contracts };
 }
 
+/**
+ * @description Performs the resolve working subset path helper operation for this module.
+ * @param {{ readonly workingSubsetRoot: string; readonly relativePath: string; }} input - Input value for input.
+ * @returns {string} Result of the resolve working subset path operation.
+ * @throws {Error} When validation, I/O, or downstream service operations fail.
+ */
 export function resolveWorkingSubsetPath(input: {
   readonly workingSubsetRoot: string;
   readonly relativePath: string;

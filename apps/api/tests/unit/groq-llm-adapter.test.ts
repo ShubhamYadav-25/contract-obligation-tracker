@@ -1,3 +1,6 @@
+/**
+ * @file Contains automated tests that verify contract tracker behavior.
+ */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { GroqLlmAdapter } from "../../src/infrastructure/llm/groq.adapter.js";

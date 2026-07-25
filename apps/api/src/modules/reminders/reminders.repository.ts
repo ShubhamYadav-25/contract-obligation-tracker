@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend reminders module contracts, services, routes, or persistence logic.
+ */
 import type { ReminderRecord, ReminderStatus } from "./reminders.types.js";
 
 export interface ReminderReadRepository {

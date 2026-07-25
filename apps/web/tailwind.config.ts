@@ -1,3 +1,6 @@
+/**
+ * @file Configures Tailwind content scanning and theme extension tokens.
+ */
 import type { Config } from "tailwindcss";
 
 export default {

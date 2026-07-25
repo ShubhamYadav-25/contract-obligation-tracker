@@ -1,3 +1,6 @@
+/**
+ * @file Defines feature-specific React UI components for the contract tracker.
+ */
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { UploadCloud } from "lucide-react";
@@ -24,6 +27,11 @@ import {
   statusTone,
 } from "../components.js";
 
+/**
+ * @description Renders the upload processing notice component for the contract tracker UI.
+ * @param {{ readonly fileName: string | undefined }} { fileName } - Input value for { file name }.
+ * @returns {JSX.Element} Result of the upload processing notice operation.
+ */
 function UploadProcessingNotice({ fileName }: { readonly fileName: string | undefined }) {
   return (
     <div
@@ -79,6 +87,11 @@ export type UploadRecord = {
   readonly ocrPageCount?: number;
 };
 
+/**
+ * @description Performs the contract to upload record helper operation for this module.
+ * @param {ContractSummary} contract - Input value for contract.
+ * @returns {UploadRecord} Result of the contract to upload record operation.
+ */
 export function contractToUploadRecord(contract: ContractSummary): UploadRecord {
   return {
     contractId: contract.id,
@@ -107,6 +120,11 @@ export function contractToUploadRecord(contract: ContractSummary): UploadRecord 
   };
 }
 
+/**
+ * @description Renders the upload contract dialog component for the contract tracker UI.
+ * @param {{ readonly open: boolean; readonly onClose: () => void; }} { open, onClose, } - Input value for { open, on close, }.
+ * @returns {JSX.Element} Result of the upload contract dialog operation.
+ */
 export function UploadContractDialog({
   open,
   onClose,
@@ -133,6 +151,11 @@ export function UploadContractDialog({
     }
   }, [open, resetUpload]);
 
+  /**
+   * @description Performs the submit helper operation for this module.
+   * @param {FormEvent<HTMLFormElement>} event - Input value for event.
+   * @returns {unknown} Result of the submit operation.
+   */
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setClientError("");
@@ -260,6 +283,11 @@ export function UploadContractDialog({
   );
 }
 
+/**
+ * @description Renders the recent contracts table component for the contract tracker UI.
+ * @param {{ readonly uploads: readonly UploadRecord[] }} { uploads } - Input value for { uploads }.
+ * @returns {JSX.Element} Result of the recent contracts table operation.
+ */
 export function RecentContractsTable({ uploads }: { readonly uploads: readonly UploadRecord[] }) {
   if (uploads.length === 0) {
     return (

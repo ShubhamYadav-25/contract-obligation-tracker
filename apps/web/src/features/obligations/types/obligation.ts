@@ -1,3 +1,6 @@
+/**
+ * @file Defines feature-level web application code for the contract tracker.
+ */
 import type { ObligationStatus } from "@contract-obligation-tracker/shared";
 
 export type { ObligationStatus };

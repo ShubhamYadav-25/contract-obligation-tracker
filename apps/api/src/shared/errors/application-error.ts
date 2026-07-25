@@ -1,3 +1,6 @@
+/**
+ * @file Defines shared API errors, middleware, validation, or boundary types.
+ */
 export interface ApiErrorBody {
   readonly success: false;
   readonly error: {
@@ -13,6 +16,11 @@ export class ApplicationError extends Error {
   readonly statusCode: number;
   readonly details: Record<string, unknown>;
 
+  /**
+   * @description Implements the constructor method for this service or adapter.
+   * @param {{ readonly code: string; readonly message: string; readonly statusCode: number; readonly details?: Record<string, unknown>; }} input - Input value for input.
+   * @returns {unknown} Result of the constructor operation.
+   */
   constructor(input: {
     readonly code: string;
     readonly message: string;

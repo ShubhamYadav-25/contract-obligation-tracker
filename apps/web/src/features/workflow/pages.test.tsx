@@ -1,3 +1,6 @@
+/**
+ * @file Contains automated tests that verify contract tracker behavior.
+ */
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
@@ -64,6 +67,10 @@ const obligationData: ObligationListResult = {
   total: 15,
 };
 
+/**
+ * @description Performs the render obligations page helper operation for this module.
+ * @returns {unknown} Result of the render obligations page operation.
+ */
 function renderObligationsPage() {
   return render(
     <MemoryRouter>
@@ -72,6 +79,10 @@ function renderObligationsPage() {
   );
 }
 
+/**
+ * @description Performs the render dashboard page helper operation for this module.
+ * @returns {unknown} Result of the render dashboard page operation.
+ */
 function renderDashboardPage() {
   return render(
     <MemoryRouter>

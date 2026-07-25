@@ -1,5 +1,9 @@
+/**
+ * @file Defines API bootstrap wiring for routes, workers, schedulers, or shutdown handling.
+ */
 import type { Logger } from "../config/logger.js";
 import { createDatabaseConfig } from "../config/database.js";
+import { createEmailConfig, type EmailConfig } from "../config/email.js";
 import { loadEnv } from "../config/env.js";
 import { createJobConfig } from "../config/jobs.js";
 import { createStorageConfig } from "../config/storage.js";
@@ -13,6 +17,9 @@ import { GeminiVisionOcrAdapter } from "../infrastructure/ocr/gemini-vision.adap
 import { TesseractOcrAdapter } from "../infrastructure/ocr/tesseract.adapter.js";
 import { GeminiStructuredLlmClient } from "../infrastructure/llm/gemini-structured-llm.client.js";
 import { GroqLlmAdapter } from "../infrastructure/llm/groq.adapter.js";
+import { BrevoEmailAdapter } from "../infrastructure/email/brevo.adapter.js";
+import { MailtrapEmailAdapter } from "../infrastructure/email/mailtrap.adapter.js";
+import { ResendEmailAdapter } from "../infrastructure/email/resend.adapter.js";
 import { SupabaseStorageProvider } from "../infrastructure/storage/supabase-storage.provider.js";
 import { ContractProcessingOrchestrator } from "../modules/contracts/contract-processing-orchestrator.service.js";
 import { DocumentTextProcessingPipeline } from "../modules/contracts/document-text-processing.pipeline.js";
@@ -36,6 +43,10 @@ import { PollingLoop } from "../jobs/pollers/polling-loop.js";
 import { ContractProcessingProcessor } from "../jobs/processors/contract-processing.processor.js";
 import { ProcessorRegistry } from "../jobs/processors/processor-registry.js";
 import { ReminderDeliveryProcessor } from "../jobs/processors/reminder-delivery.processor.js";
+import {
+  ConsoleNotificationProvider,
+  type NotificationProvider,
+} from "../modules/notifications/index.js";
 
 export interface WorkerRegistry extends CloseableResource {
   readonly names: readonly string[];
@@ -47,6 +58,18 @@ export interface WorkerRuntime extends CloseableResource {
   runOnce(): Promise<number>;
 }
 
+interface NotificationRuntime {
+  readonly provider: NotificationProvider;
+  readonly providerName: string;
+  readonly from?: string;
+  readonly defaultRecipient?: string;
+}
+
+/**
+ * @description Executes the create obligation extractor operation used by the application workflow.
+ * @param {{ readonly env: ReturnType<typeof loadEnv>; readonly logger: Logger; }} { env, logger, } - Input value for { env, logger, }.
+ * @returns {ObligationExtractionProvider} Result of the create obligation extractor operation.
+ */
 export function createObligationExtractor({
   env,
   logger,
@@ -85,6 +108,12 @@ export function createObligationExtractor({
   return heuristicObligationExtractor;
 }
 
+/**
+ * @description Executes the create groq obligation extractor operation used by the application workflow.
+ * @param {{ readonly env: ReturnType<typeof loadEnv>; readonly logger: Logger; readonly fallback: ObligationExtractionProvider; }} { env, logger, fallback, } - Input value for { env, logger, fallback, }.
+ * @returns {ObligationExtractionProvider} Result of the create groq obligation extractor operation.
+ * @throws {Error} When validation, I/O, or downstream service operations fail.
+ */
 function createGroqObligationExtractor({
   env,
   logger,
@@ -117,10 +146,71 @@ function createGroqObligationExtractor({
   });
 }
 
+/**
+ * @description Creates the notification provider used by reminder delivery jobs.
+ * @param {{ readonly emailConfig: EmailConfig; readonly logger: Logger; }} input - Email settings and logger dependencies.
+ * @returns {NotificationRuntime} Provider instance and metadata for reminder attempts.
+ * @throws {Error} When the selected email provider lacks required configuration.
+ */
+function createNotificationRuntime(input: {
+  readonly emailConfig: EmailConfig;
+  readonly logger: Logger;
+}): NotificationRuntime {
+  const { emailConfig, logger } = input;
+  if (emailConfig.provider === "brevo" || emailConfig.provider === "smtp") {
+    if (!emailConfig.brevo.apiKey || !emailConfig.from) {
+      throw new Error("Brevo email configuration is incomplete");
+    }
+
+    return {
+      provider: new BrevoEmailAdapter({
+        apiKey: emailConfig.brevo.apiKey,
+        senderEmail: emailConfig.from,
+        senderName: emailConfig.fromName ?? "Contract Obligation Tracker",
+      }),
+      providerName: "BREVO",
+      from: emailConfig.from,
+      ...(emailConfig.defaultRecipient ? { defaultRecipient: emailConfig.defaultRecipient } : {}),
+    };
+  }
+
+  if (emailConfig.provider === "mailtrap") {
+    return {
+      provider: new MailtrapEmailAdapter(),
+      providerName: "MAILTRAP",
+      ...(emailConfig.from ? { from: emailConfig.from } : {}),
+      ...(emailConfig.defaultRecipient ? { defaultRecipient: emailConfig.defaultRecipient } : {}),
+    };
+  }
+
+  if (emailConfig.provider === "resend") {
+    return {
+      provider: new ResendEmailAdapter(),
+      providerName: "RESEND",
+      ...(emailConfig.from ? { from: emailConfig.from } : {}),
+      ...(emailConfig.defaultRecipient ? { defaultRecipient: emailConfig.defaultRecipient } : {}),
+    };
+  }
+
+  return {
+    provider: new ConsoleNotificationProvider(logger),
+    providerName: "CONSOLE",
+    ...(emailConfig.from ? { from: emailConfig.from } : {}),
+    defaultRecipient: emailConfig.defaultRecipient ?? "development-reviewer@example.com",
+  };
+}
+
+/**
+ * @description Executes the create worker runtime operation used by the application workflow.
+ * @param {{ readonly logger: Logger }} { logger } - Input value for { logger }.
+ * @returns {WorkerRuntime} Result of the create worker runtime operation.
+ */
 export function createWorkerRuntime({ logger }: { readonly logger: Logger }): WorkerRuntime {
   const env = loadEnv();
   const jobConfig = createJobConfig(env);
   const storageConfig = createStorageConfig(env);
+  const emailConfig = createEmailConfig(env);
+  const notificationRuntime = createNotificationRuntime({ emailConfig, logger });
   const database = new PgPoolClient(createDatabaseConfig(env));
   const transactions = new PgTransactionManager(database.pool);
   const audit = new PostgresAuditRepository(database);
@@ -166,7 +256,20 @@ export function createWorkerRuntime({ logger }: { readonly logger: Logger }): Wo
     logger,
   });
   const contractProcessor = new ContractProcessingProcessor(orchestrator);
-  const reminderProcessor = new ReminderDeliveryProcessor(database, transactions);
+  const reminderProcessor = new ReminderDeliveryProcessor(
+    database,
+    transactions,
+    notificationRuntime.provider,
+    {
+      providerName: notificationRuntime.providerName,
+      appName: env.APP_NAME,
+      appBaseUrl: env.APP_BASE_URL,
+      ...(notificationRuntime.from ? { from: notificationRuntime.from } : {}),
+      ...(notificationRuntime.defaultRecipient
+        ? { defaultRecipient: notificationRuntime.defaultRecipient }
+        : {}),
+    },
+  );
   const registry = new ProcessorRegistry(
     new Map([
       ["PROCESS_CONTRACT", (job) => contractProcessor.process(job)],
@@ -183,14 +286,26 @@ export function createWorkerRuntime({ logger }: { readonly logger: Logger }): Wo
 
   return {
     names,
-    start() {
+
+    /**
+     * @description Implements the start method for this service or adapter.
+     * @returns {unknown} Result of the start operation.
+     */ start() {
       pollingLoop.start();
       logger.info("workers_registered", { workers: names });
     },
-    runOnce() {
+
+    /**
+     * @description Implements the run once method for this service or adapter.
+     * @returns {unknown} Result of the run once operation.
+     */ runOnce() {
       return runner.runOnce();
     },
-    async close() {
+
+    /**
+     * @description Implements the close method for this service or adapter.
+     * @returns {Promise<unknown>} Result of the close operation.
+     */ async close() {
       pollingLoop.close();
       await database.close();
       logger.info("workers_closed");
@@ -198,6 +313,11 @@ export function createWorkerRuntime({ logger }: { readonly logger: Logger }): Wo
   };
 }
 
+/**
+ * @description Performs the register workers helper operation for this module.
+ * @param {{ readonly logger: Logger; readonly createRuntime?: (input: { readonly logger: Logger }) => WorkerRuntime; }} { createRuntime = createWorkerRuntime, logger, } - Input value for { create runtime = create worker runtime, logger, }.
+ * @returns {WorkerRegistry} Result of the register workers operation.
+ */
 export function registerWorkers({
   createRuntime = createWorkerRuntime,
   logger,

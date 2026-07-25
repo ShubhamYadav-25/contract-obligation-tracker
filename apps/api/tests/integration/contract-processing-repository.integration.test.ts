@@ -1,3 +1,6 @@
+/**
+ * @file Contains automated tests that verify contract tracker behavior.
+ */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -17,6 +20,12 @@ const contractId = "00000000-0000-4000-8000-000000000003";
 const documentId = "00000000-0000-4000-8000-000000000004";
 const processingRunId = "00000000-0000-4000-8000-000000000005";
 
+/**
+ * @description Performs the apply migration helper operation for this module.
+ * @param {pg.Pool} pool - Input value for pool.
+ * @param {string} filename - Input value for filename.
+ * @returns {Promise<unknown>} Result of the apply migration operation.
+ */
 async function applyMigration(pool: pg.Pool, filename: string) {
   const migration = await readFile(
     path.resolve(process.cwd(), "../../packages/database/migrations", filename),
@@ -59,6 +68,10 @@ describeWithDatabase("PostgresContractProcessingRepository integration", () => {
     await pool?.end();
   });
 
+  /**
+   * @description Performs the seed queued run helper operation for this module.
+   * @returns {Promise<unknown>} Result of the seed queued run operation.
+   */
   async function seedQueuedRun() {
     await pool.query(
       "TRUNCATE contract_processing_runs, contract_documents, contracts, audit_events RESTART IDENTITY CASCADE",

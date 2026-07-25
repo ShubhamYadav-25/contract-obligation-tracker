@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend extraction module contracts, services, routes, or persistence logic.
+ */
 import type {
   DocumentTextExtractionMethod,
   DocumentTextSegment,
@@ -62,6 +65,11 @@ export interface ResolvedEvidenceSpanWithRole extends ResolvedEvidenceSpan {
   readonly evidenceRole: EvidenceRole;
 }
 
+/**
+ * @description Performs the normalize source line text helper operation for this module.
+ * @param {string} text - Input value for text.
+ * @returns {string} Result of the normalize source line text operation.
+ */
 export function normalizeSourceLineText(text: string): string {
   return text
     .replace(/\r\n/g, "\n")
@@ -70,6 +78,11 @@ export function normalizeSourceLineText(text: string): string {
     .trim();
 }
 
+/**
+ * @description Performs the error helper operation for this module.
+ * @param {{ readonly code: ContractSourceVerificationErrorCode; readonly message: string; readonly globalLineNumber?: number; readonly startLine?: number; readonly endLine?: number; }} input - Input value for input.
+ * @returns {ContractSourceVerificationError} Result of the error operation.
+ */
 function error(input: {
   readonly code: ContractSourceVerificationErrorCode;
   readonly message: string;
@@ -86,10 +99,20 @@ function error(input: {
   };
 }
 
+/**
+ * @description Performs the is positive integer helper operation for this module.
+ * @param {number} value - Input value for value.
+ * @returns {boolean} Result of the is positive integer operation.
+ */
 function isPositiveInteger(value: number): boolean {
   return Number.isInteger(value) && value > 0;
 }
 
+/**
+ * @description Performs the to source line helper operation for this module.
+ * @param {ContractSourceLineInput} input - Input value for input.
+ * @returns {ContractSourceLine} Result of the to source line operation.
+ */
 function toSourceLine(input: ContractSourceLineInput): ContractSourceLine {
   return {
     globalLineNumber: input.globalLineNumber,
@@ -102,6 +125,11 @@ function toSourceLine(input: ContractSourceLineInput): ContractSourceLine {
   };
 }
 
+/**
+ * @description Performs the split normalized lines helper operation for this module.
+ * @param {string} text - Input value for text.
+ * @returns {readonly string[]} Result of the split normalized lines operation.
+ */
 function splitNormalizedLines(text: string): readonly string[] {
   const normalized = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
   return normalized
@@ -110,6 +138,12 @@ function splitNormalizedLines(text: string): readonly string[] {
     .filter((line) => line.length > 0);
 }
 
+/**
+ * @description Performs the source lines from page helper operation for this module.
+ * @param {ParsedDocumentPage} page - Input value for page.
+ * @param {number} nextGlobalLineNumber - Input value for next global line number.
+ * @returns {unknown} Result of the source lines from page operation.
+ */
 function sourceLinesFromPage(page: ParsedDocumentPage, nextGlobalLineNumber: number) {
   const inputs: ContractSourceLineInput[] = [];
   const pageLines =
@@ -141,6 +175,11 @@ function sourceLinesFromPage(page: ParsedDocumentPage, nextGlobalLineNumber: num
   };
 }
 
+/**
+ * @description Performs the source lines from segments helper operation for this module.
+ * @param {readonly DocumentTextSegment[]} segments - Input value for segments.
+ * @returns {readonly ContractSourceLineInput[]} Result of the source lines from segments operation.
+ */
 function sourceLinesFromSegments(
   segments: readonly DocumentTextSegment[],
 ): readonly ContractSourceLineInput[] {
@@ -173,6 +212,11 @@ export class ContractSourceIndex {
   readonly diagnostics: readonly ContractSourceVerificationError[];
   readonly lines: readonly ContractSourceLine[];
 
+  /**
+   * @description Implements the constructor method for this service or adapter.
+   * @param {readonly ContractSourceLineInput[]} lines - Input value for lines.
+   * @returns {unknown} Result of the constructor operation.
+   */
   constructor(lines: readonly ContractSourceLineInput[]) {
     const diagnostics: ContractSourceVerificationError[] = [];
 
@@ -232,6 +276,11 @@ export class ContractSourceIndex {
     this.diagnostics = diagnostics;
   }
 
+  /**
+   * @description Implements the from parsed pages method for this service or adapter.
+   * @param {readonly ParsedDocumentPage[]} pages - Input value for pages.
+   * @returns {ContractSourceIndex} Result of the from parsed pages operation.
+   */
   static fromParsedPages(pages: readonly ParsedDocumentPage[]): ContractSourceIndex {
     const sortedPages = [...pages].sort((left, right) => left.pageNumber - right.pageNumber);
     const inputs: ContractSourceLineInput[] = [];
@@ -246,14 +295,30 @@ export class ContractSourceIndex {
     return new ContractSourceIndex(inputs);
   }
 
+  /**
+   * @description Implements the from segments method for this service or adapter.
+   * @param {readonly DocumentTextSegment[]} segments - Input value for segments.
+   * @returns {ContractSourceIndex} Result of the from segments operation.
+   */
   static fromSegments(segments: readonly DocumentTextSegment[]): ContractSourceIndex {
     return new ContractSourceIndex(sourceLinesFromSegments(segments));
   }
 
+  /**
+   * @description Executes the get line operation used by the application workflow.
+   * @param {number} globalLineNumber - Input value for global line number.
+   * @returns {ContractSourceLine | null} Result of the get line operation.
+   */
   getLine(globalLineNumber: number): ContractSourceLine | null {
     return this.linesByGlobalLineNumber.get(globalLineNumber) ?? null;
   }
 
+  /**
+   * @description Implements the resolve evidence span method for this service or adapter.
+   * @param {number} startLine - Input value for start line.
+   * @param {number} endLine - Input value for end line.
+   * @returns {ResolvedEvidenceSpan} Result of the resolve evidence span operation.
+   */
   resolveEvidenceSpan(startLine: number, endLine: number): ResolvedEvidenceSpan {
     const verificationErrors: ContractSourceVerificationError[] = [];
 
@@ -362,6 +427,11 @@ export class ContractSourceIndex {
     };
   }
 
+  /**
+   * @description Implements the resolve evidence spans method for this service or adapter.
+   * @param {readonly EvidenceSpanReference[]} spans - Input value for spans.
+   * @returns {readonly ResolvedEvidenceSpanWithRole[]} Result of the resolve evidence spans operation.
+   */
   resolveEvidenceSpans(
     spans: readonly EvidenceSpanReference[],
   ): readonly ResolvedEvidenceSpanWithRole[] {

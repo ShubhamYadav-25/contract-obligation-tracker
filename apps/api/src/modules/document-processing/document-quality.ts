@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend document processing module contracts, services, routes, or persistence logic.
+ */
 import type { ParsedDocumentPage } from "./document-processing.types.js";
 import { countWords, printableCharacterRatio } from "./text-normalizer.js";
 
@@ -17,6 +20,12 @@ export interface DocumentTextQuality {
   readonly warnings: readonly string[];
 }
 
+/**
+ * @description Performs the evaluate text quality helper operation for this module.
+ * @param {string} text - Input value for text.
+ * @param {DocumentTextQualityConfig} config - Input value for config.
+ * @returns {DocumentTextQuality} Result of the evaluate text quality operation.
+ */
 export function evaluateTextQuality(
   text: string,
   config: DocumentTextQualityConfig,
@@ -53,6 +62,12 @@ export function evaluateTextQuality(
   };
 }
 
+/**
+ * @description Performs the page requires ocr helper operation for this module.
+ * @param {Pick<ParsedDocumentPage, "normalizedText">} page - Input value for page.
+ * @param {DocumentTextQualityConfig} config - Input value for config.
+ * @returns {boolean} Result of the page requires ocr operation.
+ */
 export function pageRequiresOcr(
   page: Pick<ParsedDocumentPage, "normalizedText">,
   config: DocumentTextQualityConfig,

@@ -1,5 +1,13 @@
+/**
+ * @file Defines feature-specific React UI components for the contract tracker.
+ */
 import { Table } from "@/components/ui/table.js";
 
+/**
+ * @description Renders the contract key fields component for the contract tracker UI.
+ * @param {{ readonly fields: readonly { readonly label: string; readonly value: string }[]; }} { fields, } - Input value for { fields, }.
+ * @returns {JSX.Element} Result of the contract key fields operation.
+ */
 export function ContractKeyFields({
   fields,
 }: {

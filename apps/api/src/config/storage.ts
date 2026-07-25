@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend runtime configuration and environment helpers.
+ */
 import type { ApiEnv } from "./env.js";
 
 export interface StorageConfig {
@@ -8,6 +11,11 @@ export interface StorageConfig {
   readonly serviceRoleKey?: string;
 }
 
+/**
+ * @description Executes the create storage config operation used by the application workflow.
+ * @param {ApiEnv} env - Input value for env.
+ * @returns {StorageConfig} Result of the create storage config operation.
+ */
 export function createStorageConfig(env: ApiEnv): StorageConfig {
   const config: StorageConfig = {
     provider: env.STORAGE_PROVIDER,

@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend document processing module contracts, services, routes, or persistence logic.
+ */
 export { DocumentProcessingService } from "./document-processing.service.js";
 export { evaluateTextQuality, pageRequiresOcr } from "./document-quality.js";
 export { segmentDocumentPages } from "./text-segmentation.js";

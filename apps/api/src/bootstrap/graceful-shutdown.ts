@@ -1,3 +1,6 @@
+/**
+ * @file Defines API bootstrap wiring for routes, workers, schedulers, or shutdown handling.
+ */
 import type { Server } from "node:http";
 
 import type { Logger } from "../config/logger.js";
@@ -11,6 +14,11 @@ export interface GracefulShutdownOptions {
   readonly resources: readonly (Server | CloseableResource)[];
 }
 
+/**
+ * @description Performs the close resource helper operation for this module.
+ * @param {Server | CloseableResource} resource - Input value for resource.
+ * @returns {Promise<void>} Result of the close resource operation.
+ */
 function closeResource(resource: Server | CloseableResource): Promise<void> {
   return new Promise((resolve) => {
     if (resource.close.length > 0) {
@@ -27,6 +35,11 @@ function closeResource(resource: Server | CloseableResource): Promise<void> {
   });
 }
 
+/**
+ * @description Executes the create graceful shutdown operation used by the application workflow.
+ * @param {GracefulShutdownOptions} options - Input value for options.
+ * @returns {(signal: string) => Promise<void>} Result of the create graceful shutdown operation.
+ */
 export function createGracefulShutdown(
   options: GracefulShutdownOptions,
 ): (signal: string) => Promise<void> {

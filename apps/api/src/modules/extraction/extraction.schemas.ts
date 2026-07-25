@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend extraction module contracts, services, routes, or persistence logic.
+ */
 import { z } from "zod";
 
 export const extractedObligationCandidateSchema = z.object({

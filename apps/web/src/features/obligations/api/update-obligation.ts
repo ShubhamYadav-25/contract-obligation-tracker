@@ -1,3 +1,6 @@
+/**
+ * @file Defines frontend API client calls for a contract tracker feature.
+ */
 import { apiRequest } from "@/services/api-client.js";
 import { obligationSummarySchema } from "./list-obligations.js";
 
@@ -19,6 +22,11 @@ export interface UpdateObligationInput {
   readonly reviewStatus?: string | null;
 }
 
+/**
+ * @description Executes the update obligation operation used by the application workflow.
+ * @param {UpdateObligationInput} { obligationId, ...body } - Input value for { obligation id, ...body }.
+ * @returns {unknown} Result of the update obligation operation.
+ */
 export function updateObligation({ obligationId, ...body }: UpdateObligationInput) {
   return apiRequest(`/api/obligations/${obligationId}`, {
     method: "PATCH",

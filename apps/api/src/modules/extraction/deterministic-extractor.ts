@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend extraction module contracts, services, routes, or persistence logic.
+ */
 import { createDatabaseConfig } from "../../config/database.js";
 import { loadEnv } from "../../config/env.js";
 import { PgPoolClient } from "../../infrastructure/database/postgres-client.js";
@@ -10,8 +13,21 @@ export class DeterministicExtractor {
   private readonly transactions = new PgTransactionManager(this.db.pool);
   private readonly candidatesRepo = new PostgresExtractionCandidateRepository(this.transactions);
 
+  /**
+   * @description Implements the run method for this service or adapter.
+   * @param {{ contractId: string; documentId: string; pages: { pageNumber: number; rawText: string }[] }} { contractId, documentId, pages } - Input value for { contract id, document id, pages }.
+   * @returns {Promise<unknown>} Result of the run operation.
+   */
   // Run structured extraction and persist a single candidate for the document.
-  async run({ contractId, documentId, pages }: { contractId: string; documentId: string; pages: { pageNumber: number; rawText: string }[] }) {
+  async run({
+    contractId,
+    documentId,
+    pages,
+  }: {
+    contractId: string;
+    documentId: string;
+    pages: { pageNumber: number; rawText: string }[];
+  }) {
     const results: { promoted?: any; candidate?: any } = {};
 
     // Build structured extraction locally first
@@ -32,21 +48,32 @@ export class DeterministicExtractor {
       if (confidence >= 0.9) {
         // Prepare anchors: gather anchors from structured fields if present
         const anchors: any[] = [];
+
+        /**
+         * @description Performs the push anchor helper operation for this module.
+         * @param {any} a - Input value for a.
+         * @returns {unknown} Result of the push anchor operation.
+         */
         const pushAnchor = (a: any) => {
           if (a && a.anchor) anchors.push(a.anchor);
           else if (a && a.page_number !== undefined) anchors.push(a);
         };
 
         if ((extraction.parties as any)?.anchor) pushAnchor((extraction.parties as any).anchor);
-        if ((extraction.contractValue as any)?.anchor) pushAnchor((extraction.contractValue as any).anchor);
+        if ((extraction.contractValue as any)?.anchor)
+          pushAnchor((extraction.contractValue as any).anchor);
         if ((extraction.term as any)?.anchor) pushAnchor((extraction.term as any).anchor);
         if ((extraction.renewal as any)?.anchor) pushAnchor((extraction.renewal as any).anchor);
-        if ((extraction.noticePeriod as any)?.anchor) pushAnchor((extraction.noticePeriod as any).anchor);
+        if ((extraction.noticePeriod as any)?.anchor)
+          pushAnchor((extraction.noticePeriod as any).anchor);
         if (Array.isArray(extraction.obligations)) {
           for (const o of extraction.obligations) pushAnchor(o.anchor);
         }
 
-        const title = (extraction.parties && extraction.parties.text) || (extraction.obligations && extraction.obligations[0]?.text) || 'Extracted obligation';
+        const title =
+          (extraction.parties && extraction.parties.text) ||
+          (extraction.obligations && extraction.obligations[0]?.text) ||
+          "Extracted obligation";
 
         const insert = await client.query(
           `INSERT INTO obligations (contract_id, title, description, anchors) VALUES ($1, $2, $3, $4::jsonb) RETURNING id, contract_id, title, description, status, due_at, version`,
@@ -55,7 +82,7 @@ export class DeterministicExtractor {
 
         results.promoted = insert.rows[0];
         // Also mark candidate approved
-        await this.candidatesRepo.markStatus(candidate.id, 'APPROVED');
+        await this.candidatesRepo.markStatus(candidate.id, "APPROVED");
       }
     });
 

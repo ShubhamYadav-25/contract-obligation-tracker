@@ -1,3 +1,6 @@
+/**
+ * @file Defines React Query hooks for a contract tracker feature.
+ */
 import { useQuery } from "@tanstack/react-query";
 
 import { queryKeys } from "@/services/query-keys.js";
@@ -8,6 +11,12 @@ import type {
   ObligationStatus,
 } from "../types/obligation.js";
 
+/**
+ * @description Provides the use obligations hook for React data access or state coordination.
+ * @param {string} contractId - Input value for contract id.
+ * @param {{ readonly search?: string; readonly status?: ObligationStatus; readonly reminderStatus?: ObligationReminderFilter; readonly dueDateRange?: ObligationDueDateRangeFilter; readonly limit?: number; readonly offset?: number; }} input - Input value for input.
+ * @returns {unknown} Result of the use obligations operation.
+ */
 export function useObligations(
   contractId?: string,
   input: {

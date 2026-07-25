@@ -1,8 +1,16 @@
+/**
+ * @file Defines feature-specific React UI components for the contract tracker.
+ */
 import type { LucideIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import type { ContractWorkspaceLocationState } from "../source-navigation.js";
 
+/**
+ * @description Renders the table action link component for the contract tracker UI.
+ * @param {{ readonly children: string; readonly icon: LucideIcon; readonly state?: ContractWorkspaceLocationState; readonly to: string; }} { children, icon: Icon, state, to, } - Input value for { children, icon: icon, state, to, }.
+ * @returns {JSX.Element} Result of the table action link operation.
+ */
 export function TableActionLink({
   children,
   icon: Icon,

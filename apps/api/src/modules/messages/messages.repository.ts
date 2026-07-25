@@ -1,3 +1,6 @@
+/**
+ * @file Defines backend messages module contracts, services, routes, or persistence logic.
+ */
 import type { MessageRecord } from "./messages.types.js";
 
 export interface MessageReadRepository {
