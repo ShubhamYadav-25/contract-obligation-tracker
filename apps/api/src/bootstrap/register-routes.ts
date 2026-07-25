@@ -17,6 +17,7 @@ import { createExtractionRouter } from "../modules/extraction/extraction.routes.
  * @returns {void} Result of the register routes operation.
  */
 export function registerRoutes(app: express.Express): void {
+  app.use("/", createHealthRouter());
   app.use("/health", createHealthRouter());
   app.use("/api/v1/contracts", createContractRouter());
   app.use("/api/obligations", createObligationRouter());

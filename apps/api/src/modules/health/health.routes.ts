@@ -9,15 +9,16 @@ import { Router } from "express";
  */
 export function createHealthRouter(): Router {
   const router = Router();
+  const healthPayload = {
+    success: true,
+    data: {
+      status: "ok",
+      service: "contract-obligation-tracker-api",
+    },
+  };
 
   router.get("/", (_request, response) => {
-    response.json({
-      success: true,
-      data: {
-        status: "ok",
-        service: "contract-obligation-tracker-api",
-      },
-    });
+    response.json(healthPayload);
   });
 
   return router;
