@@ -3,11 +3,14 @@
  */
 /**
  * @description Executes the create contract processing job key operation used by the application workflow.
- * @param {{ readonly documentId: string }} input - Input value for input.
+ * @param {{ readonly documentId: string; readonly processingRunId: string }} input - Input value for input.
  * @returns {string} Result of the create contract processing job key operation.
  */
-export function createContractProcessingJobKey(input: { readonly documentId: string }): string {
-  return `contract-processing:${input.documentId}`;
+export function createContractProcessingJobKey(input: {
+  readonly documentId: string;
+  readonly processingRunId: string;
+}): string {
+  return `contract-processing:${input.documentId}:${input.processingRunId}`;
 }
 
 /**

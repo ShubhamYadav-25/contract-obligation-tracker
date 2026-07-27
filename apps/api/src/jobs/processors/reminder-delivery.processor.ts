@@ -189,7 +189,7 @@ export class ReminderDeliveryProcessor {
   async process(job: BackgroundJob): Promise<void> {
     const payload = parsePayload(job.payload);
 
-    await this.transactions.inTransaction(async ({ client }) => {
+    const prepared = await this.transactions.inTransaction(async ({ client }) => {
       const remRes = await client.query<ReminderDeliveryRow>(
         `
         SELECT
@@ -218,60 +218,82 @@ export class ReminderDeliveryProcessor {
 
       const reminder = remRes.rows[0];
       if (!reminder) {
-        return;
+        return null;
       }
-      if (reminder.status === "DELIVERED") {
-        return;
+      if (["DELIVERED", "CANCELLED", "FAILED"].includes(reminder.status)) {
+        return null;
       }
 
       const attemptNumber = Number(reminder.retry_count) + 1;
       await client.query(
         `INSERT INTO reminder_delivery_attempts (reminder_id, attempt_number, provider, status, started_at)
-         VALUES ($1, $2, $3, 'STARTED', NOW())`,
+         VALUES ($1, $2, $3, 'STARTED', NOW())
+         ON CONFLICT (reminder_id, attempt_number)
+         DO UPDATE SET
+           provider = EXCLUDED.provider,
+           status = 'STARTED',
+           error_code = NULL,
+           error_message = NULL,
+           completed_at = NULL,
+           started_at = NOW()`,
         [payload.reminderId, attemptNumber, this.config.providerName],
       );
+      await client.query(
+        `UPDATE reminders
+         SET status = 'PROCESSING', lease_expires_at = NOW() + interval '5 minutes', updated_at = NOW()
+         WHERE id = $1`,
+        [payload.reminderId],
+      );
+      return { reminder, attemptNumber };
+    });
 
-      try {
-        const recipient = this.config.defaultRecipient;
-        if (!recipient) {
-          throw new ExternalServiceError("Reminder email recipient is not configured", {
-            reminderId: payload.reminderId,
-          });
-        }
+    if (!prepared) {
+      return;
+    }
 
-        const anchor = primaryAnchor(reminder.anchors);
-        const now = this.config.now?.() ?? new Date();
-        const responsibleParty = stringFromKeys(anchor, ["obligatedParty", "obligated_party"]);
-        const category = stringFromKeys(anchor, ["obligationType", "obligation_type"]);
-        const email = buildReminderEmail({
-          appName: this.config.appName,
-          contractName: reminder.contract_display_name,
-          obligationTitle: reminder.obligation_title,
-          obligationDescription: reminder.obligation_description,
-          ...(responsibleParty ? { responsibleParty } : {}),
-          ...(category ? { category } : {}),
-          dueAt: toNullableDate(reminder.due_at),
-          scheduledFor: toDate(reminder.scheduled_for),
-          now,
-          contractUrl: createContractUrl(this.config.appBaseUrl, reminder.contract_id),
+    const { reminder, attemptNumber } = prepared;
+    try {
+      const recipient = this.config.defaultRecipient;
+      if (!recipient) {
+        throw new ExternalServiceError("Reminder email recipient is not configured", {
+          reminderId: payload.reminderId,
         });
+      }
 
-        const delivery = await this.notifications.send({
+      const anchor = primaryAnchor(reminder.anchors);
+      const now = this.config.now?.() ?? new Date();
+      const responsibleParty = stringFromKeys(anchor, ["obligatedParty", "obligated_party"]);
+      const category = stringFromKeys(anchor, ["obligationType", "obligation_type"]);
+      const email = buildReminderEmail({
+        appName: this.config.appName,
+        contractName: reminder.contract_display_name,
+        obligationTitle: reminder.obligation_title,
+        obligationDescription: reminder.obligation_description,
+        ...(responsibleParty ? { responsibleParty } : {}),
+        ...(category ? { category } : {}),
+        dueAt: toNullableDate(reminder.due_at),
+        scheduledFor: toDate(reminder.scheduled_for),
+        now,
+        contractUrl: createContractUrl(this.config.appBaseUrl, reminder.contract_id),
+      });
+
+      const delivery = await this.notifications.send({
+        recipient,
+        ...(this.config.from ? { from: this.config.from } : {}),
+        subject: email.subject,
+        bodyText: email.bodyText,
+        bodyHtml: email.bodyHtml,
+        correlationId: job.id,
+      });
+
+      if (delivery.status !== "accepted") {
+        throw new ExternalServiceError("Reminder email delivery was rejected", {
+          reminderId: payload.reminderId,
           recipient,
-          ...(this.config.from ? { from: this.config.from } : {}),
-          subject: email.subject,
-          bodyText: email.bodyText,
-          bodyHtml: email.bodyHtml,
-          correlationId: job.id,
         });
+      }
 
-        if (delivery.status !== "accepted") {
-          throw new ExternalServiceError("Reminder email delivery was rejected", {
-            reminderId: payload.reminderId,
-            recipient,
-          });
-        }
-
+      await this.transactions.inTransaction(async ({ client }) => {
         await client.query(
           `INSERT INTO inbox_entries (reminder_id, obligation_id, payload, created_at)
            VALUES ($1, $2, $3::jsonb, NOW())
@@ -298,10 +320,16 @@ export class ReminderDeliveryProcessor {
         );
 
         await client.query(
-          `UPDATE reminders SET status = 'DELIVERED', retry_count = $2, version = version + 1, updated_at = NOW() WHERE id = $1`,
+          `UPDATE reminders
+           SET status = 'DELIVERED', retry_count = $2, lease_expires_at = NULL,
+               version = version + 1, updated_at = NOW()
+           WHERE id = $1`,
           [payload.reminderId, attemptNumber],
         );
-      } catch (error) {
+      });
+    } catch (error) {
+      const terminal = job.attemptCount >= job.maxAttempts;
+      await this.transactions.inTransaction(async ({ client }) => {
         await client.query(
           `UPDATE reminder_delivery_attempts SET status = 'FAILED', error_message = $3, completed_at = NOW() WHERE reminder_id = $1 AND attempt_number = $2`,
           [
@@ -312,12 +340,14 @@ export class ReminderDeliveryProcessor {
         );
 
         await client.query(
-          `UPDATE reminders SET status = 'RETRY_PENDING', retry_count = $2, updated_at = NOW() WHERE id = $1`,
-          [payload.reminderId, attemptNumber],
+          `UPDATE reminders
+           SET status = $3::reminder_status, retry_count = $2, lease_expires_at = NULL,
+               updated_at = NOW()
+           WHERE id = $1`,
+          [payload.reminderId, attemptNumber, terminal ? "FAILED" : "RETRY_PENDING"],
         );
-
-        throw error;
-      }
-    });
+      });
+      throw error;
+    }
   }
 }

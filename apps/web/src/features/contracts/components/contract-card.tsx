@@ -1,12 +1,15 @@
 /**
  * @file Defines feature-specific React UI components for the contract tracker.
  */
-import { FileText } from "lucide-react";
+import { FileText, RotateCw } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { routePaths } from "@/app/route-paths.js";
+import { Button } from "@/components/ui/button.js";
 import { Card } from "@/components/ui/card.js";
+import { cx } from "@/utils/cx.js";
 import { formatDateTime } from "@/utils/format-date.js";
+import { useReprocessContract } from "../hooks/use-reprocess-contract.js";
 import { ContractStatusBadge } from "./contract-status-badge.js";
 import type { ContractSummary } from "../types/contracts.js";
 
@@ -18,6 +21,7 @@ import type { ContractSummary } from "../types/contracts.js";
 export function ContractCard({ contract }: { readonly contract: ContractSummary }) {
   const status = contract.processing?.status ?? "RECEIVED";
   const uploadedAt = contract.currentDocument?.uploadedAt ?? contract.createdAt;
+  const reprocessMutation = useReprocessContract();
 
   return (
     <Card>
@@ -32,7 +36,24 @@ export function ContractCard({ contract }: { readonly contract: ContractSummary 
           </Link>
           <p className="mt-1 text-sm text-muted">Uploaded {formatDateTime(uploadedAt)}</p>
         </div>
-        <ContractStatusBadge status={status} />
+        <div className="flex items-center gap-2">
+          <ContractStatusBadge status={status} />
+          {status === "FAILED" ? (
+            <Button
+              variant="secondary"
+              className="h-8 px-2 text-xs"
+              disabled={reprocessMutation.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                reprocessMutation.mutate(contract.id);
+              }}
+              title="Reprocess Contract"
+            >
+              <RotateCw className={cx("h-3 w-3", reprocessMutation.isPending && "animate-spin")} />
+              Retry
+            </Button>
+          ) : null}
+        </div>
       </div>
       <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
         <div>

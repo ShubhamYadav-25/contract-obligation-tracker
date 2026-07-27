@@ -14,6 +14,8 @@ const useContractsMock = vi.fn();
 const useUploadContractMock = vi.fn();
 const uploadMutateMock = vi.fn();
 const uploadResetMock = vi.fn();
+const reprocessMutateMock = vi.fn();
+const useDashboardOverviewMock = vi.fn();
 
 let uploadPending = false;
 
@@ -23,6 +25,22 @@ vi.mock("../obligations/hooks/use-obligations.js", () => ({
 
 vi.mock("../contracts/hooks/use-contracts.js", () => ({
   useContracts: () => useContractsMock(),
+}));
+
+vi.mock("../contracts/hooks/use-reprocess-contract.js", () => ({
+  useReprocessContract: () => ({
+    error: null,
+    isError: false,
+    isPending: false,
+    mutate: reprocessMutateMock,
+  }),
+}));
+
+vi.mock("./hooks/use-operations.js", () => ({
+  useDashboardOverview: () => useDashboardOverviewMock(),
+  useContractActivity: vi.fn(),
+  useContractProfile: vi.fn(),
+  useProcessingHistory: vi.fn(),
 }));
 
 vi.mock("../contract-upload/hooks/use-upload-contract.js", () => ({
@@ -112,6 +130,27 @@ describe("ObligationsPage", () => {
       isError: false,
       isLoading: false,
     });
+    useDashboardOverviewMock.mockReturnValue({
+      data: {
+        kpis: {
+          totalContracts: 0,
+          uploadedThisMonth: 0,
+          processing: 0,
+          awaitingReview: 0,
+          lowConfidenceItems: 0,
+          extracting: 0,
+          queued: 0,
+          dueSoon: 0,
+          missed: 0,
+          permanentAuditActionNeeded: 0,
+        },
+        attentionRequired: [],
+        upcomingDeadlines: [],
+      },
+      error: null,
+      isError: false,
+      isLoading: false,
+    });
     uploadPending = false;
     useUploadContractMock.mockImplementation(() => ({
       error: null,
@@ -124,6 +163,8 @@ describe("ObligationsPage", () => {
   afterEach(() => {
     uploadMutateMock.mockReset();
     uploadResetMock.mockReset();
+    reprocessMutateMock.mockReset();
+    useDashboardOverviewMock.mockReset();
     useContractsMock.mockReset();
     useUploadContractMock.mockReset();
     vi.restoreAllMocks();

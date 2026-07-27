@@ -14,7 +14,7 @@ export function Textarea({ className, ...props }: TextareaHTMLAttributes<HTMLTex
   return (
     <textarea
       className={cx(
-        "min-h-28 rounded-md border border-border bg-white px-3 py-2 text-sm text-ink shadow-sm focus-visible:shadow-focus",
+        "min-h-32 rounded-lg border border-slate-300 bg-white px-3.5 py-3 text-[0.9375rem] leading-6 text-slate-950 shadow-sm placeholder:text-slate-500 hover:border-slate-400 focus:border-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-700/20",
         className,
       )}
       {...props}

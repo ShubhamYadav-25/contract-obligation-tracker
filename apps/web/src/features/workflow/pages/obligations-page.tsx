@@ -113,6 +113,10 @@ function daysRemainingClassName(days: number | null): string {
   return "font-semibold text-emerald-700";
 }
 
+function needsVerification(obligation: ObligationSummary): boolean {
+  return obligation.reviewStatus === "REVIEW_REQUIRED";
+}
+
 /**
  * @description Renders the obligation mobile card component for the contract tracker UI.
  * @param {{ readonly obligation: ObligationSummary; readonly selected: boolean; readonly onSelectedChange: (selected: boolean) => void; }} { obligation, selected, onSelectedChange, } - Input value for { obligation, selected, on selected change, }.
@@ -147,10 +151,15 @@ function ObligationMobileCard({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <h3 className="text-sm font-bold leading-6 text-slate-950">{obligation.title}</h3>
-            <StatusBadge
-              label={formatStatusLabel(obligation.status)}
-              tone={statusTone(obligation.status)}
-            />
+            <div className="flex flex-wrap justify-end gap-2">
+              {needsVerification(obligation) ? (
+                <StatusBadge label="Verify with PDF" tone="warning" />
+              ) : null}
+              <StatusBadge
+                label={formatStatusLabel(obligation.status)}
+                tone={statusTone(obligation.status)}
+              />
+            </div>
           </div>
           <p className="mt-1 text-sm text-slate-500">
             {obligation.contractDisplayName ?? obligation.contractId}
@@ -323,31 +332,42 @@ export function ObligationsPage() {
       />
       <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {obligationStatuses.map((status) => {
-          const isActive = statusFilter === status;
           const Icon = obligationStatusIcons[status];
+          const active = statusFilter === status;
           return (
             <button
-              key={status}
-              aria-pressed={isActive}
+              aria-pressed={active}
               className={cx(
-                "rounded-lg border border-t-4 p-5 text-left shadow-card transition duration-200 ease-out focus-visible:shadow-focus hover:-translate-y-0.5 hover:shadow-card-hover",
+                "rounded-xl border border-t-4 p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus-visible:shadow-focus",
                 obligationStatusCardStyles[status],
-                isActive ? "ring-2 ring-accent ring-offset-2" : "hover:border-teal-400",
+                active ? "ring-2 ring-teal-600 ring-offset-2" : "",
               )}
+              key={status}
               onClick={() => {
-                setStatusFilter(isActive ? undefined : status);
+                setStatusFilter(active ? undefined : status);
                 setPageIndex(0);
+                setSelectedIds(new Set());
               }}
               type="button"
             >
-              <span className="flex items-center justify-between gap-3">
-                <span className="text-sm font-bold">{obligationStatusLabels[status]}</span>
-                <Icon aria-hidden className="size-5 opacity-80" />
-              </span>
-              <span className="mt-4 block text-3xl font-bold leading-none">
-                {obligations.isSuccess ? String(statusCounts[status]) : "Unavailable"}
-              </span>
-              {isActive ? <span className="mt-3 block text-xs font-semibold">Filtered</span> : null}
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide">
+                    {obligationStatusLabels[status]}
+                  </p>
+                  <p className="mt-2 text-2xl font-bold">
+                    {obligations.isLoading
+                      ? "…"
+                      : obligations.isSuccess
+                        ? String(statusCounts[status])
+                        : "Unavailable"}
+                  </p>
+                  <p className="mt-2 text-xs font-semibold">
+                    {active ? "Selected · click to clear" : "Filter obligations"}
+                  </p>
+                </div>
+                <Icon aria-hidden className="size-5" />
+              </div>
             </button>
           );
         })}
@@ -492,6 +512,11 @@ export function ObligationsPage() {
                         <p className="mt-2 truncate text-xs font-semibold text-slate-500">
                           {item.contractDisplayName ?? item.contractId}
                         </p>
+                        {needsVerification(item) ? (
+                          <div className="mt-2">
+                            <StatusBadge label="Verify with PDF" tone="warning" />
+                          </div>
+                        ) : null}
                       </td>
                       <td className="px-5 py-4 text-slate-700">
                         <p className="font-medium text-slate-900">
@@ -531,7 +556,7 @@ export function ObligationsPage() {
                           state={sourceLinkState(item.sourceAnchors?.[0], item.id)}
                           to={routePaths.contractDetail(item.contractId)}
                         >
-                          View Source
+                          {needsVerification(item) ? "Verify PDF" : "View Source"}
                         </TableActionLink>
                       </td>
                       <td className="px-5 py-4">

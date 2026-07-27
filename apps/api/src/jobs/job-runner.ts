@@ -49,6 +49,41 @@ export class JobRunner {
    * @returns {Promise<void>} Result of the execute operation.
    */
   private async execute(job: BackgroundJob): Promise<void> {
+    const heartbeatIntervalMilliseconds = Math.max(
+      1_000,
+      Math.floor(this.config.lockDurationMilliseconds / 3),
+    );
+    let heartbeatRunning = false;
+    const heartbeat = setInterval(() => {
+      if (heartbeatRunning) return;
+      heartbeatRunning = true;
+      void this.jobs
+        .renewLock({
+          jobId: job.id,
+          workerId: this.config.workerId,
+          lockDurationMilliseconds: this.config.lockDurationMilliseconds,
+        })
+        .then((renewed) => {
+          if (!renewed) {
+            this.logger.warn("job_lock_renewal_rejected", {
+              jobId: job.id,
+              jobType: job.jobType,
+            });
+          }
+        })
+        .catch((error: unknown) => {
+          this.logger.warn("job_lock_renewal_failed", {
+            jobId: job.id,
+            jobType: job.jobType,
+            message: getErrorMessage(error),
+          });
+        })
+        .finally(() => {
+          heartbeatRunning = false;
+        });
+    }, heartbeatIntervalMilliseconds);
+    heartbeat.unref();
+
     try {
       const processor = this.registry.get(job.jobType);
       await processor(job);
@@ -77,6 +112,8 @@ export class JobRunner {
         retryable,
         message: getErrorMessage(error),
       });
+    } finally {
+      clearInterval(heartbeat);
     }
   }
 }

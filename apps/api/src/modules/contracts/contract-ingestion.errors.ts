@@ -13,7 +13,9 @@ export type ContractIngestionErrorCode =
   | "PASSWORD_PROTECTED_PDF"
   | "MALFORMED_MULTIPART"
   | "STORAGE_UPLOAD_FAILED"
-  | "CONTRACT_PERSISTENCE_FAILED";
+  | "CONTRACT_PERSISTENCE_FAILED"
+  | "CONTRACT_NOT_FOUND"
+  | "CONTRACT_PROCESSING_IN_PROGRESS";
 
 export class ContractIngestionError extends ApplicationError {
   /**

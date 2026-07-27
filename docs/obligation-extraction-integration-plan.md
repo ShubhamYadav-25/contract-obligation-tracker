@@ -20,7 +20,7 @@ PDF upload
        -> OBLIGATION_EXTRACTOR_MODE=auto uses Groq when GROQ_API_KEY is set, otherwise heuristic
        -> OBLIGATION_EXTRACTOR_MODE=heuristic uses HeuristicObligationExtractionProvider
        -> OBLIGATION_EXTRACTOR_MODE=groq uses GroqObligationExtractionProvider and requires GROQ_API_KEY
-       -> OBLIGATION_EXTRACTOR_MODE=reference-aware-gemini uses ReferenceAwareObligationExtractor and requires GEMINI_API_KEY plus GEMINI_MODEL
+       -> OBLIGATION_EXTRACTOR_MODE=reference-aware-gemini uses ReferenceAwareObligationExtractor and requires GEMINI_API_KEY plus GEMINI_MODEL; when GROQ_API_KEY is present, Gemini quota exhaustion triggers Groq
        -> extractFieldsFromPages(...) for heuristic extraction
   -> toExtractedObligations(...)
   -> PostgresDocumentTextPageRepository.replacePages(...)
@@ -43,7 +43,7 @@ PDF upload
   -> feature-flagged ObligationExtractionProvider.extract(...)
        -> ReferenceAwareObligationExtractor only when explicitly selected
        -> explicit EXTRACTION-stage failure on reference-aware extraction failure
-       -> no Groq/heuristic fallback for explicit reference-aware-gemini mode
+       -> explicit reference-aware-gemini mode falls back to Groq only for quota/request-budget exhaustion when GROQ_API_KEY is configured; other Gemini failures remain visible
   -> existing toExtractedObligations(...) mapping for confirmed obligations only
   -> existing text-page persistence unchanged
   -> existing obligation repository unchanged
@@ -101,7 +101,9 @@ Rules:
 - Default `auto` preserves pre-integration behavior: use Groq when `GROQ_API_KEY` exists, otherwise heuristic.
 - `heuristic` remains available and always selects `HeuristicObligationExtractionProvider`.
 - `groq` requires `GROQ_API_KEY` and selects `GroqObligationExtractionProvider`.
-- `reference-aware-gemini` requires `GEMINI_API_KEY` and `GEMINI_MODEL`.
+- `reference-aware-gemini` requires `GEMINI_API_KEY` and `GEMINI_MODEL`. With
+  `GROQ_API_KEY`, quota or per-contract request-budget exhaustion activates Groq;
+  Groq retains the existing heuristic fallback.
 - Reference-aware extraction failures must not silently fall back to Groq or heuristic extraction.
 - Transient reference-aware failures use existing retryable processing semantics.
 - Permanent reference-aware failures fail the `EXTRACTION` stage explicitly.

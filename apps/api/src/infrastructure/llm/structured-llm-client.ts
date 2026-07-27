@@ -40,6 +40,44 @@ export interface StructuredLlmRequestBudgetProvider {
 }
 
 /**
+ * @description Performs the clean json text helper operation for this module.
+ * @param {string} text - Input value for text.
+ * @returns {string} Result of the clean json text operation.
+ */
+function cleanJsonText(text: string): string {
+  let cleaned = text.trim();
+
+  if (cleaned.startsWith("```")) {
+    cleaned = cleaned
+      .replace(/^```(?:json)?\s*/i, "")
+      .replace(/\s*```$/, "")
+      .trim();
+  }
+
+  const firstBrace = cleaned.indexOf("{");
+  const firstBracket = cleaned.indexOf("[");
+  let start = -1;
+  if (firstBrace !== -1 && firstBracket !== -1) {
+    start = Math.min(firstBrace, firstBracket);
+  } else if (firstBrace !== -1) {
+    start = firstBrace;
+  } else if (firstBracket !== -1) {
+    start = firstBracket;
+  }
+
+  if (start >= 0) {
+    const lastBrace = cleaned.lastIndexOf("}");
+    const lastBracket = cleaned.lastIndexOf("]");
+    const end = Math.max(lastBrace, lastBracket);
+    if (end > start) {
+      cleaned = cleaned.slice(start, end + 1);
+    }
+  }
+
+  return cleaned;
+}
+
+/**
  * @description Performs the parse structured json helper operation for this module.
  * @param {string} text - Input value for text.
  * @param {string} operationName - Input value for operation name.
@@ -49,12 +87,17 @@ export interface StructuredLlmRequestBudgetProvider {
 export function parseStructuredJson(text: string, operationName: string): unknown {
   try {
     return JSON.parse(text);
-  } catch (error) {
-    throw new ExternalServiceError("Structured LLM response was not valid JSON", {
-      operationName,
-      retryable: false,
-      message: error instanceof Error ? error.message : String(error),
-    });
+  } catch {
+    try {
+      const cleaned = cleanJsonText(text);
+      return JSON.parse(cleaned);
+    } catch (error) {
+      throw new ExternalServiceError("Structured LLM response was not valid JSON", {
+        operationName,
+        retryable: true,
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 }
 
@@ -75,7 +118,7 @@ export function validateStructuredData<T>(
   if (!result.success) {
     throw new ExternalServiceError("Structured LLM response failed schema validation", {
       operationName,
-      retryable: false,
+      retryable: operationName !== "gemini_structured_output_preflight",
       validationIssues: result.error.issues.map((issue) => ({
         path: issue.path.join("."),
         message: issue.message,
@@ -85,3 +128,4 @@ export function validateStructuredData<T>(
   }
   return result.data;
 }
+

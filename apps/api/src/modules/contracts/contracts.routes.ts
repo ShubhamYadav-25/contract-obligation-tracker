@@ -90,6 +90,16 @@ export function createContractRouter(
     requireAuthContext,
     asyncRoute((request, response) => controller.streamDocument(request, response)),
   );
+  router.post(
+    "/:contractId/reprocess",
+    requireAuthContext,
+    asyncRoute((request, response) => controller.reprocess(request, response)),
+  );
+  router.post(
+    "/:contractId/retry",
+    requireAuthContext,
+    asyncRoute((request, response) => controller.reprocess(request, response)),
+  );
   router.get(
     "/:contractId",
     requireAuthContext,

@@ -166,6 +166,9 @@ function setup(input: {
         })),
     ),
   };
+  const reminders = {
+    createForObligations: vi.fn(async () => 0),
+  };
   const parser = {
     extract: vi.fn(async () => ({
       contractId: command.contractId,
@@ -229,6 +232,7 @@ function setup(input: {
     processingRuns,
     textPages,
     obligations,
+    reminders,
     audit,
     storage,
     parser,
@@ -245,6 +249,7 @@ function setup(input: {
   return {
     geminiVisionOcr,
     obligations,
+    reminders,
     pageRenderer,
     persisted: () => persisted,
     pipeline,
@@ -260,7 +265,7 @@ describe("DocumentTextProcessingPipeline", () => {
       "Section 1. This agreement starts on July 21, 2026.\nVendor shall deliver monthly reports by 2026-08-15.",
     );
     const secondPage = page(2, "Section 2. Confidentiality obligations survive termination.");
-    const { obligations, pageRenderer, persisted, pipeline, tesseractOcr } = setup({
+    const { obligations, pageRenderer, persisted, pipeline, reminders, tesseractOcr } = setup({
       pages: [firstPage, secondPage],
     });
 
@@ -273,14 +278,26 @@ describe("DocumentTextProcessingPipeline", () => {
     expect(obligations.upsertExtractedForContract).toHaveBeenCalledWith(
       expect.objectContaining({
         contractId: command.contractId,
-        obligations: [
+        obligations: expect.arrayContaining([
           expect.objectContaining({
             title: "Vendor shall deliver monthly reports by 2026-08-15.",
             description: "Vendor shall deliver monthly reports by 2026-08-15.",
             dueAt: new Date(Date.UTC(2026, 7, 15)),
           }),
-        ],
+        ]),
       }),
+      expect.anything(),
+    );
+    expect(reminders.createForObligations).toHaveBeenCalledWith(
+      {
+        obligations: [
+          expect.objectContaining({
+            id: "obligation-1",
+            dueAt: new Date(Date.UTC(2026, 7, 15)),
+          }),
+        ],
+        offsetBeforeDueMinutes: 4_320,
+      },
       expect.anything(),
     );
     expect(persisted()?.pages[0]?.segments[0]).toMatchObject({
@@ -359,7 +376,7 @@ describe("DocumentTextProcessingPipeline", () => {
     );
   });
 
-  it("persists only confirmed reference-aware obligations and marks review output for review", async () => {
+  it("persists confirmed and review-required obligations and completes processing", async () => {
     const llm = new FakeStructuredLlmClient();
     llm.queueResponse("contract_context_extraction", {
       parties: [
@@ -470,9 +487,9 @@ describe("DocumentTextProcessingPipeline", () => {
 
     const result = await pipeline.run(command);
 
-    expect(result.outcome).toBe("REVIEW_REQUIRED");
+    expect(result.outcome).toBe("COMPLETED");
     expect(result.summary).toMatchObject({
-      obligationCount: 1,
+      obligationCount: 2,
       extractionMetadata: {
         metrics: expect.objectContaining({
           confirmed: 1,
@@ -482,7 +499,7 @@ describe("DocumentTextProcessingPipeline", () => {
     });
     expect(obligations.upsertExtractedForContract).toHaveBeenCalledWith(
       expect.objectContaining({
-        obligations: [
+        obligations: expect.arrayContaining([
           expect.objectContaining({
             description: "Customer shall pay the Fees within thirty days.",
             anchors: [
@@ -492,7 +509,18 @@ describe("DocumentTextProcessingPipeline", () => {
               }),
             ],
           }),
-        ],
+          expect.objectContaining({
+            description: "The other party shall pay the Fees within thirty days.",
+            anchors: [
+              expect.objectContaining({
+                source: "reference_aware_obligation",
+                confidence: expect.objectContaining({
+                  reviewStatus: "REVIEW_REQUIRED",
+                }),
+              }),
+            ],
+          }),
+        ]),
       }),
       expect.anything(),
     );

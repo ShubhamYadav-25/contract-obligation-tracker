@@ -7,11 +7,24 @@ import { z } from "zod";
 import { ApplicationError } from "../../shared/errors/application-error.js";
 import type { ReminderReadRepository } from "./reminders.repository.js";
 import type { ReminderRecord } from "./reminders.types.js";
+import { createReminderOccurrenceKey } from "./reminder-occurrence-key.js";
 
 const listQuerySchema = z.object({
   obligationId: z.uuid().optional(),
   limit: z.coerce.number().int().min(1).max(100).default(50),
   offset: z.coerce.number().int().min(0).default(0),
+});
+const createReminderSchema = z.object({
+  obligationId: z.uuid(),
+  scheduledFor: z.iso.datetime({ offset: true }),
+});
+const rescheduleReminderSchema = z.object({
+  scheduledFor: z.iso.datetime({ offset: true }),
+  expectedVersion: z.number().int().min(0),
+});
+const reminderActionSchema = z.object({
+  action: z.enum(["CANCEL", "ACTIVATE", "RETRY"]),
+  expectedVersion: z.number().int().min(0),
 });
 
 /**
@@ -75,5 +88,69 @@ export class ReminderController {
         offset: query.offset,
       },
     });
+  }
+
+  async create(request: Request, response: Response): Promise<void> {
+    const auth = request.authContext;
+    if (!auth) {
+      throw new ApplicationError({
+        code: "AUTHENTICATION_REQUIRED",
+        message: "Authenticated user and organization context is required",
+        statusCode: 401,
+      });
+    }
+    const input = createReminderSchema.parse(request.body);
+    const scheduledFor = new Date(input.scheduledFor);
+    const reminder = await this.reminders.createForOrganization({
+      organizationId: auth.organizationId,
+      obligationId: input.obligationId,
+      scheduledFor,
+      occurrenceKey: createReminderOccurrenceKey({
+        obligationId: input.obligationId,
+        scheduledFor,
+      }),
+    });
+    response.status(201).json({ success: true, data: serializeReminder(reminder) });
+  }
+
+  async reschedule(request: Request, response: Response): Promise<void> {
+    const auth = request.authContext;
+    if (!auth) {
+      throw new ApplicationError({
+        code: "AUTHENTICATION_REQUIRED",
+        message: "Authenticated user and organization context is required",
+        statusCode: 401,
+      });
+    }
+    const reminderId = String(request.params.reminderId ?? "");
+    const input = rescheduleReminderSchema.parse(request.body);
+    const scheduledFor = new Date(input.scheduledFor);
+    const reminder = await this.reminders.rescheduleForOrganization({
+      organizationId: auth.organizationId,
+      reminderId,
+      scheduledFor,
+      expectedVersion: input.expectedVersion,
+      occurrenceKey: `reminder:${reminderId}:scheduled:${scheduledFor.toISOString()}`,
+    });
+    response.json({ success: true, data: serializeReminder(reminder) });
+  }
+
+  async action(request: Request, response: Response): Promise<void> {
+    const auth = request.authContext;
+    if (!auth) {
+      throw new ApplicationError({
+        code: "AUTHENTICATION_REQUIRED",
+        message: "Authenticated user and organization context is required",
+        statusCode: 401,
+      });
+    }
+    const input = reminderActionSchema.parse(request.body);
+    const reminder = await this.reminders.transitionForOrganization({
+      organizationId: auth.organizationId,
+      reminderId: String(request.params.reminderId ?? ""),
+      action: input.action,
+      expectedVersion: input.expectedVersion,
+    });
+    response.json({ success: true, data: serializeReminder(reminder) });
   }
 }

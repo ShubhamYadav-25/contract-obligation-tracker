@@ -993,7 +993,6 @@ export class PostgresContractProcessingRepository implements ContractProcessingR
         UPDATE contract_processing_runs AS run
         SET
           status = 'PROCESSING',
-          attempt_number = $6,
           queue_job_id = $5,
           started_at = NOW(),
           completed_at = NULL,
@@ -1009,14 +1008,7 @@ export class PostgresContractProcessingRepository implements ContractProcessingR
           AND run.document_id = $3
           AND contract.id = run.contract_id
           AND contract.organization_id = $4
-          AND (
-            run.status = 'QUEUED'
-            OR (
-              run.status IN ('PROCESSING', 'PARSING', 'OCR_PROCESSING')
-              AND run.attempt_number < $6
-              AND run.queue_job_id = $5
-            )
-          )
+          AND run.status = 'QUEUED'
           AND NOT EXISTS (
             SELECT 1
             FROM contract_processing_runs AS newer_run
@@ -1031,7 +1023,6 @@ export class PostgresContractProcessingRepository implements ContractProcessingR
         input.documentId,
         input.organizationId,
         input.queueJobId,
-        input.attemptNumber,
       ],
     );
 

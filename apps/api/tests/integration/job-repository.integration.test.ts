@@ -5,13 +5,15 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import pg from "pg";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { PgPoolClient } from "../../src/infrastructure/database/postgres-client.js";
 import { PgTransactionManager } from "../../src/infrastructure/database/transaction-manager.js";
 import { PostgresJobRepository } from "../../src/jobs/job.repository.js";
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
+const testDatabaseSsl =
+  process.env.TEST_DATABASE_SSL === "true" ? { rejectUnauthorized: false } : false;
 const describeWithDatabase = testDatabaseUrl ? describe : describe.skip;
 
 describeWithDatabase("PostgresJobRepository integration", () => {
@@ -24,7 +26,7 @@ describeWithDatabase("PostgresJobRepository integration", () => {
       throw new Error("TEST_DATABASE_URL is required for PostgreSQL integration tests");
     }
 
-    pool = new pg.Pool({ connectionString: testDatabaseUrl, ssl: false });
+    pool = new pg.Pool({ connectionString: testDatabaseUrl, ssl: testDatabaseSsl });
     const migration = await readFile(
       path.resolve(
         process.cwd(),
@@ -39,7 +41,7 @@ describeWithDatabase("PostgresJobRepository integration", () => {
 
     database = new PgPoolClient({
       connectionString: testDatabaseUrl,
-      ssl: false,
+      ssl: Boolean(testDatabaseSsl),
       poolMax: 3,
       connectionTimeoutMilliseconds: 5_000,
       idleTimeoutMilliseconds: 30_000,
@@ -50,6 +52,12 @@ describeWithDatabase("PostgresJobRepository integration", () => {
   afterAll(async () => {
     await database?.close();
     await pool?.end();
+  });
+
+  beforeEach(async () => {
+    await pool.query(
+      "TRUNCATE background_jobs, reminders, reminder_delivery_attempts, audit_events",
+    );
   });
 
   it("deduplicates jobs by idempotency key", async () => {
@@ -100,7 +108,7 @@ describeWithDatabase("PostgresJobRepository integration", () => {
       [job.id],
     );
 
-    const recovered = await jobs.recoverExpiredJobs(new Date());
+    const recovered = await jobs.recoverExpiredJobs(new Date(Date.now() + 60_000));
     expect(recovered.some((candidate) => candidate.id === job.id)).toBe(true);
   });
 });

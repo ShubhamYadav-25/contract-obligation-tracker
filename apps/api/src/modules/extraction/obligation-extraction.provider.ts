@@ -70,6 +70,39 @@ export interface ObligationExtractionProvider {
   extract(input: ObligationExtractionInput): Promise<ObligationExtractionResult>;
 }
 
+type TriggeredFallbackDependencies = {
+  readonly primary: ObligationExtractionProvider;
+  readonly fallback: ObligationExtractionProvider;
+  readonly shouldFallback: (error: unknown) => boolean;
+  readonly logger: Logger;
+};
+
+export class TriggeredFallbackObligationExtractionProvider
+  implements ObligationExtractionProvider
+{
+  constructor(private readonly dependencies: TriggeredFallbackDependencies) {}
+
+  async extract(input: ObligationExtractionInput): Promise<ObligationExtractionResult> {
+    try {
+      return await this.dependencies.primary.extract(input);
+    } catch (error) {
+      if (!this.dependencies.shouldFallback(error)) {
+        throw error;
+      }
+
+      this.dependencies.logger.warn("obligation_extraction_fallback_triggered", {
+        contractId: input.context.contractId,
+        documentId: input.context.documentId,
+        processingRunId: input.context.processingRunId,
+        primaryProvider: "REFERENCE_AWARE_GEMINI",
+        fallbackProvider: "GROQ",
+        reason: error instanceof Error ? error.message : String(error),
+      });
+      return this.dependencies.fallback.extract(input);
+    }
+  }
+}
+
 export class HeuristicObligationExtractionProvider implements ObligationExtractionProvider {
   /**
    * @description Implements the extract method for this service or adapter.

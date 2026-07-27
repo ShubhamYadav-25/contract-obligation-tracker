@@ -268,7 +268,7 @@ describe("ReferenceAwareObligationExtractor", () => {
     });
   });
 
-  it("preserves review candidates without treating them as confirmed obligations", async () => {
+  it("maps review-required findings into obligations while preserving review metadata", async () => {
     const llm = new FakeStructuredLlmClient();
     queueContext(llm);
     queuePaymentCandidate(llm, {
@@ -287,7 +287,14 @@ describe("ReferenceAwareObligationExtractor", () => {
 
     const result = await extract({ llm });
 
-    expect(result.extraction.obligations).toEqual([]);
+    expect(result.extraction.obligations).toHaveLength(1);
+    expect(result.extraction.obligations?.[0]).toMatchObject({
+      anchor: {
+        confidence: expect.objectContaining({
+          reviewStatus: "REVIEW_REQUIRED",
+        }),
+      },
+    });
     expect(result.metadata?.metrics?.reviewRequired).toBe(1);
     expect(result.metadata?.reviewRequiredCandidates?.[0]).toMatchObject({
       summary: "Customer shall pay the Fees within thirty days after invoice receipt.",

@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   createObligationExtractor,
+  isGeminiQuotaFallbackTrigger,
   registerWorkers,
   type WorkerRuntime,
 } from "../../src/bootstrap/register-workers.js";
@@ -13,8 +14,10 @@ import { parseEnv } from "../../src/config/env.js";
 import {
   GroqObligationExtractionProvider,
   HeuristicObligationExtractionProvider,
+  TriggeredFallbackObligationExtractionProvider,
 } from "../../src/modules/extraction/obligation-extraction.provider.js";
 import { ReferenceAwareObligationExtractor } from "../../src/modules/extraction/reference-aware/index.js";
+import { ExternalServiceError } from "../../src/shared/errors/external-service-error.js";
 
 const logger: Logger = {
   info: vi.fn(),
@@ -113,6 +116,19 @@ describe("createObligationExtractor", () => {
     expect(extractor).toBeInstanceOf(ReferenceAwareObligationExtractor);
   });
 
+  it("wraps Gemini with a quota-triggered Groq fallback when both keys are configured", () => {
+    const extractor = createObligationExtractor({
+      env: parseEnv({
+        OBLIGATION_EXTRACTOR_MODE: "reference-aware-gemini",
+        GEMINI_API_KEY: "test-gemini-key",
+        GROQ_API_KEY: "test-groq-key",
+      }),
+      logger,
+    });
+
+    expect(extractor).toBeInstanceOf(TriggeredFallbackObligationExtractionProvider);
+  });
+
   it("fails clearly when reference-aware Gemini is selected without required Gemini config", () => {
     expect(() =>
       parseEnv({
@@ -129,5 +145,32 @@ describe("createObligationExtractor", () => {
         logger,
       }),
     ).not.toThrow();
+  });
+});
+
+describe("isGeminiQuotaFallbackTrigger", () => {
+  it("triggers for daily and HTTP quota failures", () => {
+    expect(isGeminiQuotaFallbackTrigger(new ExternalServiceError("DAILY_QUOTA_EXHAUSTED"))).toBe(
+      true,
+    );
+    expect(
+      isGeminiQuotaFallbackTrigger(
+        new ExternalServiceError("Gemini structured LLM request failed", {
+          status: 429,
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it("does not trigger for non-quota Gemini failures", () => {
+    expect(
+      isGeminiQuotaFallbackTrigger(
+        new ExternalServiceError("Gemini structured LLM request failed", {
+          retryable: true,
+          status: 503,
+        }),
+      ),
+    ).toBe(false);
+    expect(isGeminiQuotaFallbackTrigger(new Error("Invalid extraction response"))).toBe(false);
   });
 });

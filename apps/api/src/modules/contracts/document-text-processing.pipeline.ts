@@ -32,6 +32,7 @@ import type {
   ExtractedObligationInput,
   ObligationRepository,
 } from "../obligations/obligations.repository.js";
+import type { ExtractedObligationReminderRepository } from "../reminders/reminders.repository.js";
 import type { ProcessContractJobPayload } from "./contract-processing-job.schema.js";
 import type {
   ContractProcessingPipeline,
@@ -61,6 +62,7 @@ export interface DocumentTextProcessingPipelineDependencies {
   readonly processingRuns: ContractProcessingRepository;
   readonly textPages: DocumentTextPageRepository;
   readonly obligations: ObligationRepository;
+  readonly reminders: ExtractedObligationReminderRepository;
   readonly audit: AuditRepository;
   readonly storage: StorageProvider;
   readonly parser: DocumentTextExtractor;
@@ -486,6 +488,13 @@ export class DocumentTextProcessingPipeline implements ContractProcessingPipelin
           transaction,
         );
         obligationCount = persistedObligations.length;
+        await this.dependencies.reminders.createForObligations(
+          {
+            obligations: persistedObligations,
+            offsetBeforeDueMinutes: 3 * 24 * 60,
+          },
+          transaction,
+        );
         await this.dependencies.processingRuns.markTextSegmented(input, transaction);
         await this.dependencies.audit.append(
           {
@@ -541,19 +550,6 @@ export class DocumentTextProcessingPipeline implements ContractProcessingPipelin
       extractionConfidence: confidence,
       ...(extractionMetadata ? { extractionMetadata } : {}),
     };
-    const reviewItemCount =
-      extractionMetadata?.reviewRequiredCandidates?.length ??
-      extractionMetadata?.metrics?.reviewRequired ??
-      0;
-
-    if (reviewItemCount > 0) {
-      return {
-        outcome: "REVIEW_REQUIRED",
-        reviewItemCount,
-        summary,
-      };
-    }
-
     return {
       outcome: "COMPLETED",
       summary,

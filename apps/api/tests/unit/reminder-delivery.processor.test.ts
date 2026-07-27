@@ -69,9 +69,57 @@ describe("reminder email template", () => {
 });
 
 describe("ReminderDeliveryProcessor", () => {
+  it("does not send a reminder that was cancelled after enqueueing", async () => {
+    const query = vi.fn(async (sql: string) => {
+      if (sql.includes("FROM reminders AS reminder")) {
+        return {
+          rowCount: 1,
+          rows: [{
+            id: "11111111-1111-1111-1111-111111111111",
+            obligation_id: "22222222-2222-2222-2222-222222222222",
+            status: "CANCELLED",
+            retry_count: 0,
+            scheduled_for: new Date(),
+            occurrence_key: "occurrence:cancelled",
+            contract_id: "33333333-3333-3333-3333-333333333333",
+            contract_display_name: "Cancelled Agreement",
+            obligation_title: "Cancelled reminder",
+            obligation_description: null,
+            due_at: null,
+            anchors: [],
+          }],
+        };
+      }
+      return { rowCount: 1, rows: [] };
+    });
+    const notifications: NotificationProvider = {
+      send: vi.fn(async () => ({ status: "accepted" as const })),
+    };
+    const processor = new ReminderDeliveryProcessor(
+      {} as any,
+      { inTransaction: async (work) => work({ client: { query } as any }) },
+      notifications,
+      {
+        providerName: "TEST",
+        appName: "Contract Obligation Tracker",
+        appBaseUrl: "http://localhost:5173",
+        defaultRecipient: "reviewer@example.com",
+      },
+    );
+
+    await processor.process(
+      createJob({
+        reminderId: "11111111-1111-1111-1111-111111111111",
+        occurrenceKey: "occurrence:cancelled",
+      }),
+    );
+
+    expect(notifications.send).not.toHaveBeenCalled();
+  });
+
   it("does not create a message entry when email delivery is rejected", async () => {
     const reminderId = "11111111-1111-1111-1111-111111111111";
-    const query = vi.fn(async (sql: string) => {
+    const query = vi.fn(async (sql: string, _params?: unknown[]) => {
       if (sql.includes("FROM reminders AS reminder")) {
         return {
           rowCount: 1,
@@ -96,8 +144,9 @@ describe("ReminderDeliveryProcessor", () => {
 
       return { rowCount: 1, rows: [] };
     });
+    const inTransaction = vi.fn(async (work) => work({ client: { query } as any }));
     const transactions: TransactionManager = {
-      inTransaction: async (work) => work({ client: { query } as any }),
+      inTransaction,
     };
     const notifications: NotificationProvider = {
       send: vi.fn(async () => ({ status: "rejected" as const })),
@@ -118,6 +167,65 @@ describe("ReminderDeliveryProcessor", () => {
       false,
     );
     expect(query.mock.calls.some(([sql]) => String(sql).includes("status = 'FAILED'"))).toBe(true);
+    expect(
+      query.mock.calls.some(
+        ([sql, params]) =>
+          String(sql).includes("status = $3::reminder_status") &&
+          Array.isArray(params) &&
+          params[2] === "RETRY_PENDING",
+      ),
+    ).toBe(true);
+    expect(inTransaction).toHaveBeenCalledTimes(2);
+  });
+
+  it("marks a reminder failed after the final background job attempt", async () => {
+    const reminderId = "11111111-1111-1111-1111-111111111111";
+    const query = vi.fn(async (sql: string, _params?: unknown[]) => {
+      if (sql.includes("FROM reminders AS reminder")) {
+        return {
+          rowCount: 1,
+          rows: [{
+            id: reminderId,
+            obligation_id: "22222222-2222-2222-2222-222222222222",
+            status: "RETRY_PENDING",
+            retry_count: 2,
+            scheduled_for: new Date("2026-07-24T00:00:00.000Z"),
+            occurrence_key: "occurrence:alpha",
+            contract_id: "33333333-3333-3333-3333-333333333333",
+            contract_display_name: "Affiliate Agreement",
+            obligation_title: "Send renewal notice",
+            obligation_description: null,
+            due_at: new Date("2026-07-31T00:00:00.000Z"),
+            anchors: [],
+          }],
+        };
+      }
+      return { rowCount: 1, rows: [] };
+    });
+    const transactions: TransactionManager = {
+      inTransaction: async (work) => work({ client: { query } as any }),
+    };
+    const notifications: NotificationProvider = {
+      send: vi.fn(async () => ({ status: "rejected" as const })),
+    };
+    const processor = new ReminderDeliveryProcessor({} as any, transactions, notifications, {
+      providerName: "TEST",
+      appName: "Contract Obligation Tracker",
+      appBaseUrl: "http://localhost:5173",
+      defaultRecipient: "reviewer@example.com",
+    });
+
+    await expect(
+      processor.process({
+        ...createJob({ reminderId, occurrenceKey: "occurrence:alpha" }),
+        attemptCount: 3,
+      }),
+    ).rejects.toThrow();
+
+    const terminalUpdate = query.mock.calls.find(
+      ([sql]) => String(sql).includes("status = $3::reminder_status"),
+    );
+    expect(terminalUpdate?.[1]).toEqual([reminderId, 3, "FAILED"]);
   });
 });
 

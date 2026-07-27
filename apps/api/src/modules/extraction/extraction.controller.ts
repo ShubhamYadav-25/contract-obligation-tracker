@@ -2,9 +2,7 @@
  * @file Defines backend extraction module contracts, services, routes, or persistence logic.
  */
 import type { Request, Response } from "express";
-import { PgPoolClient } from "../../infrastructure/database/postgres-client.js";
-import { createDatabaseConfig } from "../../config/database.js";
-import { loadEnv } from "../../config/env.js";
+import { getApplicationDatabase } from "../../infrastructure/database/app-database.js";
 import { PgTransactionManager } from "../../infrastructure/database/transaction-manager.js";
 import { PostgresExtractionCandidateRepository } from "./postgres-extraction.repository.js";
 import type { ExtractionCandidate } from "./extraction.types.js";
@@ -55,14 +53,14 @@ function toReviewCandidate(row: ExtractionCandidate) {
     contractId: row.contractId,
     title,
     description: JSON.stringify(extracted),
-    confidence: Math.round((Number(row.confidence) || 0) * 100),
+    confidence: Math.max(0, Math.min(1, Number(row.confidence) || 0)),
     reviewReasons: row.validationIssues ?? [],
     sourceAnchors: anchors,
   };
 }
 
 export class ExtractionController {
-  private readonly database = new PgPoolClient(createDatabaseConfig(loadEnv()));
+  private readonly database = getApplicationDatabase();
   private readonly transactions = new PgTransactionManager(this.database.pool);
   private readonly candidates = new PostgresExtractionCandidateRepository(this.transactions);
 
@@ -76,7 +74,10 @@ export class ExtractionController {
     const contractId = Array.isArray(request.params.contractId)
       ? request.params.contractId[0]
       : request.params.contractId;
-    const rows = await this.candidates.listByContract(contractId ?? "");
+    const rows = await this.candidates.listByContractAndOrganization(
+      contractId ?? "",
+      request.authContext?.organizationId ?? "",
+    );
     response.json({ count: rows.length, items: rows });
   }
 
@@ -87,7 +88,9 @@ export class ExtractionController {
    * @returns {Promise<void>} Result of the list all operation.
    */
   async listAll(request: Request, response: Response): Promise<void> {
-    const rows = await this.candidates.listAll();
+    const rows = await this.candidates.listAllByOrganization(
+      request.authContext?.organizationId ?? "",
+    );
     response.json({ success: true, data: rows.map(toReviewCandidate) });
   }
 
@@ -101,7 +104,10 @@ export class ExtractionController {
     const candidateId = Array.isArray(request.params.candidateId)
       ? request.params.candidateId[0]
       : request.params.candidateId;
-    const candidate = await this.candidates.findPendingById(candidateId ?? "");
+    const candidate = await this.candidates.findPendingByIdForOrganization(
+      candidateId ?? "",
+      request.authContext?.organizationId ?? "",
+    );
     if (!candidate) {
       response.status(404).json({
         success: false,
@@ -128,7 +134,10 @@ export class ExtractionController {
     const candidateId = Array.isArray(request.params.candidateId)
       ? request.params.candidateId[0]
       : request.params.candidateId;
-    const candidate = await this.candidates.findPendingById(candidateId ?? "");
+    const candidate = await this.candidates.findPendingByIdForOrganization(
+      candidateId ?? "",
+      request.authContext?.organizationId ?? "",
+    );
     if (!candidate) {
       response.status(404).json({ error: "not_found" });
       return;
@@ -177,7 +186,10 @@ export class ExtractionController {
     const candidateId = Array.isArray(request.params.candidateId)
       ? request.params.candidateId[0]
       : request.params.candidateId;
-    const candidate = await this.candidates.findPendingById(candidateId ?? "");
+    const candidate = await this.candidates.findPendingByIdForOrganization(
+      candidateId ?? "",
+      request.authContext?.organizationId ?? "",
+    );
     if (!candidate) {
       response.status(404).json({
         success: false,

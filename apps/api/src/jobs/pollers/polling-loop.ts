@@ -3,7 +3,9 @@
  */
 import type { Logger } from "../../config/logger.js";
 import type { CloseableResource } from "../../bootstrap/graceful-shutdown.js";
-import type { JobPoller } from "./job-poller.js";
+interface Poller {
+  poll(): Promise<number>;
+}
 
 export class PollingLoop implements CloseableResource {
   private timer: NodeJS.Timeout | undefined;
@@ -17,7 +19,7 @@ export class PollingLoop implements CloseableResource {
    * @returns {unknown} Result of the constructor operation.
    */
   constructor(
-    private readonly poller: JobPoller,
+    private readonly poller: Poller,
     private readonly intervalMilliseconds: number,
     private readonly logger: Logger,
   ) {}

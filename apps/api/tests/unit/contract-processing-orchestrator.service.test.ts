@@ -124,12 +124,11 @@ class FakeProcessingRepository implements ContractProcessingRepository {
     if (
       this.run.status === "QUEUED" ||
       (["PROCESSING", "PARSING", "OCR_PROCESSING"].includes(this.run.status) &&
-        this.run.attemptNumber < input.attemptNumber)
+        this.run.queueJobId === input.queueJobId)
     ) {
       this.run = {
         ...this.run,
         status: "PROCESSING",
-        attemptNumber: input.attemptNumber,
         startedAt: new Date(),
       };
       return this.run;

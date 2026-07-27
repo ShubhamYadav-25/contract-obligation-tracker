@@ -6,16 +6,28 @@ import type { ButtonHTMLAttributes, PropsWithChildren } from "react";
 import { cx } from "@/utils/cx.js";
 
 type ButtonVariant = "primary" | "secondary" | "danger" | "ghost";
+type ButtonSize = "sm" | "md" | "lg";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   readonly variant?: ButtonVariant;
+  readonly size?: ButtonSize;
 }
 
 const variants: Record<ButtonVariant, string> = {
-  primary: "bg-accent text-white shadow-card hover:bg-teal-700",
-  secondary: "border border-slate-300 bg-white text-slate-700 shadow-card hover:bg-slate-50",
-  danger: "bg-rose-700 text-white shadow-card hover:bg-rose-800",
-  ghost: "text-slate-700 hover:bg-slate-100",
+  primary:
+    "border border-teal-800 bg-teal-700 text-white shadow-sm hover:bg-teal-800 hover:shadow-md active:bg-teal-900",
+  secondary:
+    "border border-slate-300 bg-white text-slate-800 shadow-sm hover:border-slate-400 hover:bg-slate-50 active:bg-slate-100",
+  danger:
+    "border border-rose-800 bg-rose-700 text-white shadow-sm hover:bg-rose-800 active:bg-rose-900",
+  ghost:
+    "text-slate-700 hover:bg-slate-100 hover:text-slate-950 active:bg-slate-200",
+};
+
+const sizes: Record<ButtonSize, string> = {
+  sm: "min-h-9 px-3 text-sm",
+  md: "min-h-11 px-4 text-[0.9375rem]",
+  lg: "min-h-12 px-5 text-base",
 };
 
 /**
@@ -26,14 +38,16 @@ const variants: Record<ButtonVariant, string> = {
 export function Button({
   children,
   className,
+  size = "md",
   variant = "primary",
   ...props
 }: PropsWithChildren<ButtonProps>) {
   return (
     <button
       className={cx(
-        "inline-flex h-10 items-center justify-center gap-2 rounded-md px-4 text-sm font-semibold transition duration-150 ease-out focus-visible:shadow-focus active:translate-y-px disabled:cursor-not-allowed disabled:opacity-55 disabled:active:translate-y-0",
+        "inline-flex items-center justify-center gap-2 rounded-lg font-bold leading-none transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:shadow-none",
         variants[variant],
+        sizes[size],
         className,
       )}
       {...props}

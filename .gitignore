@@ -32,3 +32,6 @@ dev-output/
 outputs/
 datasets/contracts/*
 !datasets/contracts/README.md
+
+
+install.cmd

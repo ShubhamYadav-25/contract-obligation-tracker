@@ -505,8 +505,10 @@ export function classifyGeminiDoctorError(error: unknown): GeminiErrorCategory {
         })
       : undefined;
   const status = typeof details?.status === "number" ? details.status : getErrorStatus(error);
-  const message =
-    typeof details?.message === "string" ? details.message : getProviderMessage(error);
+  const mainMessage = error instanceof Error ? error.message : "";
+  const detailsMessage = typeof details?.message === "string" ? details.message : "";
+  const providerMessage = getProviderMessage(error) ?? "";
+  const message = `${mainMessage} ${detailsMessage} ${providerMessage}`;
 
   if (/API_KEY_INVALID|api key not valid|invalid api key|unauth/i.test(message ?? "")) {
     return "AUTHENTICATION_ERROR";
@@ -830,6 +832,14 @@ export class GeminiStructuredLlmClient
         this.selectedModelResult = result;
         return result;
       } catch (error) {
+        if (
+          error instanceof ExternalServiceError &&
+          (error.message === "DAILY_QUOTA_EXHAUSTED" ||
+            error.message === "GEMINI_CONTRACT_REQUEST_BUDGET_EXCEEDED")
+        ) {
+          throw error;
+        }
+
         const errorCategory = classifyGeminiDoctorError(error);
         if (
           ["AUTHENTICATION_ERROR", "RATE_LIMITED", "NETWORK_ERROR", "UNKNOWN_ERROR"].includes(
@@ -1008,7 +1018,7 @@ export class GeminiStructuredLlmClient
               systemInstruction: "Return only the requested structured response.",
               prompt: "Return status OK.",
               jsonSchema: preflightJsonSchema,
-              maxOutputTokens: 32,
+              maxOutputTokens: 256,
               signal: attemptSignal,
             }),
           ),
@@ -1173,7 +1183,18 @@ export class GeminiStructuredLlmClient
     const maxLoopAttempts = Math.max(this.maxAttempts, this.maxQuotaRetries + 1);
     for (let attempt = 1; attempt <= maxLoopAttempts; attempt += 1) {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), this.requestTimeoutMilliseconds);
+      let rejectOnTimeout: ((reason: Error) => void) | undefined;
+      const timeoutFailure = new Promise<never>((_resolve, reject) => {
+        rejectOnTimeout = reject;
+      });
+      const timeout = setTimeout(() => {
+        controller.abort();
+        const error = new Error(
+          `Gemini request timed out after ${this.requestTimeoutMilliseconds}ms`,
+        );
+        error.name = "AbortError";
+        rejectOnTimeout?.(error);
+      }, this.requestTimeoutMilliseconds);
 
       /**
        * @description Performs the abort forwarder helper operation for this module.
@@ -1188,7 +1209,7 @@ export class GeminiStructuredLlmClient
           attempt,
           maxAttempts: this.maxAttempts,
         });
-        return await operation(controller.signal);
+        return await Promise.race([operation(controller.signal), timeoutFailure]);
       } catch (error) {
         lastError = error;
         if (
@@ -1227,7 +1248,7 @@ export class GeminiStructuredLlmClient
         if (!classification.retryable || !this.canRetry(classification, attempt)) {
           throw new ExternalServiceError("Gemini structured LLM request failed", {
             operationName,
-            retryable: false,
+            retryable: classification.retryable,
             attempts: attempt,
             status: classification.status,
             message: redactedProviderMessage,
@@ -1262,7 +1283,7 @@ export class GeminiStructuredLlmClient
     const classification = classifyGeminiStructuredLlmError(lastError, operationName, model);
     throw new ExternalServiceError("Gemini structured LLM request failed", {
       operationName,
-      retryable: false,
+      retryable: classification.retryable,
       attempts: maxLoopAttempts,
       status: classification.status,
       message: redactSecretFromMessage(classification.providerMessage, this.apiKey),

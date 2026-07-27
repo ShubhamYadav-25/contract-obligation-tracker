@@ -106,6 +106,10 @@ const deploymentMigrationFiles: readonly DeploymentMigration[] = [
     filename: "202607220004_inbox_entries.up.sql",
     shouldApply: async (database) => !(await tableExists(database, "inbox_entries")),
   },
+  {
+    filename: "202607270001_contract_profiles.up.sql",
+    shouldApply: async (database) => !(await tableExists(database, "contract_profiles")),
+  },
 ];
 
 const migrationsRelativePath = "packages/database/migrations";

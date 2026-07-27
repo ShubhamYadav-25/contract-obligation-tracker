@@ -82,6 +82,25 @@ export class PostgresExtractionCandidateRepository {
     });
   }
 
+  async findPendingByIdForOrganization(
+    id: string,
+    organizationId: string,
+  ): Promise<ExtractionCandidate | null> {
+    return this.transactions.inTransaction(async ({ client }) => {
+      const result = await client.query(
+        `SELECT candidate.id, candidate.contract_id, candidate.document_id,
+                candidate.extracted_json, candidate.confidence, candidate.validation_issues,
+                candidate.created_at, candidate.status, candidate.reviewed_at
+         FROM extraction_candidates candidate
+         JOIN contracts contract ON contract.id = candidate.contract_id
+         WHERE candidate.id = $1 AND contract.organization_id = $2
+           AND candidate.status = 'PENDING_REVIEW'`,
+        [id, organizationId],
+      );
+      return result.rowCount === 0 ? null : mapCandidateRow(result.rows[0]);
+    });
+  }
+
   /**
    * @description Executes the list by contract operation used by the application workflow.
    * @param {string} contractId - Input value for contract id.
@@ -97,6 +116,25 @@ export class PostgresExtractionCandidateRepository {
     });
   }
 
+  async listByContractAndOrganization(
+    contractId: string,
+    organizationId: string,
+  ): Promise<ExtractionCandidate[]> {
+    return this.transactions.inTransaction(async ({ client }) => {
+      const result = await client.query(
+        `SELECT candidate.id, candidate.contract_id, candidate.document_id,
+                candidate.extracted_json, candidate.confidence, candidate.validation_issues,
+                candidate.created_at, candidate.status, candidate.reviewed_at
+         FROM extraction_candidates candidate
+         JOIN contracts contract ON contract.id = candidate.contract_id
+         WHERE candidate.contract_id = $1 AND contract.organization_id = $2
+         ORDER BY candidate.created_at DESC`,
+        [contractId, organizationId],
+      );
+      return result.rows.map((row: any) => mapCandidateRow(row));
+    });
+  }
+
   /**
    * @description Executes the list all operation used by the application workflow.
    * @returns {Promise<ExtractionCandidate[]>} Result of the list all operation.
@@ -106,6 +144,22 @@ export class PostgresExtractionCandidateRepository {
       const result = await client.query(
         `SELECT id, contract_id, document_id, extracted_json, confidence, validation_issues, created_at, status, reviewed_at FROM extraction_candidates ORDER BY created_at DESC`,
         [],
+      );
+      return result.rows.map((row: any) => mapCandidateRow(row));
+    });
+  }
+
+  async listAllByOrganization(organizationId: string): Promise<ExtractionCandidate[]> {
+    return this.transactions.inTransaction(async ({ client }) => {
+      const result = await client.query(
+        `SELECT candidate.id, candidate.contract_id, candidate.document_id,
+                candidate.extracted_json, candidate.confidence, candidate.validation_issues,
+                candidate.created_at, candidate.status, candidate.reviewed_at
+         FROM extraction_candidates candidate
+         JOIN contracts contract ON contract.id = candidate.contract_id
+         WHERE contract.organization_id = $1 AND candidate.status = 'PENDING_REVIEW'
+         ORDER BY candidate.created_at DESC`,
+        [organizationId],
       );
       return result.rows.map((row: any) => mapCandidateRow(row));
     });

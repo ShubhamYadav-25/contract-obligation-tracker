@@ -17,7 +17,12 @@ export function Card({
   readonly className?: string;
 }>) {
   return (
-    <section className={cx("rounded-lg border border-border bg-white p-5", className)}>
+    <section
+      className={cx(
+        "rounded-xl border border-slate-200 bg-white p-5 shadow-card sm:p-6",
+        className,
+      )}
+    >
       {children}
     </section>
   );

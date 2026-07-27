@@ -28,6 +28,7 @@ import type {
   ContractDocumentRecord,
   ContractDocumentSourceType,
   ContractTrackingResult,
+  ContractWorkspaceRecord,
 } from "./contracts.types.js";
 import { FileHashService } from "./file-hash.service.js";
 
@@ -350,6 +351,83 @@ export class ContractIngestionService {
       throw new Error("Document text page read repository is not configured");
     }
     return this.dependencies.documentTextPages.listByContract(input);
+  }
+
+  /**
+   * @description Executes the reprocess contract operation used by the application workflow.
+   * @param {{ readonly organizationId: string; readonly contractId: string }} input - Input value for input.
+   * @returns {Promise<ContractWorkspaceRecord>} Result of the reprocess contract operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
+  async reprocessContract(input: {
+    readonly organizationId: string;
+    readonly contractId: string;
+  }): Promise<ContractWorkspaceRecord> {
+    const workspace = await this.findContract(input);
+    if (!workspace || !workspace.currentDocument || workspace.currentDocument.uploadStatus !== "STORED") {
+      throw new ContractIngestionError(
+        "CONTRACT_NOT_FOUND",
+        "Contract document is not stored or ready for processing",
+        404,
+      );
+    }
+
+    const latestRun = workspace.latestProcessingRun;
+    if (latestRun && (latestRun.status === "PROCESSING" || latestRun.status === "QUEUED")) {
+      throw new ContractIngestionError(
+        "CONTRACT_PROCESSING_IN_PROGRESS",
+        "Contract is currently being processed",
+        409,
+      );
+    }
+
+    const processingRunId = randomUUID();
+    const nextAttemptNumber = (latestRun?.attemptNumber ?? 0) + 1;
+
+    await this.dependencies.transactions.inTransaction(async (transaction) => {
+      await this.dependencies.processingRuns.createRun(
+        {
+          id: processingRunId,
+          contractId: input.contractId,
+          documentId: workspace.currentDocument!.id,
+          status: "RECEIVED",
+          attemptNumber: nextAttemptNumber,
+        },
+        transaction,
+      );
+    });
+
+    await this.queueProcessing({
+      organizationId: input.organizationId,
+      contractId: input.contractId,
+      documentId: workspace.currentDocument.id,
+      processingRunId,
+    });
+
+    await this.dependencies.audit.append({
+      actor: {
+        id: input.organizationId,
+        type: "USER",
+      },
+      action: "CONTRACT_REPROCESSED",
+      entityType: "CONTRACT",
+      entityId: input.contractId,
+      correlationId: randomUUID(),
+      timestamp: new Date(),
+      newData: {
+        contractId: input.contractId,
+        documentId: workspace.currentDocument.id,
+        processingRunId,
+        attemptNumber: nextAttemptNumber,
+      },
+    });
+
+    const updatedWorkspace = await this.findContract(input);
+    if (!updatedWorkspace) {
+      throw new ContractIngestionError("CONTRACT_NOT_FOUND", "Contract was not found", 404);
+    }
+
+    return updatedWorkspace;
   }
 
   /**

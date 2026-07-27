@@ -69,11 +69,52 @@ describe("PgPoolClient", () => {
     await client.close();
   });
 
+  it("retries aggregate network access failures instead of failing immediately", async () => {
+    const client = new PgPoolClient({
+      connectionString: "postgres://user:pass@localhost:5432/postgres",
+      ssl: false,
+      poolMax: 1,
+      connectionTimeoutMilliseconds: 100,
+      idleTimeoutMilliseconds: 100,
+    });
+    const aggregate = new AggregateError([
+      Object.assign(new Error("connect EACCES"), { code: "EACCES" }),
+    ]);
+    const query = vi
+      .spyOn(client.pool, "query")
+      .mockRejectedValueOnce(aggregate)
+      .mockResolvedValueOnce({ rows: [{ ok: true }], rowCount: 1 } as never);
+
+    await expect(client.query("SELECT 1")).resolves.toEqual({
+      rows: [{ ok: true }],
+      rowCount: 1,
+    });
+    expect(query).toHaveBeenCalledTimes(2);
+    await client.close();
+  });
+
   it("preserves explicit database unavailable errors", () => {
     const error = new DatabaseConnectionError(new Error("Connection terminated due to timeout"));
 
     expect(error.code).toBe("DATABASE_UNAVAILABLE");
     expect(error.statusCode).toBe(503);
     expect(error.details.reason).toBe("CONNECTION_TIMEOUT");
+  });
+
+  it("does not misclassify PostgreSQL query errors as connection failures", async () => {
+    const client = new PgPoolClient({
+      connectionString: "postgres://user:pass@localhost:5432/postgres",
+      ssl: false,
+      poolMax: 1,
+      connectionTimeoutMilliseconds: 100,
+      idleTimeoutMilliseconds: 100,
+    });
+    const missingRelation = Object.assign(new Error('relation "contract_profiles" does not exist'), {
+      code: "42P01",
+    });
+    vi.spyOn(client.pool, "query").mockRejectedValue(missingRelation);
+
+    await expect(client.query("SELECT * FROM contract_profiles")).rejects.toBe(missingRelation);
+    await client.close();
   });
 });

@@ -9,7 +9,7 @@ export interface UpdateObligationInput {
   readonly expectedVersion: number;
   readonly title?: string;
   readonly description?: string;
-  readonly dueAt?: string | null;
+  readonly dueAt?: string | Date | null;
   readonly responsibleParty?: string | null;
   readonly counterparty?: string | null;
   readonly category?: string | null;

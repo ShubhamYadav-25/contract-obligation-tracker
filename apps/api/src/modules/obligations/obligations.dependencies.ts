@@ -1,9 +1,7 @@
 /**
  * @file Defines backend obligations module contracts, services, routes, or persistence logic.
  */
-import { createDatabaseConfig } from "../../config/database.js";
-import { loadEnv } from "../../config/env.js";
-import { PgPoolClient } from "../../infrastructure/database/postgres-client.js";
+import { getApplicationDatabase } from "../../infrastructure/database/app-database.js";
 import { PgTransactionManager } from "../../infrastructure/database/transaction-manager.js";
 import { PostgresObligationRepository } from "./postgres-obligation.repository.js";
 import { PostgresTransitionHistoryRepository } from "./postgres-transition-history.repository.js";
@@ -15,8 +13,7 @@ import { SystemClock } from "../../infrastructure/clock/clock.js";
  * @returns {unknown} Result of the create obligation service dependencies operation.
  */
 export function createObligationServiceDependencies() {
-  const env = loadEnv();
-  const database = new PgPoolClient(createDatabaseConfig(env));
+  const database = getApplicationDatabase();
   const transactions = new PgTransactionManager(database.pool);
   const obligations = new PostgresObligationRepository(transactions);
   const transitionHistory = new PostgresTransitionHistoryRepository(transactions);

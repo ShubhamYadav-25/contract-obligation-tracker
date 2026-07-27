@@ -26,6 +26,7 @@ import { DocumentTextProcessingPipeline } from "../modules/contracts/document-te
 import {
   GroqObligationExtractionProvider,
   HeuristicObligationExtractionProvider,
+  TriggeredFallbackObligationExtractionProvider,
   type ObligationExtractionProvider,
 } from "../modules/extraction/obligation-extraction.provider.js";
 import { ReferenceAwareObligationExtractor } from "../modules/extraction/reference-aware/index.js";
@@ -36,6 +37,7 @@ import {
   PostgresDocumentTextPageRepository,
 } from "../modules/contracts/postgres-contract.repository.js";
 import { PostgresObligationRepository } from "../modules/obligations/postgres-obligation.repository.js";
+import { PostgresReminderRepository } from "../modules/reminders/postgres-reminder.repository.js";
 import { JobRepository, PostgresJobRepository } from "../jobs/job.repository.js";
 import { JobRunner } from "../jobs/job-runner.js";
 import { JobPoller } from "../jobs/pollers/job-poller.js";
@@ -47,6 +49,7 @@ import {
   ConsoleNotificationProvider,
   type NotificationProvider,
 } from "../modules/notifications/index.js";
+import { ApplicationError } from "../shared/errors/application-error.js";
 
 export interface WorkerRegistry extends CloseableResource {
   readonly names: readonly string[];
@@ -94,7 +97,7 @@ export function createObligationExtractor({
   }
 
   if (env.OBLIGATION_EXTRACTOR_MODE === "reference-aware-gemini") {
-    return new ReferenceAwareObligationExtractor({
+    const geminiExtractor = new ReferenceAwareObligationExtractor({
       llm: new GeminiStructuredLlmClient({ env, logger }),
       logger,
       config: {
@@ -103,9 +106,42 @@ export function createObligationExtractor({
         maxBatchOutputTokens: env.GEMINI_MAX_BATCH_OUTPUT_TOKENS,
       },
     });
+    if (!env.GROQ_API_KEY) {
+      return geminiExtractor;
+    }
+
+    return new TriggeredFallbackObligationExtractionProvider({
+      primary: geminiExtractor,
+      fallback: createGroqObligationExtractor({
+        env,
+        logger,
+        fallback: heuristicObligationExtractor,
+      }),
+      shouldFallback: isGeminiQuotaFallbackTrigger,
+      logger,
+    });
   }
 
   return heuristicObligationExtractor;
+}
+
+export function isGeminiQuotaFallbackTrigger(error: unknown): boolean {
+  if (!(error instanceof ApplicationError)) {
+    return false;
+  }
+
+  if (
+    error.message === "DAILY_QUOTA_EXHAUSTED" ||
+    error.message === "GEMINI_CONTRACT_REQUEST_BUDGET_EXCEEDED"
+  ) {
+    return true;
+  }
+
+  const quota =
+    error.details.quota && typeof error.details.quota === "object"
+      ? (error.details.quota as Record<string, unknown>)
+      : undefined;
+  return error.details.status === 429 || quota !== undefined;
 }
 
 /**
@@ -216,6 +252,7 @@ export function createWorkerRuntime({ logger }: { readonly logger: Logger }): Wo
   const audit = new PostgresAuditRepository(database);
   const processingRuns = new PostgresContractProcessingRepository(database);
   const obligations = new PostgresObligationRepository(transactions);
+  const reminders = new PostgresReminderRepository(transactions);
   const jobs: JobRepository = new PostgresJobRepository(database, transactions);
   const obligationExtractor = createObligationExtractor({ env, logger });
   const orchestrator = new ContractProcessingOrchestrator({
@@ -227,6 +264,7 @@ export function createWorkerRuntime({ logger }: { readonly logger: Logger }): Wo
       processingRuns,
       textPages: new PostgresDocumentTextPageRepository(database),
       obligations,
+      reminders,
       audit,
       storage: new SupabaseStorageProvider(storageConfig),
       parser: new NativePdfTextExtractorAdapter(),
@@ -282,6 +320,19 @@ export function createWorkerRuntime({ logger }: { readonly logger: Logger }): Wo
     jobConfig.pollIntervalMilliseconds,
     logger,
   );
+  const recoveryLoop = new PollingLoop(
+    {
+      poll: async () => {
+        const recovered = await jobs.recoverExpiredJobs(new Date());
+        if (recovered.length > 0) {
+          logger.warn("expired_job_locks_recovered", { count: recovered.length });
+        }
+        return recovered.length;
+      },
+    },
+    jobConfig.pollIntervalMilliseconds,
+    logger,
+  );
   const names = ["PROCESS_CONTRACT", "DELIVER_REMINDER"] as const;
 
   return {
@@ -290,8 +341,9 @@ export function createWorkerRuntime({ logger }: { readonly logger: Logger }): Wo
     /**
      * @description Implements the start method for this service or adapter.
      * @returns {unknown} Result of the start operation.
-     */ start() {
+    */ start() {
       pollingLoop.start();
+      recoveryLoop.start();
       logger.info("workers_registered", { workers: names });
     },
 
@@ -305,8 +357,9 @@ export function createWorkerRuntime({ logger }: { readonly logger: Logger }): Wo
     /**
      * @description Implements the close method for this service or adapter.
      * @returns {Promise<unknown>} Result of the close operation.
-     */ async close() {
+    */ async close() {
       pollingLoop.close();
+      recoveryLoop.close();
       await database.close();
       logger.info("workers_closed");
     },

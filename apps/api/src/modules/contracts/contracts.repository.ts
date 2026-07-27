@@ -172,7 +172,6 @@ export interface ClaimContractProcessingRunInput {
   readonly documentId: string;
   readonly processingRunId: string;
   readonly queueJobId: string;
-  readonly attemptNumber: number;
 }
 
 export interface CompleteContractProcessingRunInput {

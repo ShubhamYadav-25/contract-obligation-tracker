@@ -43,6 +43,7 @@ const processingSchema = z.object({
   completedAt: z.string().nullable(),
   failedAt: z.string().nullable(),
   updatedAt: z.string(),
+  canReprocess: z.boolean().optional(),
 });
 
 export const contractSummarySchema = z.object({

@@ -12,7 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
-import { Link, NavLink, Outlet } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 
 import { routePaths } from "@/app/route-paths.js";
 import { useAuthSession } from "../../features/auth/index.js";
@@ -25,6 +25,14 @@ const navigation = [
   { label: "Messages", to: routePaths.messages, icon: Inbox },
 ];
 
+function currentSection(pathname: string): string {
+  if (pathname.startsWith("/contracts")) return "Contracts";
+  if (pathname.startsWith("/reviews")) return "Obligations";
+  if (pathname.startsWith("/obligations")) return "Obligations";
+  if (pathname.startsWith("/messages")) return "Messages";
+  return "Dashboard";
+}
+
 /**
  * @description Renders the sidebar component for the contract tracker UI.
  * @param {{ readonly onNavigate?: () => void }} { onNavigate } - Input value for { on navigate }.
@@ -35,60 +43,63 @@ function Sidebar({ onNavigate }: { readonly onNavigate?: () => void }) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="mb-8 px-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-          Lexbridge Legal
+      <div className="mb-7 px-2">
+        <p className="text-xs font-bold uppercase tracking-[0.14em] text-teal-700">
+          LEXBRIDGE LEGAL
         </p>
-        <div className="mt-1 text-xl font-bold text-slate-950">Contract Tracker</div>
+        <div className="mt-1 text-xl font-extrabold tracking-tight text-slate-950">
+          Contract Tracker
+        </div>
+        <p className="mt-1 text-sm text-slate-600">Obligation operations workspace</p>
       </div>
+      <p className="mb-2 px-3 text-xs font-bold uppercase tracking-wider text-slate-500">
+        Workspace
+      </p>
       <nav aria-label="Primary navigation" className="space-y-1">
         {navigation.map((item) => (
           <NavLink
             className={({ isActive }) =>
               cx(
-                "group relative flex h-11 items-center gap-3 rounded-md px-4 text-sm transition duration-150 ease-out focus-visible:shadow-focus",
-                "before:absolute before:left-0 before:h-6 before:w-1 before:rounded-r before:bg-transparent before:transition-colors",
+                "group relative flex min-h-12 items-center gap-3 rounded-lg px-3.5 text-[0.9375rem] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2",
                 isActive
-                  ? "bg-[#E6FFFA] font-bold text-teal-800 before:h-7 before:bg-teal-600"
-                  : "font-medium text-slate-600 hover:bg-[#E0F2F1] hover:text-teal-700 hover:before:bg-teal-500",
+                  ? "bg-teal-50 font-bold text-teal-900 before:absolute before:inset-y-2 before:left-0 before:w-1 before:rounded-r-full before:bg-teal-700"
+                  : "font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-950",
               )
             }
-            key={item.to}
+            key={item.label}
             onClick={onNavigate}
             to={item.to}
           >
-            <item.icon aria-hidden size={17} />
+            <item.icon aria-hidden size={20} className="shrink-0 text-slate-600 group-hover:text-slate-950" />
             <span className="min-w-0 flex-1">{item.label}</span>
           </NavLink>
         ))}
       </nav>
-      <div className="mt-7 rounded-lg border border-slate-200 bg-slate-50 p-3 shadow-card">
-        <div className="flex items-start gap-2 text-sm">
-          <Bell aria-hidden className="mt-0.5 text-amber-700" size={16} />
+      <div className="mt-7 rounded-xl border border-sky-200 bg-sky-50 p-4">
+        <div className="flex items-start gap-2.5 text-sm">
+          <Bell aria-hidden className="mt-0.5 text-amber-700 shrink-0" size={16} />
           <div>
             <p className="font-semibold text-slate-900">Processing visibility</p>
-            <p className="mt-1 text-xs leading-5 text-slate-500">
-              Upload a PDF and monitor backend status.
+            <p className="mt-1 text-sm leading-5 text-slate-600">
+              Contract and obligation states are loaded from the active workspace.
             </p>
           </div>
         </div>
       </div>
       <div className="mt-auto border-t border-slate-200 pt-4">
-        <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-card">
+        <div className="flex items-center gap-3">
           <div
             aria-hidden
-            className="grid size-10 place-items-center rounded-full bg-teal-700 text-sm font-bold text-white"
+            className="grid size-9 place-items-center rounded-full bg-teal-700 text-xs font-bold text-white shrink-0"
           >
-            AR
+            {session?.userId.slice(0, 2).toUpperCase() ?? "DEV"}
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-bold text-slate-900">
-              {session ? "Development Reviewer" : "No active session"}
+              {session ? "Development reviewer" : "No active session"}
             </p>
             <p className="truncate text-xs text-slate-500">
-              {import.meta.env.VITE_DEV_ORGANIZATION_ID
-                ? "Development organization"
-                : "Set auth env headers"}
+              {session ? session.userId : "Configure development auth headers"}
             </p>
           </div>
         </div>
@@ -103,10 +114,13 @@ function Sidebar({ onNavigate }: { readonly onNavigate?: () => void }) {
  */
 export function AppShell() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const location = useLocation();
+  const section = currentSection(location.pathname);
 
   return (
     <div className="min-h-screen bg-surface text-ink">
-      <aside className="fixed inset-y-0 left-0 hidden w-72 border-r border-slate-200 bg-white px-4 py-6 lg:block">
+      <a className="skip-link" href="#main-content">Skip to main content</a>
+      <aside className="fixed inset-y-0 left-0 hidden w-64 border-r border-slate-200 bg-white px-4 py-6 lg:block">
         <Sidebar />
       </aside>
       {mobileOpen ? (
@@ -117,10 +131,10 @@ export function AppShell() {
             onClick={() => setMobileOpen(false)}
             type="button"
           />
-          <aside className="relative h-full w-80 max-w-[86vw] border-r border-slate-200 bg-white px-4 py-6 shadow-xl transition duration-200 ease-out">
+          <aside aria-label="Mobile navigation" className="relative h-full w-80 max-w-[88vw] border-r border-slate-200 bg-white px-4 py-6 shadow-xl">
             <button
               aria-label="Close navigation"
-              className="absolute right-3 top-3 rounded-md p-2 transition hover:bg-slate-100 focus-visible:shadow-focus"
+              className="absolute right-3 top-3 grid size-11 place-items-center rounded-lg text-slate-700 transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700"
               onClick={() => setMobileOpen(false)}
               type="button"
             >
@@ -130,28 +144,28 @@ export function AppShell() {
           </aside>
         </div>
       ) : null}
-      <div className="lg:pl-72">
-        <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 px-4 py-3 backdrop-blur">
-          <div className="flex items-center justify-between gap-3">
+      <div className="lg:pl-64">
+        <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 px-4 py-3 shadow-sm backdrop-blur sm:px-6 lg:px-8">
+          <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <button
                 aria-label="Open navigation"
-                className="rounded-md p-2 transition hover:bg-slate-100 focus-visible:shadow-focus lg:hidden"
+                className="grid size-11 place-items-center rounded-lg text-slate-700 transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 lg:hidden"
                 onClick={() => setMobileOpen(true)}
                 type="button"
               >
                 <Menu aria-hidden size={20} />
               </button>
-              <div className="hidden items-center gap-2 text-sm text-slate-500 sm:flex">
+              <div className="flex items-center gap-2 text-sm text-slate-600">
                 <span>Workspace</span>
                 <ChevronRight aria-hidden size={14} />
-                <span className="font-semibold text-slate-900">Contract Operations</span>
+                <span aria-current="page" className="font-bold text-slate-950">{section}</span>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <Link
                 aria-label="Notifications"
-                className="relative rounded-md border border-slate-200 bg-white p-2 shadow-card transition hover:bg-slate-50 focus-visible:shadow-focus"
+                className="relative grid size-11 place-items-center rounded-lg border border-slate-300 bg-white text-slate-700 shadow-card transition-colors hover:bg-slate-50 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700"
                 to={routePaths.messages}
               >
                 <Bell aria-hidden size={17} />
@@ -160,7 +174,7 @@ export function AppShell() {
             </div>
           </div>
         </header>
-        <main>
+        <main id="main-content" tabIndex={-1}>
           <Outlet />
         </main>
       </div>

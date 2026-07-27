@@ -59,6 +59,11 @@ function mapJob(row: BackgroundJobRow): BackgroundJob {
 export interface JobRepository {
   createJob(input: CreateBackgroundJobInput): Promise<BackgroundJob>;
   claimJobs(input: ClaimJobsInput): Promise<readonly BackgroundJob[]>;
+  renewLock(input: {
+    readonly jobId: string;
+    readonly workerId: string;
+    readonly lockDurationMilliseconds: number;
+  }): Promise<boolean>;
   markCompleted(input: CompleteJobInput): Promise<void>;
   markFailed(input: FailJobInput): Promise<void>;
   recoverExpiredJobs(now: Date): Promise<readonly BackgroundJob[]>;
@@ -152,6 +157,26 @@ export class PostgresJobRepository implements JobRepository {
     });
   }
 
+  async renewLock(input: {
+    readonly jobId: string;
+    readonly workerId: string;
+    readonly lockDurationMilliseconds: number;
+  }): Promise<boolean> {
+    const result = await this.database.query(
+      `
+        UPDATE background_jobs
+        SET
+          lock_expires_at = NOW() + ($3::double precision * interval '1 millisecond'),
+          updated_at = NOW()
+        WHERE id = $1
+          AND locked_by = $2
+          AND status = 'PROCESSING'
+      `,
+      [input.jobId, input.workerId, input.lockDurationMilliseconds],
+    );
+    return result.rowCount === 1;
+  }
+
   /**
    * @description Implements the mark completed method for this service or adapter.
    * @param {CompleteJobInput} input - Input value for input.
@@ -219,27 +244,59 @@ export class PostgresJobRepository implements JobRepository {
    * @returns {Promise<readonly BackgroundJob[]>} Result of the recover expired jobs operation.
    */
   async recoverExpiredJobs(now: Date): Promise<readonly BackgroundJob[]> {
-    const result = await this.database.query<BackgroundJobRow>(
-      `
-        UPDATE background_jobs
-        SET
-          status = CASE
-            WHEN attempt_count < max_attempts THEN 'RETRY_PENDING'::job_status
-            ELSE 'FAILED'::job_status
-          END,
-          available_at = $1,
-          last_error = COALESCE(last_error, 'Recovered expired processing lock'),
-          locked_by = NULL,
-          locked_at = NULL,
-          lock_expires_at = NULL,
-          updated_at = NOW()
-        WHERE status = 'PROCESSING'
-          AND lock_expires_at < $1
-        RETURNING *
-      `,
-      [now],
-    );
+    return this.transactions.inTransaction(async ({ client }) => {
+      const result = await client.query<BackgroundJobRow>(
+        `
+          UPDATE background_jobs
+          SET
+            status = CASE
+              WHEN attempt_count < max_attempts THEN 'RETRY_PENDING'::job_status
+              ELSE 'FAILED'::job_status
+            END,
+            available_at = $1,
+            last_error = COALESCE(last_error, 'Recovered expired processing lock'),
+            locked_by = NULL,
+            locked_at = NULL,
+            lock_expires_at = NULL,
+            updated_at = NOW()
+          WHERE status = 'PROCESSING'
+            AND lock_expires_at < $1
+          RETURNING *
+        `,
+        [now],
+      );
 
-    return result.rows.map(mapJob);
+      for (const row of result.rows) {
+        if (row.job_type !== "PROCESS_CONTRACT") continue;
+        const payload =
+          row.payload && typeof row.payload === "object"
+            ? (row.payload as Record<string, unknown>)
+            : {};
+        const processingRunId =
+          typeof payload.processingRunId === "string" ? payload.processingRunId : null;
+        if (!processingRunId) continue;
+        const retryPending = row.status === "RETRY_PENDING";
+        await client.query(
+          `
+            UPDATE contract_processing_runs
+            SET
+              status = CASE WHEN $3::boolean THEN 'QUEUED' ELSE 'FAILED' END,
+              error_code = 'JOB_LOCK_EXPIRED',
+              error_stage = 'QUEUE',
+              error_message = 'Background processing lease expired',
+              error_retryable = $3,
+              completed_at = CASE WHEN $3::boolean THEN NULL ELSE $4::timestamptz END,
+              failed_at = CASE WHEN $3::boolean THEN NULL ELSE $4::timestamptz END,
+              updated_at = $4::timestamptz
+            WHERE id = $1
+              AND queue_job_id = $2
+              AND status IN ('PROCESSING', 'PARSING', 'OCR_PROCESSING', 'TEXT_SEGMENTED')
+          `,
+          [processingRunId, row.idempotency_key, retryPending, now],
+        );
+      }
+
+      return result.rows.map(mapJob);
+    });
   }
 }

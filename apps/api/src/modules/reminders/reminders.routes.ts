@@ -22,6 +22,21 @@ export function createReminderRouter(): Router {
     requireAuthContext,
     asyncRoute((request, response) => controller.list(request, response)),
   );
+  router.post(
+    "/",
+    requireAuthContext,
+    asyncRoute((request, response) => controller.create(request, response)),
+  );
+  router.patch(
+    "/:reminderId",
+    requireAuthContext,
+    asyncRoute((request, response) => controller.reschedule(request, response)),
+  );
+  router.post(
+    "/:reminderId/actions",
+    requireAuthContext,
+    asyncRoute((request, response) => controller.action(request, response)),
+  );
 
   return router;
 }

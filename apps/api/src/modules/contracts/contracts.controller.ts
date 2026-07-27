@@ -90,6 +90,7 @@ function serializeProcessingRun(run: ContractProcessingRunRecord | undefined) {
     completedAt: run.completedAt?.toISOString() ?? null,
     failedAt: run.failedAt?.toISOString() ?? null,
     updatedAt: run.updatedAt.toISOString(),
+    canReprocess: run.status !== "PROCESSING" && run.status !== "QUEUED",
   };
 }
 
@@ -360,7 +361,40 @@ export class ContractController {
         errorMessage: processingRun.errorMessage ?? null,
         errorRetryable: processingRun.errorRetryable ?? null,
         failedAt: processingRun.failedAt?.toISOString() ?? null,
+        canReprocess: processingRun.status !== "PROCESSING" && processingRun.status !== "QUEUED",
       },
+      meta: {
+        requestId: String(response.locals.correlationId ?? "unknown"),
+      },
+    });
+  }
+
+  /**
+   * @description Executes the reprocess contract operation used by the application workflow.
+   * @param {Request} request - Input value for request.
+   * @param {Response} response - Input value for response.
+   * @returns {Promise<void>} Result of the reprocess operation.
+   * @throws {Error} When validation, I/O, or downstream service operations fail.
+   */
+  async reprocess(request: Request, response: Response): Promise<void> {
+    const context = requireContext(request);
+    const contractId = request.params.contractId;
+    if (typeof contractId !== "string") {
+      throw new ApplicationError({
+        code: "INVALID_CONTRACT_ID",
+        message: "Contract ID is required",
+        statusCode: 400,
+      });
+    }
+
+    const result = await this.createService().reprocessContract({
+      organizationId: context.organizationId,
+      contractId,
+    });
+
+    response.status(200).json({
+      success: true,
+      data: serializeWorkspace(result),
       meta: {
         requestId: String(response.locals.correlationId ?? "unknown"),
       },

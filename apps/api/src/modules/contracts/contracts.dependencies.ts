@@ -1,11 +1,10 @@
 /**
  * @file Defines backend contracts module contracts, services, routes, or persistence logic.
  */
-import { createDatabaseConfig } from "../../config/database.js";
 import { loadEnv } from "../../config/env.js";
 import { createLogger } from "../../config/logger.js";
 import { createStorageConfig } from "../../config/storage.js";
-import { PgPoolClient } from "../../infrastructure/database/postgres-client.js";
+import { getApplicationDatabase } from "../../infrastructure/database/app-database.js";
 import { PgTransactionManager } from "../../infrastructure/database/transaction-manager.js";
 import { SupabaseStorageProvider } from "../../infrastructure/storage/supabase-storage.provider.js";
 import { PostgresJobRepository } from "../../jobs/job.repository.js";
@@ -34,7 +33,7 @@ export function createContractIngestionService(): ContractIngestionService {
   const env = loadEnv();
   const logger = createLogger(env);
   const storageConfig = createStorageConfig(env);
-  const database = new PgPoolClient(createDatabaseConfig(env));
+  const database = getApplicationDatabase();
   const transactions = new PgTransactionManager(database.pool);
   const jobs = new PostgresJobRepository(database, transactions);
   const contracts = new PostgresContractRepository(database);

@@ -7,7 +7,7 @@ import type { DatabaseConfig } from "../../config/database.js";
 import { ApplicationError } from "../../shared/errors/application-error.js";
 
 const { Pool } = pg;
-const maxTransientQueryAttempts = 2;
+const maxTransientQueryAttempts = 3;
 const transientRetryDelayMilliseconds = 150;
 
 export interface QueryResult<Row = unknown> {
@@ -33,9 +33,30 @@ export class DatabaseConnectionError extends ApplicationError {
       statusCode: 503,
       details: {
         reason: databaseFailureReason(error),
+        driverCodes: nestedErrorCodes(error),
+        driverMessage: safeDatabaseErrorMessage(error),
       },
     });
   }
+}
+
+function safeDatabaseErrorMessage(error: unknown): string {
+  const messages: string[] = [];
+  const visit = (candidate: unknown): void => {
+    const message = errorMessage(candidate).trim();
+    if (message) messages.push(message);
+    if (candidate && typeof candidate === "object") {
+      const errors = (candidate as { readonly errors?: unknown }).errors;
+      if (Array.isArray(errors)) errors.forEach(visit);
+      const cause = (candidate as { readonly cause?: unknown }).cause;
+      if (cause) visit(cause);
+    }
+  };
+  visit(error);
+  return [...new Set(messages)]
+    .join(" | ")
+    .replace(/postgres(?:ql)?:\/\/[^\s]+/gi, "[REDACTED_DATABASE_URL]")
+    .slice(0, 500);
 }
 
 /**
@@ -58,23 +79,54 @@ function errorCode(error: unknown): string | undefined {
     : undefined;
 }
 
+function nestedErrorCodes(error: unknown): readonly string[] {
+  const codes = new Set<string>();
+  const visit = (candidate: unknown): void => {
+    const code = errorCode(candidate);
+    if (code) codes.add(code);
+    if (candidate && typeof candidate === "object") {
+      const errors = (candidate as { readonly errors?: unknown }).errors;
+      if (Array.isArray(errors)) errors.forEach(visit);
+      const cause = (candidate as { readonly cause?: unknown }).cause;
+      if (cause) visit(cause);
+    }
+  };
+  visit(error);
+  return [...codes];
+}
+
 /**
  * @description Performs the database failure reason helper operation for this module.
  * @param {unknown} error - Input value for error.
  * @returns {string} Result of the database failure reason operation.
  */
 function databaseFailureReason(error: unknown): string {
-  const code = errorCode(error);
-  if (code === "ENOTFOUND" || /getaddrinfo\s+ENOTFOUND/i.test(errorMessage(error))) {
+  const codes = nestedErrorCodes(error);
+  const message = errorMessage(error);
+  if (codes.includes("ENOTFOUND") || /getaddrinfo\s+ENOTFOUND/i.test(message)) {
     return "DNS_LOOKUP_FAILED";
   }
-  if (/timeout/i.test(errorMessage(error))) {
+  if (codes.includes("ETIMEDOUT") || /timeout/i.test(message)) {
     return "CONNECTION_TIMEOUT";
   }
-  if (/connection terminated/i.test(errorMessage(error))) {
+  if (
+    codes.some((code) => ["ECONNRESET", "EPIPE", "57P01", "57P02", "57P03"].includes(code)) ||
+    /connection terminated|connection reset|socket hang up/i.test(message)
+  ) {
     return "CONNECTION_TERMINATED";
   }
+  if (codes.includes("ECONNREFUSED")) return "CONNECTION_REFUSED";
+  if (codes.includes("EACCES") || codes.includes("EPERM")) return "NETWORK_ACCESS_DENIED";
+  if (/remaining connection slots|too many clients|connection pool/i.test(message)) {
+    return "CONNECTION_CAPACITY_EXHAUSTED";
+  }
+  if (codes.includes("28P01")) return "AUTHENTICATION_FAILED";
+  if (codes.includes("3D000")) return "DATABASE_NOT_FOUND";
   return "CONNECTION_FAILED";
+}
+
+function isDatabaseConnectionFailure(error: unknown): boolean {
+  return databaseFailureReason(error) !== "CONNECTION_FAILED";
 }
 
 /**
@@ -85,7 +137,12 @@ function databaseFailureReason(error: unknown): string {
 function isTransientConnectionFailure(error: unknown): boolean {
   return new Set(["DNS_LOOKUP_FAILED", "CONNECTION_TIMEOUT", "CONNECTION_TERMINATED"]).has(
     databaseFailureReason(error),
-  );
+  ) ||
+    new Set([
+      "CONNECTION_REFUSED",
+      "NETWORK_ACCESS_DENIED",
+      "CONNECTION_CAPACITY_EXHAUSTED",
+    ]).has(databaseFailureReason(error));
 }
 
 /**
@@ -116,6 +173,8 @@ export class PgPoolClient implements PostgreSqlClient {
       max: config.poolMax,
       connectionTimeoutMillis: config.connectionTimeoutMilliseconds,
       idleTimeoutMillis: config.idleTimeoutMilliseconds,
+      keepAlive: true,
+      keepAliveInitialDelayMillis: 10_000,
       ssl: config.ssl ? { rejectUnauthorized: false } : false,
     });
 
@@ -146,6 +205,9 @@ export class PgPoolClient implements PostgreSqlClient {
         };
       } catch (error) {
         lastError = error;
+        if (!isDatabaseConnectionFailure(error)) {
+          throw error;
+        }
         if (!isTransientConnectionFailure(error) || attempt >= maxTransientQueryAttempts) {
           throw new DatabaseConnectionError(error);
         }

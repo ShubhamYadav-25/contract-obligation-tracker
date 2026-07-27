@@ -3,21 +3,29 @@
 @tailwind utilities;
 
 :root {
-  color: #0f172a;
-  background: #fafafa;
+  color: #172033;
+  background: #f6f8fb;
   font-family:
-    Inter,
+    "Segoe UI Variable",
+    "Segoe UI",
     ui-sans-serif,
     system-ui,
     -apple-system,
     BlinkMacSystemFont,
-    "Segoe UI",
     sans-serif;
+  font-size: 16px;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
 }
 
 body {
   min-width: 320px;
   margin: 0;
+  background: #f6f8fb;
+  color: #172033;
+  font-size: 1rem;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
 }
 
 button,
@@ -25,11 +33,50 @@ input,
 select,
 textarea,
 a {
-  outline-color: #14b8a6;
+  outline-color: #087f73;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+a {
+  text-underline-offset: 0.18em;
+}
+
+::selection {
+  background: #bff4eb;
+  color: #134e4a;
+}
+
+:focus-visible {
+  outline: 3px solid rgba(8, 127, 115, 0.38);
+  outline-offset: 2px;
 }
 
 #root {
   min-height: 100vh;
+}
+
+.skip-link {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 100;
+  transform: translateY(-180%);
+  border-radius: 0.625rem;
+  background: #0f172a;
+  padding: 0.75rem 1rem;
+  color: #ffffff;
+  font-weight: 700;
+  transition: transform 150ms ease;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
 }
 
 .pdf-source-shell {
@@ -270,5 +317,58 @@ a {
   .pdf-reader-search {
     order: 3;
     width: 100%;
+  }
+}
+
+/* Ergonomics & Interactive Micro-Interactions */
+button,
+a,
+[role="button"] {
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Custom Ergonomic Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Interactive Card & Link Hover Transitions */
+.interactive-hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.interactive-hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08);
+}
+
+.interactive-hover-lift:active {
+  transform: translateY(0) scale(0.99);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
   }
 }

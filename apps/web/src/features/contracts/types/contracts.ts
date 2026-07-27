@@ -39,6 +39,7 @@ export interface ContractProcessingSummary {
   readonly completedAt: string | null;
   readonly failedAt: string | null;
   readonly updatedAt: string;
+  readonly canReprocess?: boolean | undefined;
 }
 
 export interface ContractTextSummary {

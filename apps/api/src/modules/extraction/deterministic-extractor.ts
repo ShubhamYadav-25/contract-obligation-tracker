@@ -1,15 +1,13 @@
 /**
  * @file Defines backend extraction module contracts, services, routes, or persistence logic.
  */
-import { createDatabaseConfig } from "../../config/database.js";
-import { loadEnv } from "../../config/env.js";
-import { PgPoolClient } from "../../infrastructure/database/postgres-client.js";
+import { getApplicationDatabase } from "../../infrastructure/database/app-database.js";
 import { PgTransactionManager } from "../../infrastructure/database/transaction-manager.js";
 import { PostgresExtractionCandidateRepository } from "./postgres-extraction.repository.js";
 import { extractFieldsFromPages } from "./heuristics.js";
 
 export class DeterministicExtractor {
-  private readonly db = new PgPoolClient(createDatabaseConfig(loadEnv()));
+  private readonly db = getApplicationDatabase();
   private readonly transactions = new PgTransactionManager(this.db.pool);
   private readonly candidatesRepo = new PostgresExtractionCandidateRepository(this.transactions);
 

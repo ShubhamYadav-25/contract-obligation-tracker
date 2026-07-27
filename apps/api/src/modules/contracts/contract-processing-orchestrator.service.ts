@@ -89,7 +89,6 @@ export class ContractProcessingOrchestrator {
           documentId: command.documentId,
           processingRunId: command.processingRunId,
           queueJobId: command.queueJobId,
-          attemptNumber: command.attemptNumber,
         },
         transaction,
       );

@@ -4,10 +4,13 @@
 import type express from "express";
 
 import { createContractRouter } from "../modules/contracts/contracts.routes.js";
+import { createContractProfileRouter } from "../modules/contract-profiles/index.js";
+import { createDashboardRouter } from "../modules/dashboard/dashboard.routes.js";
 import { createHealthRouter } from "../modules/health/health.routes.js";
 import { createKpiRouter } from "../modules/kpi/kpi.routes.js";
 import { createMessageRouter } from "../modules/messages/messages.routes.js";
 import { createObligationRouter } from "../modules/obligations/obligations.routes.js";
+import { createOperationsRouter } from "../modules/operations/operations.routes.js";
 import { createReminderRouter } from "../modules/reminders/reminders.routes.js";
 import { createExtractionRouter } from "../modules/extraction/extraction.routes.js";
 
@@ -19,7 +22,10 @@ import { createExtractionRouter } from "../modules/extraction/extraction.routes.
 export function registerRoutes(app: express.Express): void {
   app.use("/", createHealthRouter());
   app.use("/health", createHealthRouter());
+  app.use("/api/v1/dashboard", createDashboardRouter());
   app.use("/api/v1/contracts", createContractRouter());
+  app.use("/api/v1/contracts", createContractProfileRouter());
+  app.use("/api/v1/contracts", createOperationsRouter());
   app.use("/api/obligations", createObligationRouter());
   app.use("/api/reminders", createReminderRouter());
   app.use("/api/messages", createMessageRouter());

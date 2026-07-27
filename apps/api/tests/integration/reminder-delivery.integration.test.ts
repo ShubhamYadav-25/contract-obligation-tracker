@@ -14,6 +14,8 @@ import type { BackgroundJob } from "../../src/jobs/job.types.js";
 import type { NotificationProvider } from "../../src/modules/notifications/notifications.types.js";
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
+const testDatabaseSsl =
+  process.env.TEST_DATABASE_SSL === "true" ? { rejectUnauthorized: false } : false;
 const describeWithDatabase = testDatabaseUrl ? describe : describe.skip;
 
 /**
@@ -47,7 +49,7 @@ describeWithDatabase("ReminderDeliveryProcessor integration", () => {
       throw new Error("TEST_DATABASE_URL is required for PostgreSQL integration tests");
     }
 
-    pool = new pg.Pool({ connectionString: testDatabaseUrl, ssl: false });
+    pool = new pg.Pool({ connectionString: testDatabaseUrl, ssl: testDatabaseSsl });
     const jobsMigration = await readFile(
       path.resolve(
         process.cwd(),
@@ -82,12 +84,12 @@ describeWithDatabase("ReminderDeliveryProcessor integration", () => {
     await pool.query(jobsMigration);
     await pool.query(inboxMigration);
     await pool.query(
-      "TRUNCATE background_jobs, reminders, reminder_delivery_attempts, inbox_entries, obligations, contracts, audit_events",
+      "TRUNCATE background_jobs, reminders, reminder_delivery_attempts, inbox_entries, obligations, contracts, audit_events CASCADE",
     );
 
     database = new PgPoolClient({
       connectionString: testDatabaseUrl,
-      ssl: false,
+      ssl: Boolean(testDatabaseSsl),
       poolMax: 3,
       connectionTimeoutMilliseconds: 5_000,
       idleTimeoutMilliseconds: 30_000,
@@ -196,5 +198,5 @@ describeWithDatabase("ReminderDeliveryProcessor integration", () => {
       [reminderId],
     );
     expect(secondInboxEntries.rows[0].count).toBe(1);
-  });
+  }, 30_000);
 });

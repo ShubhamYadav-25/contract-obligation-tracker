@@ -2,6 +2,8 @@
  * @file Defines backend reminders module contracts, services, routes, or persistence logic.
  */
 import type { ReminderRecord, ReminderStatus } from "./reminders.types.js";
+import type { TransactionContext } from "../../infrastructure/database/transaction-manager.js";
+import type { ObligationRecord } from "../obligations/obligations.types.js";
 
 export interface ReminderReadRepository {
   listByOrganization(input: {
@@ -10,6 +12,25 @@ export interface ReminderReadRepository {
     readonly limit: number;
     readonly offset: number;
   }): Promise<readonly ReminderRecord[]>;
+  createForOrganization(input: {
+    readonly organizationId: string;
+    readonly obligationId: string;
+    readonly scheduledFor: Date;
+    readonly occurrenceKey: string;
+  }): Promise<ReminderRecord>;
+  rescheduleForOrganization(input: {
+    readonly organizationId: string;
+    readonly reminderId: string;
+    readonly scheduledFor: Date;
+    readonly occurrenceKey: string;
+    readonly expectedVersion: number;
+  }): Promise<ReminderRecord>;
+  transitionForOrganization(input: {
+    readonly organizationId: string;
+    readonly reminderId: string;
+    readonly action: "CANCEL" | "ACTIVATE" | "RETRY";
+    readonly expectedVersion: number;
+  }): Promise<ReminderRecord>;
 }
 
 export interface ReminderRepository {
@@ -40,4 +61,14 @@ export interface ReminderSchedulerRepository {
     readonly remindersClaimed: number;
     readonly jobsCreated: number;
   }>;
+}
+
+export interface ExtractedObligationReminderRepository {
+  createForObligations(
+    input: {
+      readonly obligations: readonly ObligationRecord[];
+      readonly offsetBeforeDueMinutes: number;
+    },
+    transaction: TransactionContext,
+  ): Promise<number>;
 }

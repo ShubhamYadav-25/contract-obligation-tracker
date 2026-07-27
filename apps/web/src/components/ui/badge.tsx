@@ -29,7 +29,7 @@ export function Badge({ children, className, tone = "neutral" }: PropsWithChildr
   return (
     <span
       className={cx(
-        "inline-flex min-h-6 items-center rounded px-2 py-0.5 text-xs font-semibold",
+        "inline-flex min-h-7 items-center rounded-md px-2.5 py-1 text-[0.8125rem] font-bold leading-none",
         tones[tone],
         className,
       )}

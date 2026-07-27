@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge.js";
  * @returns {JSX.Element} Result of the confidence indicator operation.
  */
 export function ConfidenceIndicator({ confidence }: { readonly confidence: number }) {
-  const percent = Math.round(confidence * 100);
+  const normalized = confidence > 1 ? confidence : confidence * 100;
+  const percent = Math.round(Math.max(0, Math.min(100, normalized)));
   const tone = percent >= 85 ? "success" : percent >= 60 ? "warning" : "danger";
 
   return (

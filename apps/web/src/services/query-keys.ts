@@ -28,6 +28,10 @@ export const queryKeys = {
     byContract: (contractId: string) => ["obligations", "contract", contractId] as const,
     detail: (id: string) => ["obligations", id] as const,
   },
+  reminders: {
+    all: ["reminders"] as const,
+    byObligation: (obligationId: string) => ["reminders", "obligation", obligationId] as const,
+  },
   messages: {
     all: ["messages"] as const,
     list: (input: {

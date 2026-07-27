@@ -32,6 +32,7 @@ export const processingStatusResponseSchema = z.object({
   errorMessage: z.string().nullable(),
   errorRetryable: z.boolean().nullable(),
   failedAt: z.string().nullable(),
+  canReprocess: z.boolean().optional(),
 });
 
 export type ProcessingStatusResponse = z.infer<typeof processingStatusResponseSchema>;

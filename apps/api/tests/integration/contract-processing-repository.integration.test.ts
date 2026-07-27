@@ -12,6 +12,8 @@ import { PgTransactionManager } from "../../src/infrastructure/database/transact
 import { PostgresContractProcessingRepository } from "../../src/modules/contracts/postgres-contract.repository.js";
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
+const testDatabaseSsl =
+  process.env.TEST_DATABASE_SSL === "true" ? { rejectUnauthorized: false } : false;
 const describeWithDatabase = testDatabaseUrl ? describe : describe.skip;
 
 const organizationId = "00000000-0000-4000-8000-000000000001";
@@ -45,7 +47,7 @@ describeWithDatabase("PostgresContractProcessingRepository integration", () => {
       throw new Error("TEST_DATABASE_URL is required for PostgreSQL integration tests");
     }
 
-    pool = new pg.Pool({ connectionString: testDatabaseUrl, ssl: false });
+    pool = new pg.Pool({ connectionString: testDatabaseUrl, ssl: testDatabaseSsl });
     await applyMigration(pool, "202607200001_supabase_postgres_jobs.up.sql");
     await applyMigration(pool, "202607210001_contract_ingestion.up.sql");
     await applyMigration(pool, "202607210002_contract_processing_lifecycle.up.sql");
@@ -54,7 +56,7 @@ describeWithDatabase("PostgresContractProcessingRepository integration", () => {
 
     database = new PgPoolClient({
       connectionString: testDatabaseUrl,
-      ssl: false,
+      ssl: Boolean(testDatabaseSsl),
       poolMax: 5,
       connectionTimeoutMilliseconds: 5_000,
       idleTimeoutMilliseconds: 30_000,
@@ -149,7 +151,6 @@ describeWithDatabase("PostgresContractProcessingRepository integration", () => {
           documentId,
           processingRunId,
           queueJobId: "contract:process:1",
-          attemptNumber: 1,
         },
         transaction,
       ),
@@ -171,7 +172,6 @@ describeWithDatabase("PostgresContractProcessingRepository integration", () => {
             documentId,
             processingRunId,
             queueJobId: "contract:process:1",
-            attemptNumber: 1,
           },
           transaction,
         ),
@@ -184,7 +184,6 @@ describeWithDatabase("PostgresContractProcessingRepository integration", () => {
             documentId,
             processingRunId,
             queueJobId: "contract:process:1",
-            attemptNumber: 1,
           },
           transaction,
         ),
@@ -194,7 +193,7 @@ describeWithDatabase("PostgresContractProcessingRepository integration", () => {
     expect([firstClaim, secondClaim].filter(Boolean)).toHaveLength(1);
   });
 
-  it("allows a later retry attempt to reclaim a previously processing run", async () => {
+  it("does not reclaim an already processing run until recovery returns it to queued", async () => {
     await seedQueuedRun();
     await pool.query(
       "UPDATE contract_processing_runs SET status = 'PROCESSING', attempt_number = 1 WHERE id = $1",
@@ -209,13 +208,11 @@ describeWithDatabase("PostgresContractProcessingRepository integration", () => {
           documentId,
           processingRunId,
           queueJobId: "contract:process:1",
-          attemptNumber: 2,
         },
         transaction,
       ),
     );
 
-    expect(claimed?.status).toBe("PROCESSING");
-    expect(claimed?.attemptNumber).toBe(2);
+    expect(claimed).toBeNull();
   });
 });

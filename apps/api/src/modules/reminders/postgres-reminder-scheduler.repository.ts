@@ -34,7 +34,7 @@ export class PostgresReminderSchedulerRepository implements ReminderSchedulerRep
           WITH due_reminders AS (
             SELECT id, occurrence_key
             FROM reminders
-            WHERE status IN ('PENDING', 'RETRY_PENDING')
+            WHERE status = 'PENDING'
               AND scheduled_for <= $1
             ORDER BY scheduled_for, created_at
             FOR UPDATE SKIP LOCKED
@@ -60,7 +60,19 @@ export class PostgresReminderSchedulerRepository implements ReminderSchedulerRep
               $1,
               jsonb_build_object('reminderId', $2::text, 'occurrenceKey', $3::text)
             )
-            ON CONFLICT (idempotency_key) DO NOTHING
+            ON CONFLICT (idempotency_key)
+            DO UPDATE SET
+              payload = EXCLUDED.payload,
+              status = 'PENDING',
+              available_at = NOW(),
+              attempt_count = 0,
+              locked_by = NULL,
+              locked_at = NULL,
+              lock_expires_at = NULL,
+              last_error = NULL,
+              completed_at = NULL,
+              updated_at = NOW()
+            WHERE background_jobs.status = 'FAILED'
           `,
           [createReminderDeliveryJobKey(reminder.id), reminder.id, reminder.occurrence_key],
         );

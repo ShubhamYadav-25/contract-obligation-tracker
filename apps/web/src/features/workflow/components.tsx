@@ -68,15 +68,15 @@ export function SectionCard({
   return (
     <section
       className={cx(
-        "min-w-0 rounded-lg border border-slate-200 bg-white p-5 shadow-card",
+        "min-w-0 rounded-xl border border-slate-200 bg-white p-5 shadow-card sm:p-6",
         className,
       )}
     >
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-lg font-semibold leading-7 text-slate-900">{title}</h2>
+          <h2 className="text-xl font-bold leading-7 tracking-tight text-slate-950">{title}</h2>
           {description ? (
-            <p className="mt-1 text-sm leading-5 text-slate-500">{description}</p>
+            <p className="mt-1.5 max-w-3xl text-sm leading-6 text-slate-600">{description}</p>
           ) : null}
         </div>
         {action ? <div className="flex shrink-0 items-center gap-2">{action}</div> : null}
@@ -103,10 +103,10 @@ export function KpiCard({
   readonly tone?: Tone;
 }) {
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-card transition duration-200 ease-out hover:-translate-y-0.5 hover:shadow-card-hover">
-      <p className="text-sm font-semibold text-slate-500">{label}</p>
-      <p className="mt-2 text-2xl font-bold text-slate-950">{value}</p>
-      <p className={cx("mt-3 inline-flex rounded px-2 py-1 text-xs ring-1", toneClasses[tone])}>
+    <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-card transition-shadow duration-200 hover:shadow-card-hover">
+      <p className="text-sm font-bold text-slate-600">{label}</p>
+      <p className="mt-2 text-3xl font-extrabold tracking-tight text-slate-950">{value}</p>
+      <p className={cx("mt-3 inline-flex rounded-md px-2.5 py-1 text-[0.8125rem] font-semibold ring-1", toneClasses[tone])}>
         {helper}
       </p>
     </section>
@@ -129,7 +129,7 @@ export function StatusBadge({
   return (
     <span
       className={cx(
-        "inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-bold ring-1",
+        "inline-flex min-h-7 items-center gap-1.5 rounded-md border px-2.5 py-1 text-[0.8125rem] font-bold leading-none ring-1",
         toneClasses[tone],
       )}
     >
@@ -167,8 +167,8 @@ export function DataTable({
   minWidth = "min-w-[720px]",
 }: PropsWithChildren<{ readonly minWidth?: string }>) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-card">
-      <table className={cx("w-full divide-y divide-border text-left text-sm", minWidth)}>
+    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-card">
+      <table className={cx("w-full divide-y divide-border text-left text-[0.9375rem]", minWidth)}>
         {children}
       </table>
     </div>
@@ -182,11 +182,11 @@ export function DataTable({
  */
 export function TableHead({ columns }: { readonly columns: readonly string[] }) {
   return (
-    <thead className="bg-slate-50 text-xs uppercase text-slate-600">
+    <thead className="bg-slate-50 text-[0.8125rem] uppercase text-slate-700">
       <tr>
         {columns.map((column, index) => (
           <th
-            className="group whitespace-nowrap px-5 py-3 font-bold tracking-normal"
+            className="group whitespace-nowrap px-5 py-3.5 font-bold tracking-wide"
             key={`${column}-${index}`}
             scope="col"
           >
@@ -236,9 +236,9 @@ export function PaginationControls({
   readonly previousDisabled?: boolean;
 }) {
   return (
-    <div className="mt-4 flex flex-col gap-3 text-sm text-muted sm:flex-row sm:items-center sm:justify-between">
-      <p>{label}</p>
-      <div className="flex items-center gap-2">
+    <div className="mt-5 flex flex-col gap-3 text-sm font-medium text-muted sm:flex-row sm:items-center sm:justify-between">
+      <p aria-live="polite">{label}</p>
+      <div className="flex items-center gap-3">
         <Button disabled={previousDisabled} onClick={onPrevious} type="button" variant="secondary">
           Previous
         </Button>
@@ -257,7 +257,7 @@ export function PaginationControls({
  */
 export function FilterBar({ children }: PropsWithChildren) {
   return (
-    <div className="mb-5 flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-card md:flex-row md:flex-wrap md:items-center">
+    <div aria-label="Filters" className="mb-6 flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-card md:flex-row md:flex-wrap md:items-center">
       {children}
     </div>
   );

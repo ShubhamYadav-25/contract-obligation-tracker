@@ -17,6 +17,7 @@ import { TransitionDialog } from "../components/transition-dialog.js";
 import { TransitionHistory } from "../components/transition-history.js";
 import { useObligation } from "../hooks/use-obligation.js";
 import { useUpdateObligationStatus } from "../hooks/use-update-obligation-status.js";
+import { ReminderControls } from "@/features/reminders/index.js";
 
 /**
  * @description Renders the obligation detail page component for the contract tracker UI.
@@ -72,6 +73,12 @@ export function ObligationDetailPage() {
             <Card>
               <h2 className="mb-3 text-sm font-semibold">Transition history</h2>
               <TransitionHistory transitions={obligation.data.transitionHistory} />
+            </Card>
+            <Card>
+              <ReminderControls
+                dueAt={obligation.data.dueAt}
+                obligationId={obligation.data.id}
+              />
             </Card>
           </div>
         </div>

@@ -11,8 +11,13 @@ import { createReminderOccurrenceKey } from "../../src/modules/reminders/reminde
 
 describe("job idempotency keys", () => {
   it("creates deterministic contract processing keys", () => {
-    expect(createContractProcessingJobKey({ documentId: "document-1" })).toBe(
-      "contract-processing:document-1",
+    expect(
+      createContractProcessingJobKey({
+        documentId: "document-1",
+        processingRunId: "run-1",
+      }),
+    ).toBe(
+      "contract-processing:document-1:run-1",
     );
   });
 

@@ -333,6 +333,28 @@ describe("Gemini model discovery", () => {
     expect(client.getMetricsSnapshot().retryCount).toBe(1);
   });
 
+  it("rejects a Gemini SDK promise that ignores abort signals at the hard deadline", async () => {
+    const generateContent = vi.fn(() => new Promise<never>(() => {}));
+    const { client } = setupGemini({
+      generateContent,
+      overrideEnv: {
+        GEMINI_MODEL: "gemini-3.5-flash-lite",
+        GEMINI_REQUEST_TIMEOUT_MS: 10,
+        GEMINI_MAX_ATTEMPTS: 1,
+      },
+    });
+
+    await expect(client.selectUsableModel()).rejects.toMatchObject({
+      message: "Gemini structured LLM request failed",
+      details: expect.objectContaining({
+        attempts: 1,
+        message: expect.stringContaining("timed out after 10ms"),
+        retryable: true,
+      }),
+    });
+    expect(generateContent).toHaveBeenCalledOnce();
+  });
+
   it("stops immediately on daily quota exhaustion", async () => {
     const generateContent = vi.fn(async () => {
       throw {

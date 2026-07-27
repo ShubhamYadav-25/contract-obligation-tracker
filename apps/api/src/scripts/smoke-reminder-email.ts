@@ -57,7 +57,7 @@ function createSyntheticJob(payload: {
     status: "PENDING",
     priority: 0,
     availableAt: now,
-    attemptCount: 0,
+    attemptCount: 1,
     maxAttempts: 1,
     createdAt: now,
     updatedAt: now,

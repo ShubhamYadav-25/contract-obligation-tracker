@@ -530,7 +530,10 @@ export class ReferenceAwareObligationExtractor implements ObligationExtractionPr
       extractionDurationMilliseconds: Date.now() - startedAt,
     };
     const extraction: StructuredExtraction = {
-      obligations: confirmed.map((obligation) => toFieldAnchor(obligation, sourceIndex)),
+      // Persist every source-verified obligation. Low-confidence fields remain
+      // explicitly marked REVIEW_REQUIRED in their anchor so the client can
+      // verify them against the mapped PDF instead of using a second queue.
+      obligations: consolidated.map((obligation) => toFieldAnchor(obligation, sourceIndex)),
     };
 
     this.logger.info("reference_aware_obligations_extracted", {
@@ -542,7 +545,7 @@ export class ReferenceAwareObligationExtractor implements ObligationExtractionPr
 
     return {
       extraction,
-      confidence: averageConfidence(confirmed),
+      confidence: averageConfidence(consolidated),
       provider: "REFERENCE_AWARE_GEMINI",
       metadata: {
         metrics,

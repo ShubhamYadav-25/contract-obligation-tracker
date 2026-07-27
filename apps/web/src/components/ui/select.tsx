@@ -14,7 +14,7 @@ export function Select({ className, ...props }: SelectHTMLAttributes<HTMLSelectE
   return (
     <select
       className={cx(
-        "h-11 rounded-md border border-slate-300 bg-white px-3 text-sm text-ink shadow-sm transition hover:border-slate-400 focus:border-teal-500 focus:outline-none focus-visible:shadow-focus",
+        "min-h-11 cursor-pointer rounded-lg border border-slate-300 bg-white px-3.5 text-[0.9375rem] text-slate-950 shadow-sm transition-colors hover:border-slate-400 focus:border-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-700/20 disabled:cursor-not-allowed disabled:bg-slate-100",
         className,
       )}
       {...props}
